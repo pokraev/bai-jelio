@@ -61,8 +61,10 @@
   .stage-wrap {
     position: relative;
     width: 580px;
+    max-width: 100%;
     flex-shrink: 0;
     overflow: visible;
+    margin: 0 auto;
   }
   .stage {
     position: relative;
@@ -415,12 +417,26 @@
 
   @media (max-width: 420px) {
     .stage-wrap {
-      transform: scale(0.94);
-      transform-origin: top center;
+      width: calc(100% - 32px);
+      max-width: 406px;
+      margin: 0 auto;
     }
-    .stage-fab-left { left: 66px; }
-    .stage-fab-right { right: 66px; }
+    .stage {
+      width: 100%; height: 238px;
+      max-width: 406px;
+      border-radius: 45% / 50%;
+    }
+    .stage img, #mouthCanvas {
+      width: 580px; height: 340px;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .stage-fab-left { left: 40px; }
+    .stage-fab-right { right: 40px; }
     .lips-popover { left: 12px; right: 12px; width: auto; }
+    .round-btn { width: 50px; height: 50px; }
+    .iq-btn { height: 50px; }
+    .lang-btn { height: 38px; }
   }
 
   .topics { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
