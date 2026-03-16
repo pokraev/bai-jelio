@@ -1034,9 +1034,6 @@ async function connect() {
   setStatus('Connecting...', true);
 
   try {
-    await audioPlayer.init();
-    await audioPlayer.resume();
-
     const uri = GEMINI_WS_URL + '?key=' + encodeURIComponent(apiKey);
     ws = new WebSocket(uri);
 
@@ -1075,6 +1072,16 @@ async function connect() {
 
       // Setup complete - session ready
       if (response.setupComplete) {
+        // Init audio lazily — may need user gesture, so wrap in a one-time click handler if suspended
+        audioPlayer.init().then(() => audioPlayer.resume()).catch(() => {
+          const unlockAudio = () => {
+            audioPlayer.init().then(() => audioPlayer.resume());
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+          };
+          document.addEventListener('click', unlockAudio, { once: true });
+          document.addEventListener('touchstart', unlockAudio, { once: true });
+        });
         isConnected = true;
         setCookie('gemini_api_key', apiKey, 90);
         connectBtn.classList.add('connected');
