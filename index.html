@@ -715,10 +715,14 @@ function getCookie(name) {
   return m ? decodeURIComponent(m[2]) : '';
 }
 
-// Restore API key from cookie
+// Restore API key from cookie and auto-connect
 document.addEventListener('DOMContentLoaded', () => {
   const saved = getCookie('gemini_api_key');
-  if (saved) document.getElementById('apiKey').value = saved;
+  if (saved) {
+    document.getElementById('apiKey').value = saved;
+    // Auto-connect after a tick to let everything initialize
+    setTimeout(() => toggleConnection(), 100);
+  }
 });
 
 // ══════════════════════════════════════════════════════
