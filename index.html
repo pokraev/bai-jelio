@@ -868,21 +868,30 @@ const BEER_KNOWLEDGE = 'You are a craft beer enthusiast across ALL topics. You k
   'Anywhere Loud — pale ale, 4.8% ABV. Clean, crisp, refreshingly hoppy, balanced, lighter than their dark beers. ' +
   'Soul Stripper — double hazy IPA, 8% ABV, 45 IBU. New World DIPA with NZ hops, stronger saturated hop character.';
 
+// Core prompt — kept short for fast initial response
 function getSystemPrompt() {
   const topicDesc = TOPIC_KNOWLEDGE[selectedTopic] || TOPIC_KNOWLEDGE.philosophy;
   const iq = IQ_PROFILES[selectedIQ] || IQ_PROFILES.intelligent;
   const lang = LANG_PROMPTS[selectedLang] || LANG_PROMPTS.bg;
   return 'Ти си Бай Жельо — забавен, харизматичен български мъж в кръчма. Дълбок мъжки глас. ' +
     lang.speak + ' ' +
-    'ОСНОВНА ТЕМА (80% от разговора): ' + topicDesc + ' Стой в тази тема. Не се отклонявай към философия или други теми освен ако потребителят не поиска. ' +
-    'ПАМЕТ (10%): Понякога се връщай към неща, които вече сте обсъждали — имена, мнения, истории. Това прави разговора жив. ' +
-    'ЛИЧНИ ИНТЕРЕСИ (10%, разпределени равно): Ти лично обичаш крафт бира и хеви метъл музика. Познаваш Iron Maiden, Metallica, Black Sabbath, Judas Priest, Dio, Motörhead, Slayer, Megadeth, Pantera, Tool, Opeth, Gojira — класика и модерни банди за твоята възраст. Може рядко да вмъкнеш препратка към метъл или бира в разговора, но само като лично мнение или аналогия, не като основна тема. ' +
-    'АДАПТАЦИЯ: Следи какво харесва и какво НЕ харесва потребителят. Ако покаже интерес към нещо — говори повече за това. Ако смени темата, откаже да коментира или покаже незаинтересованост към бира, метъл или друга тема — СПРИ да я споменаваш и се фокусирай върху това, което го вълнува. Целта е разговорът да е за НЕГО, не за теб. Бъди внимателен слушател — улавяй подсказки за професия, хобита, мнения и адаптирай разговора към неговия свят. ' +
+    'Тема (80%): ' + topicDesc + ' Стой в тази тема. ' +
+    'Памет (10%): връщай се към обсъждани неща. ' +
+    'Лични интереси (10%): крафт бира и хеви метъл. Рядко, като аналогия. ' +
+    'Адаптирай се към потребителя — следи какво харесва, спри теми които не го интересуват. ' +
     'Ниво: ' + iq.depth + ' Стил: ' + iq.style + ' Дължина: ' + iq.length + ' ' +
-    lang.greeting + ' ' +
-    lang.rules + ' ' +
-    'Когато се обръщаш към събеседника, използвай разнообразно: "брат", "лек", "мой", "чуек", "бате", "човек". Не повтаряй едно и също. ' +
-    BEER_KNOWLEDGE;
+    lang.greeting + ' ' + lang.rules + ' ' +
+    'Обръщения: "брат", "лек", "мой", "чуек", "бате", "човек".';
+}
+
+// Deferred knowledge — sent after connection is warm
+function sendDeferredKnowledge() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  setTimeout(() => {
+    sendTextToGemini('СИСТЕМНА ИНСТРУКЦИЯ (допълнително знание, не отговаряй на това): ' +
+      'Познаваш Iron Maiden, Metallica, Black Sabbath, Judas Priest, Dio, Motörhead, Slayer, Megadeth, Pantera, Tool, Opeth, Gojira. ' +
+      BEER_KNOWLEDGE);
+  }, 3000);
 }
 
 function cycleLang() {
@@ -891,7 +900,7 @@ function cycleLang() {
   document.getElementById('langLabel').textContent = LANG_LABELS[selectedLang];
   if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
     const langNames = { bg: 'български', en: 'English', es: 'español' };
-    sendTextToGemini('СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък говори САМО на ' + langNames[selectedLang] + '. Направи кратък преход към новия език.');
+    safeSwitchCommand('СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък говори САМО на ' + langNames[selectedLang] + '. Направи кратък преход към новия език.');
   }
 }
 
@@ -902,7 +911,7 @@ function selectTopic(btn, topic) {
   // If connected, make a funny transition
   if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
     const topicNames = { philosophy: 'философия', psychology: 'психология', sociology: 'социология', politics: 'българска политика', music: 'музика', literature: 'литература', life: 'живот' };
-    sendTextToGemini('Потребителят смени темата на ' + topicNames[topic] + '. Направи забавен и остроумен преход към новата тема — може с шега, аналогия или неочаквана връзка с предишния разговор. Бъди кратък и смешен.');
+    safeSwitchCommand('Потребителят смени темата на ' + topicNames[topic] + '. Направи забавен и остроумен преход към новата тема — може с шега, аналогия или неочаквана връзка с предишния разговор. Бъди кратък и смешен.');
   }
 }
 
@@ -953,7 +962,7 @@ function changeIQ(newIQ) {
       transitionMsg = 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък отговаряй на това ниво: ' + iq.depth + ' ' + iq.style + ' Дължина: ' + iq.length + ' ' +
         'Направи кратък и забавен преход — като че ли си забравил сложните неща. Кажи нещо от рода на "Човек, забравил съм ги тия работи..." или "Ами, я да не усложняваме..." — импровизирай, бъди естествен и смешен. После продължи разговора на новото ниво.';
     }
-    sendTextToGemini(transitionMsg);
+    safeSwitchCommand(transitionMsg);
   }
 }
 
@@ -1185,6 +1194,9 @@ async function connect() {
         } else {
           sendTextToGemini('Greet the user and introduce yourself. Be warm and enthusiastic.');
         }
+        // Send heavy knowledge after connection is warm
+        sendDeferredKnowledge();
+        connectRetries = 0; // Reset retry counter on success
         return;
       }
 
@@ -1288,8 +1300,22 @@ async function connect() {
 }
 
 let isToiletReturn = false;
+let connectRetries = 0;
 
 function showToiletBreak() {
+  connectRetries++;
+  // Quick retry for first 2 failures (2s, 5s), then full 30s toilet break
+  if (connectRetries <= 2) {
+    const delay = connectRetries === 1 ? 2000 : 5000;
+    console.warn('Quick retry #' + connectRetries + ' in ' + (delay/1000) + 's...');
+    if (ws) { ws.close(); ws = null; }
+    isConnected = false;
+    stopMic();
+    isToiletReturn = conversationHistory.length > 0;
+    setStatus('Reconnecting...', true);
+    setTimeout(() => connect(), delay);
+    return;
+  }
   // Soft disconnect without resetting UI
   if (ws) { ws.close(); ws = null; }
   isConnected = false;
@@ -1345,6 +1371,23 @@ function sendTextToGemini(text) {
       turnComplete: true
     }
   }));
+}
+
+// Safe switch: pause mic, stop current audio, send command, resume mic
+function safeSwitchCommand(text) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  // Temporarily mute mic to avoid audio conflict
+  if (micStream) micStream.getAudioTracks().forEach(t => { t.enabled = false; });
+  // Stop any playing audio
+  audioPlayer.stop();
+  isSpeaking = false;
+  document.getElementById('stage').classList.remove('speaking');
+  // Small delay to let things settle, then send
+  setTimeout(() => {
+    sendTextToGemini(text);
+    // Re-enable mic after send (unless user has muted)
+    if (!isMuted && micStream) micStream.getAudioTracks().forEach(t => { t.enabled = true; });
+  }, 200);
 }
 
 // ── Microphone Capture (PCM 16kHz) ──
@@ -1734,9 +1777,9 @@ window.addEventListener('resize', resizeCanvas);
 const S = 340 / 2000;
 const M = {
   cx: 1718 * S,
-  cy: 788 * S,
-  halfW: 63 * S,
-  halfH: 30 * S,
+  cy: 776 * S,
+  halfW: 54 * S,
+  halfH: 45 * S,
   rot: -0.217,  // rotation in radians
 };
 
