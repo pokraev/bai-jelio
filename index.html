@@ -1187,7 +1187,13 @@ async function connect() {
         startMic();
 
         // Character opens the conversation
-        if (isToiletReturn) {
+        if (isSilentReconnect) {
+          // Silent retry — just continue where we left off, no fanfare
+          isSilentReconnect = false;
+          const summary = getConversationSummary();
+          sendTextToGemini('Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary);
+        } else if (isToiletReturn) {
+          // Toilet break was shown — do the funny return
           isToiletReturn = false;
           const summary = getConversationSummary();
           sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно от рода на "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?" и продължи разговора от там, където спря. ' + summary);
@@ -1300,6 +1306,7 @@ async function connect() {
 }
 
 let isToiletReturn = false;
+let isSilentReconnect = false;
 let connectRetries = 0;
 
 function showToiletBreak() {
@@ -1311,7 +1318,8 @@ function showToiletBreak() {
     if (ws) { ws.close(); ws = null; }
     isConnected = false;
     stopMic();
-    isToiletReturn = conversationHistory.length > 0;
+    isSilentReconnect = conversationHistory.length > 0;
+    isToiletReturn = false;
     setStatus('Reconnecting...', true);
     setTimeout(() => connect(), delay);
     return;
