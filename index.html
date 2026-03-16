@@ -1344,7 +1344,7 @@ function disconnect() {
     ws = null;
   }
   isConnected = false;
-  stopMic();
+  destroyMic();
   audioPlayer.stop();
 
   const connectBtn = document.getElementById('connectBtn');
@@ -1408,10 +1408,18 @@ function setMicGain(val) {
 async function startMic() {
   if (isMicActive) return;
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
-    });
-    micContext = new AudioContext({ sampleRate: 16000 });
+    // Reuse existing stream if still alive
+    if (!micStream || micStream.getTracks().every(t => t.readyState === 'ended')) {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+      });
+    }
+    // Re-enable tracks in case they were disabled
+    micStream.getAudioTracks().forEach(t => { t.enabled = true; });
+
+    if (!micContext || micContext.state === 'closed') {
+      micContext = new AudioContext({ sampleRate: 16000 });
+    }
     micSource = micContext.createMediaStreamSource(micStream);
     micGainNode = micContext.createGain();
     micGainNode.gain.value = micGainValue;
@@ -1459,11 +1467,17 @@ function stopMic() {
   if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
   if (micGainNode) { micGainNode.disconnect(); micGainNode = null; }
   if (micSource) { micSource.disconnect(); micSource = null; }
-  if (micContext) { micContext.close(); micContext = null; }
-  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  // Keep micStream and micContext alive to avoid re-prompting for permission
 
   document.getElementById('stage').classList.remove('listening');
   resetWaveform();
+}
+
+// Full cleanup — only on page unload or explicit disconnect by user
+function destroyMic() {
+  stopMic();
+  if (micContext) { micContext.close(); micContext = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 }
 
 let isMuted = false;
