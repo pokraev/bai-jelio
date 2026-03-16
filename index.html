@@ -1558,7 +1558,8 @@ function startWaveformAnimation() {
     micAnalyser.fftSize = 64;
     micAnalyser.smoothingTimeConstant = 0.6;
     micFreqData = new Uint8Array(micAnalyser.frequencyBinCount);
-    if (micSource) micSource.connect(micAnalyser);
+    if (micGainNode) micGainNode.connect(micAnalyser);
+    else if (micSource) micSource.connect(micAnalyser);
   }
   document.getElementById('waveform').classList.remove('idle');
 
@@ -1776,9 +1777,9 @@ window.addEventListener('resize', resizeCanvas);
 
 const S = 340 / 2000;
 const M = {
-  cx: 1718 * S,
-  cy: 776 * S,
-  halfW: 54 * S,
+  cx: 1724 * S,
+  cy: 782 * S,
+  halfW: 57 * S,
   halfH: 45 * S,
   rot: -0.217,  // rotation in radians
 };
