@@ -774,7 +774,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════
 
 const GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
-const GEMINI_MODEL = 'models/gemini-2.5-flash-native-audio-preview-12-2025';
+const GEMINI_MODELS = [
+  'models/gemini-2.5-flash-native-audio-preview-12-2025',
+  'models/gemini-2.0-flash-live-001'
+];
+let currentModelIdx = 0;
+function getModel() { return GEMINI_MODELS[currentModelIdx]; }
 
 let ws = null;
 let isConnected = false;
@@ -1118,7 +1123,7 @@ async function connect() {
     ws.onopen = () => {
       const setupMsg = {
         setup: {
-          model: GEMINI_MODEL,
+          model: getModel(),
           generationConfig: {
             responseModalities: ['AUDIO'],
             speechConfig: {
@@ -1261,6 +1266,15 @@ async function connect() {
         setCookie('gemini_api_key', '', -1);
         setStatus('Invalid API key. Please enter a new one.', false);
         disconnect();
+        return;
+      }
+      // On 1008, try next model immediately without toilet break
+      if (e.code === 1008 && currentModelIdx < GEMINI_MODELS.length - 1) {
+        currentModelIdx++;
+        console.warn('Model unsupported, trying fallback:', getModel());
+        isConnected = false;
+        stopMic();
+        connect();
         return;
       }
       // All other errors: toilet break + auto-reconnect
