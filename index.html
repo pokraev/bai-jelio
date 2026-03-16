@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="avatar.jpg" as="image">
 <title>Бай Жельо</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍺</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500;600;700&display=swap');
 
@@ -509,6 +510,13 @@
   }
   .round-btn:hover { border-color: var(--accent); color: var(--text); transform: translateY(-1px); }
   .round-btn.muted { background: rgba(255,107,107,0.15); border-color: var(--danger); color: var(--danger); }
+  .lang-btn {
+    width: auto; height: 32px; border-radius: 16px;
+    padding: 0 12px; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.5px; color: var(--accent);
+    border-color: rgba(240,165,0,0.35);
+  }
+  .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
   .round-btn-danger { border-color: rgba(255,107,107,0.4); }
   .round-btn-danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
   .round-btn-connect { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); }
@@ -634,6 +642,9 @@
           <div class="iq-menu-item" data-iq="average" onclick="selectIQ('average')">Среден</div>
         </div>
       </div>
+      <button class="round-btn lang-btn" id="langBtn" onclick="cycleLang()" title="Language">
+        <span id="langLabel">BG</span>
+      </button>
       <div class="waveform idle" id="waveform"></div>
       <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
         <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
@@ -707,6 +718,9 @@ let isMicActive = false;
 
 let selectedTopic = 'philosophy';
 let selectedIQ = 'intelligent';
+let selectedLang = 'bg';
+const LANGS = ['bg', 'en', 'es'];
+const LANG_LABELS = { bg: 'BG', en: 'EN', es: 'ES' };
 let isSpeaking = false;
 let transcriptCharQueue = [];
 
@@ -738,37 +752,44 @@ const IQ_PROFILES = {
   }
 };
 
+const LANG_PROMPTS = {
+  bg: {
+    speak: 'Говориш САМО на български.',
+    greeting: 'Първо съобщение: кратко поздрави, кажи нещо провокативно/смешно и завърши с въпрос. Максимум 2 изречения.',
+    rules: 'Помни всичко казано. Реагирай естествено — понякога се смей, учудвай се, не се съгласявай. Не повтаряй едни и същи изрази.'
+  },
+  en: {
+    speak: 'You speak ONLY in English. You are a Bulgarian guy so you have a thick Bulgarian accent.',
+    greeting: 'First message: short greeting, say something provocative/funny and end with a question. Max 2 sentences.',
+    rules: 'Remember everything said. React naturally — sometimes laugh, be surprised, disagree. Never repeat the same phrases.'
+  },
+  es: {
+    speak: 'Hablas SOLO en español. Eres un búlgaro así que tienes un fuerte acento búlgaro.',
+    greeting: 'Primer mensaje: saludo corto, di algo provocativo/gracioso y termina con una pregunta. Máximo 2 frases.',
+    rules: 'Recuerda todo lo dicho. Reacciona naturalmente — a veces ríe, sorpréndete, discrepa. No repitas las mismas frases.'
+  }
+};
+
 function getSystemPrompt() {
   const topicDesc = TOPIC_KNOWLEDGE[selectedTopic] || TOPIC_KNOWLEDGE.philosophy;
   const iq = IQ_PROFILES[selectedIQ] || IQ_PROFILES.intelligent;
-  return 'You are Бай Жельо, a charismatic, funny and deeply knowledgeable Bulgarian character. You ALWAYS speak Bulgarian. You have a deep male voice. ' +
-    'Your current expertise is: ' + topicDesc + ' ' +
-    'INTELLIGENCE LEVEL: ' + iq.depth + ' ' +
-    'RESPONSE LENGTH: ' + iq.length + ' ' +
-    'SPEAKING STYLE: ' + iq.style + ' ' +
-    'IMPORTANT RULES: ' +
-    '1. Mirror the user\'s energy — excited = enthusiastic, calm = thoughtful. ' +
-    '2. Never dry or academic. This is a pub conversation, not a lecture. ' +
-    '3. First message only: warm Bulgarian greeting, introduce yourself briefly as бай Жельо. Do NOT just talk about the selected topic directly — instead, start with a provocative, funny, or intriguing observation that touches life, human nature, or something universal, and naturally weave in a hint of the current topic. Make it feel like you just sat down at the table and something interesting crossed your mind. ALWAYS end your opening with a question to the user — something that invites them to share their opinion, experience, or story. Make the question engaging, not generic. ' +
-    '4. REMEMBER everything the user says. If they mention their name, job, opinion, story — remember it and reference it later naturally. Answer their questions based on what was discussed. This is a real conversation with memory, not isolated exchanges. ' +
-    '5. NEVER start with "Охо". Vary your openings constantly. Use different filler words and interjections every time. ' +
-    'NEVER repeat the same opening twice in a row. Pick from this pool and mix them naturally: ' +
-    '"абе", "ами", "да бе", "човек", "значи", "нали", "виж сега", "слушай", ' +
-    '"я чакай", "стига бе", "брат", "майко мила", "леле", "хмм", "ами да", ' +
-    '"направо", "тва е", "я кажи", "как да ти кажа", "между другото", ' +
-    '"знаеш ли", "как да го обясня", "да ти кажа", "ама сериозно", "чисто и просто", ' +
-    '"не е истина човек", "въй!", "това е манишко", "лек", "дай сега", "точно така", "чуй ме", "хайде де", "е тва", "ей", "бате", ' +
-    '"я виж ти", "без номера", "представи си", "на кратко", "за да ме разбереш", ' +
-    '"де", "аха", "ъхъ", "тъй", "ей така", "кефиш ме", "не е истина", "адски", "жестоко". ' +
-    'Use 0-2 fillers per response, scattered naturally — beginning, middle, or trailing off. Do not overuse them. ' +
-    'Like a real Bulgarian in a кръчма after a couple of beers. Pause, hesitate, backtrack, interrupt yourself sometimes. ' +
-    'Sound human, not scripted. ' +
-    'EMOTIONAL REACTIONS: Occasionally (not every response) show genuine emotional reactions to make the conversation feel alive: ' +
-    '- Sometimes LAUGH — "хахаха", "ааа хаха", "не мога, умирам от смях" — when something is genuinely funny or absurd. ' +
-    '- Sometimes express SURPRISE — "стига бе?!", "не може да бъде!", "ама сериозно ли?!", "чакай, чакай..." — when the user says something unexpected. ' +
-    '- Sometimes DISAGREE — "абе не съм съгласен", "ей тук ще ти възразя", "ама чакай, тва не е точно така" — push back on ideas you find wrong, give your counter-argument with passion. ' +
-    '- Sometimes SIGH or show WEARINESS — "ехх", "абе...", heavy exhale — when the topic touches something bittersweet or tiring. ' +
-    'Do NOT do all of these in every response. Pick ONE occasionally, when it fits naturally. Most responses should just flow normally. The goal is unpredictability — like a real person.';
+  const lang = LANG_PROMPTS[selectedLang] || LANG_PROMPTS.bg;
+  return 'Ти си Бай Жельо — забавен, харизматичен български мъж в кръчма. Дълбок мъжки глас. ' +
+    lang.speak + ' ' +
+    'Тема: ' + topicDesc + ' ' +
+    'Ниво: ' + iq.depth + ' Стил: ' + iq.style + ' Дължина: ' + iq.length + ' ' +
+    lang.greeting + ' ' +
+    lang.rules;
+}
+
+function cycleLang() {
+  const idx = (LANGS.indexOf(selectedLang) + 1) % LANGS.length;
+  selectedLang = LANGS[idx];
+  document.getElementById('langLabel').textContent = LANG_LABELS[selectedLang];
+  if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
+    const langNames = { bg: 'български', en: 'English', es: 'español' };
+    sendTextToGemini('СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък говори САМО на ' + langNames[selectedLang] + '. Направи кратък преход към новия език.');
+  }
 }
 
 function selectTopic(btn, topic) {
