@@ -976,9 +976,9 @@ class GeminiAudioPlayer {
     this.audioQueue = [];
     this.isPlaying = false;
     this.scheduledTime = 0;
-    this.minimumBufferSize = 2400; // 100ms at 24kHz — smaller chunks, smoother playback
+    this.minimumBufferSize = 7200; // 300ms at 24kHz — larger chunks, fewer gaps
     this.startDelay = 0.08;
-    this.scheduleAheadTime = 0.5; // Schedule further ahead to prevent gaps
+    this.scheduleAheadTime = 1.0; // Schedule 1s ahead to prevent gaps
     this.onPlayingChange = null;
   }
 
@@ -1016,7 +1016,7 @@ class GeminiAudioPlayer {
       this.audioQueue.push(this.processingBuffer);
       this.processingBuffer = new Float32Array(0);
 
-      if (!this.isPlaying && this.audioQueue.length >= 2) {
+      if (!this.isPlaying && this.audioQueue.length >= 3) {
         this.isPlaying = true;
         if (this.onPlayingChange) this.onPlayingChange(true);
         this.scheduledTime = this.context.currentTime + this.startDelay;
