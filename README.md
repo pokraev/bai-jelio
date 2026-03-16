@@ -13,7 +13,7 @@ This is a real-time voice conversation app powered by Google Gemini's Live Audio
 - **7 conversation topics**: Philosophy, Psychology, Sociology, Politics, Music, Literature, Life
 - **3 IQ levels**: Average (кръчмар mode), Intelligent (default), Genius (напил-се-и-цитира-Камю mode)
 - **3 languages**: Bulgarian (default), English (with thick Bulgarian accent), Spanish (same accent, different language)
-- **Craft beer expertise**: Ask him about beer and watch him light up about Metalhead Brewery. He won't bring it up himself though — he has *some* self-control
+- **Hidden easter eggs**: There might be some surprises if you ask the right questions. We're not saying what. Just... try talking about drinks
 - **Smart mute**: Mute pauses the session after the avatar finishes talking — zero network usage until you unmute
 - **Screen Wake Lock**: Your phone won't fall asleep while Бай Жельо is talking. Because that would be rude
 - **Auto-connect**: Saved API key? Straight to the conversation. No clicking around
