@@ -1120,15 +1120,13 @@ async function connect() {
         setup: {
           model: GEMINI_MODEL,
           generationConfig: {
-            responseModalities: 'AUDIO',
+            responseModalities: ['AUDIO'],
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: { voiceName: 'Charon' }
               }
             }
           },
-          outputAudioTranscription: {},
-          inputAudioTranscription: {},
           systemInstruction: {
             parts: [{ text: getSystemPrompt() }]
           }
