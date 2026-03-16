@@ -790,7 +790,7 @@ let wakeLock = null;
 
 async function requestWakeLock() {
   if ('wakeLock' in navigator) {
-    try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { console.warn('Wake Lock failed:', e); }
   }
 }
 function releaseWakeLock() {
@@ -1150,9 +1150,10 @@ async function connect() {
       // Setup complete - session ready
       if (response.setupComplete) {
         // Init audio lazily — may need user gesture, so wrap in a one-time click handler if suspended
-        audioPlayer.init().then(() => audioPlayer.resume()).catch(() => {
+        audioPlayer.init().then(() => audioPlayer.resume()).catch((e) => {
+          console.warn('AudioContext blocked (needs user gesture):', e);
           const unlockAudio = () => {
-            audioPlayer.init().then(() => audioPlayer.resume());
+            audioPlayer.init().then(() => audioPlayer.resume()).catch(e2 => console.error('Audio unlock failed:', e2));
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
           };
@@ -1252,17 +1253,19 @@ async function connect() {
     };
 
     ws.onclose = (e) => {
-      console.log('WebSocket closed:', e.code, e.reason);
+      console.warn('WebSocket closed:', e.code, e.reason, 'wasClean:', e.wasClean);
       if (!isConnected) return;
       const reason = (e.reason || '').toLowerCase();
       const isFatal = reason.includes('api key') || reason.includes('invalid') || reason.includes('denied') || reason.includes('permission') || reason.includes('authenticate');
       if (isFatal) {
+        console.error('Fatal connection error — clearing API key:', e.code, e.reason);
         setCookie('gemini_api_key', '', -1);
         setStatus('Invalid API key. Please enter a new one.', false);
         disconnect();
         return;
       }
       // All other errors: toilet break + auto-reconnect
+      console.warn('Recoverable error — toilet break, will reconnect in 30s:', e.code, e.reason);
       showToiletBreak();
     };
 
