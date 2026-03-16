@@ -1157,6 +1157,9 @@ async function connect() {
       if (response.serverContent) {
         const content = response.serverContent;
 
+        // If muted and previous turn is done, ignore new model output
+        if (mutedAfterTurn && content.modelTurn?.parts) return;
+
         if (content.modelTurn?.parts) {
           for (const part of content.modelTurn.parts) {
             if (part.inlineData?.mimeType?.startsWith('audio/')) {
@@ -1195,8 +1198,13 @@ async function connect() {
         if (content.turnComplete) {
           audioPlayer.complete();
           transcriptCharQueue = [];
-          setStatus('', false);
           trackUsage();
+          if (isMuted) {
+            mutedAfterTurn = true;
+            setStatus('Paused — unmute to continue', false);
+          } else {
+            setStatus('', false);
+          }
         }
 
         if (content.interrupted) {
@@ -1317,7 +1325,7 @@ async function startMic() {
     // ScriptProcessorNode: 4096 samples buffer, 1 input, 1 output
     scriptProcessor = micContext.createScriptProcessor(4096, 1, 1);
     scriptProcessor.onaudioprocess = (e) => {
-      if (!ws || ws.readyState !== WebSocket.OPEN || !isMicActive) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN || !isMicActive || isMuted) return;
       const float32 = e.inputBuffer.getChannelData(0);
       // Convert Float32 -> Int16
       const int16 = new Int16Array(float32.length);
@@ -1363,6 +1371,8 @@ function stopMic() {
 }
 
 let isMuted = false;
+let mutedAfterTurn = false;
+
 function toggleMute() {
   isMuted = !isMuted;
   const btn = document.getElementById('muteBtn');
@@ -1374,10 +1384,12 @@ function toggleMute() {
     micStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
   }
   if (isMuted) {
+    mutedAfterTurn = false;
     document.getElementById('stage').classList.remove('listening');
     resetWaveform();
     setStatus('Microphone muted', false);
   } else {
+    mutedAfterTurn = false;
     document.getElementById('stage').classList.add('listening');
     startWaveformAnimation();
     setStatus('', false);
