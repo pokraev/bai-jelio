@@ -825,7 +825,7 @@ const IQ_PROFILES = {
   },
   genius: {
     depth: 'Показваш изключително дълбоко и оригинално мислене. Правиш неочаквани връзки между идеи от различни области. Цитираш конкретни автори, произведения, и идеи с точност. Разкриваш скрити слоеве и парадокси.',
-    length: '4-7 sentences. По-обстойно, с дълбочина и нюанси.',
+    length: '3-5 sentences max. Дълбоко, но стегнато. Без излишни думи.',
     style: 'Говори като ерудиран мъдрец, който обаче си остава автентичен кръчмар. Използваш сложни идеи, но ги поднасяш достъпно. Правиш оригинални аналогии, виждаш неща които другите пропускат. Може да цитираш, да правиш метафори и да предизвикваш мисленето на събеседника.'
   }
 };
@@ -976,9 +976,9 @@ class GeminiAudioPlayer {
     this.audioQueue = [];
     this.isPlaying = false;
     this.scheduledTime = 0;
-    this.minimumBufferSize = 4800; // 200ms at 24kHz
+    this.minimumBufferSize = 2400; // 100ms at 24kHz — smaller chunks, smoother playback
     this.startDelay = 0.08;
-    this.scheduleAheadTime = 0.2;
+    this.scheduleAheadTime = 0.5; // Schedule further ahead to prevent gaps
     this.onPlayingChange = null;
   }
 
