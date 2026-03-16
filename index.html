@@ -774,12 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════
 
 const GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
-const GEMINI_MODELS = [
-  'models/gemini-2.5-flash-native-audio-preview-12-2025',
-  'models/gemini-2.0-flash-live-001'
-];
-let currentModelIdx = 0;
-function getModel() { return GEMINI_MODELS[currentModelIdx]; }
+const GEMINI_MODEL = 'models/gemini-2.5-flash-native-audio-preview-12-2025';
 
 let ws = null;
 let isConnected = false;
@@ -805,6 +800,7 @@ const LANGS = ['bg', 'en', 'es'];
 const LANG_LABELS = { bg: 'BG', en: 'EN', es: 'ES' };
 let isSpeaking = false;
 let transcriptCharQueue = [];
+let conversationHistory = [];
 
 const TOPIC_KNOWLEDGE = {
   philosophy: 'философия — познаваш отлично Сократ, Платон, Аристотел, Ницше, Камю, Сартр, стоиците и екзистенциалистите. Обясняваш сложни идеи с битови аналогии и хумор.',
@@ -1123,7 +1119,7 @@ async function connect() {
     ws.onopen = () => {
       const setupMsg = {
         setup: {
-          model: getModel(),
+          model: GEMINI_MODEL,
           generationConfig: {
             responseModalities: ['AUDIO'],
             speechConfig: {
@@ -1132,6 +1128,8 @@ async function connect() {
               }
             }
           },
+          outputAudioTranscription: {},
+          inputAudioTranscription: {},
           systemInstruction: {
             parts: [{ text: getSystemPrompt() }]
           }
@@ -1181,7 +1179,8 @@ async function connect() {
         // Character opens the conversation
         if (isToiletReturn) {
           isToiletReturn = false;
-          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно от рода на "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?" и продължи разговора от там, където спря.');
+          const summary = getConversationSummary();
+          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно от рода на "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?" и продължи разговора от там, където спря. ' + summary);
         } else {
           sendTextToGemini('Greet the user and introduce yourself. Be warm and enthusiastic.');
         }
@@ -1269,14 +1268,6 @@ async function connect() {
         return;
       }
       // On 1008, try next model immediately without toilet break
-      if (e.code === 1008 && currentModelIdx < GEMINI_MODELS.length - 1) {
-        currentModelIdx++;
-        console.warn('Model unsupported, trying fallback:', getModel());
-        isConnected = false;
-        stopMic();
-        connect();
-        return;
-      }
       // All other errors: toilet break + auto-reconnect
       console.warn('Recoverable error — toilet break, will reconnect in 30s:', e.code, e.reason);
       showToiletBreak();
@@ -1681,7 +1672,24 @@ function updateSpeakingViseme(time) {
 function driveLipSyncFromAudio(pcmData) { /* handled by FFT analyser */ }
 
 // ── Transcript ──
-function appendTranscript() { /* transcript removed */ }
+function appendTranscript(role, text) {
+  if (!text) return;
+  // Append to last entry if same role, otherwise new entry
+  const last = conversationHistory[conversationHistory.length - 1];
+  if (last && last.role === role) {
+    last.text += text;
+  } else {
+    conversationHistory.push({ role, text });
+  }
+  // Keep last 20 exchanges to avoid prompt bloat
+  if (conversationHistory.length > 20) conversationHistory.shift();
+}
+
+function getConversationSummary() {
+  if (conversationHistory.length === 0) return '';
+  return 'ПРЕДИШЕН РАЗГОВОР (продължи от тук):\n' +
+    conversationHistory.map(e => (e.role === 'user' ? 'Потребител' : 'Бай Жельо') + ': ' + e.text).join('\n');
+}
 
 // ── Popover / Positioning (preserved from original) ──
 function toggleLipsPopover(event) {
