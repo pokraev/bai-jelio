@@ -60,27 +60,31 @@
 
   .stage-wrap {
     position: relative;
-    width: 580px;
-    max-width: 100%;
+    width: min(580px, calc(100vw - 32px));
     flex-shrink: 0;
     overflow: visible;
     margin: 0 auto;
   }
   .stage {
     position: relative;
-    width: 580px; height: 340px;
+    width: min(580px, calc(100vw - 32px));
+    height: calc(min(580px, calc(100vw - 32px)) * 340 / 580);
     border-radius: 50%; overflow: hidden;
     box-shadow: 0 0 0 3px var(--accent), 0 0 40px var(--accent-glow), 0 20px 60px rgba(0,0,0,0.5);
     flex-shrink: 0;
   }
   .stage img {
-    position: absolute; top: 0; left: 0;
-    width: 100%; height: 100%; object-fit: cover;
+    position: absolute;
+    width: 580px; height: 340px;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
     z-index: 1;
   }
   #mouthCanvas {
-    position: absolute; top: 0; left: 0;
-    width: 100%; height: 100%;
+    position: absolute;
+    width: 580px; height: 340px;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
     z-index: 2;
     pointer-events: none;
   }
@@ -416,27 +420,9 @@
   .btn-load:hover { border-color: var(--accent); background: rgba(240,165,0,0.08); }
 
   @media (max-width: 420px) {
-    .stage-wrap {
-      width: calc(100% - 32px);
-      max-width: 406px;
-      margin: 0 auto;
-    }
-    .stage {
-      width: 100%; height: 238px;
-      max-width: 406px;
-      border-radius: 45% / 50%;
-    }
-    .stage img, #mouthCanvas {
-      width: 580px; height: 340px;
-      left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-    }
     .stage-fab-left { left: 40px; }
     .stage-fab-right { right: 40px; }
     .lips-popover { left: 12px; right: 12px; width: auto; }
-    .round-btn { width: 50px; height: 50px; }
-    .iq-btn { height: 50px; }
-    .lang-btn { height: 38px; }
   }
 
   .topics { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -527,10 +513,10 @@
   .round-btn:hover { border-color: var(--accent); color: var(--text); transform: translateY(-1px); }
   .round-btn.muted { background: rgba(255,107,107,0.15); border-color: var(--danger); color: var(--danger); }
   .lang-btn {
-    width: auto; height: 32px; border-radius: 16px;
-    padding: 0 12px; font-size: 0.65rem; font-weight: 700;
+    width: 44px; height: 44px; border-radius: 50%;
+    padding: 0; font-size: 0.6rem; font-weight: 700;
     letter-spacing: 0.5px; color: var(--accent);
-    border-color: rgba(240,165,0,0.35);
+    display: flex; align-items: center; justify-content: center;
   }
   .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
   .round-btn-danger { border-color: rgba(255,107,107,0.4); }
@@ -718,6 +704,23 @@
 </div>
 
 <script>
+// ── Cookie helpers ──
+function setCookie(name, value, days) {
+  const d = new Date();
+  d.setTime(d.getTime() + days * 86400000);
+  document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Strict';
+}
+function getCookie(name) {
+  const m = document.cookie.match('(^|;)\\s*' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[2]) : '';
+}
+
+// Restore API key from cookie
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = getCookie('gemini_api_key');
+  if (saved) document.getElementById('apiKey').value = saved;
+});
+
 // ══════════════════════════════════════════════════════
 // ── GEMINI LIVE API - WebSocket Connection          ──
 // ══════════════════════════════════════════════════════
@@ -1069,6 +1072,7 @@ async function connect() {
       // Setup complete - session ready
       if (response.setupComplete) {
         isConnected = true;
+        setCookie('gemini_api_key', apiKey, 90);
         connectBtn.classList.add('connected');
         connectBtn.disabled = true;
         document.getElementById('stageActions').style.display = 'flex';
@@ -2409,5 +2413,6 @@ function setStatus(msg, active) {
 </script>
 <div class="quota-bar" id="quotaBar">
   <span id="quotaDay"></span>
+  <a href="#" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;" style="pointer-events:auto;color:var(--text-muted);text-decoration:none;opacity:0.6;">reset key</a>
 </div>
 </body></html>
