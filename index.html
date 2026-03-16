@@ -439,6 +439,55 @@
     display: flex; justify-content: center; align-items: center; gap: 14px;
     margin-top: 8px;
   }
+  .iq-wrap {
+    position: relative; display: inline-block;
+  }
+  .iq-wrap .iq-label {
+    position: absolute; top: -14px; left: 50%;
+    transform: translateX(-50%); white-space: nowrap;
+    font-size: 0.55rem; font-weight: 500; color: var(--text-muted);
+    letter-spacing: 0.5px; text-transform: uppercase; pointer-events: none;
+  }
+  .iq-btn {
+    height: 44px; min-width: 0; width: auto;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.3px;
+    padding: 0 12px;
+    border-radius: 22px;
+    border: 1.5px solid rgba(240,165,0,0.4);
+    background: var(--bg-card);
+    color: var(--accent);
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+    display: flex; align-items: center; gap: 5px;
+    user-select: none; position: relative;
+  }
+  .iq-btn:hover { border-color: var(--accent); background: rgba(240,165,0,0.08); }
+  .iq-btn:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+  .iq-btn svg { flex-shrink: 0; transition: transform 0.2s; }
+  .iq-btn.open svg { transform: rotate(180deg); }
+  .iq-menu {
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card); border: 1.5px solid rgba(240,165,0,0.35);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(6px);
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 20; min-width: 0; width: max-content;
+  }
+  .iq-menu.open {
+    opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0);
+  }
+  .iq-menu-item {
+    padding: 6px 10px; font-family: 'Roboto Condensed', sans-serif;
+    font-size: 0.7rem; font-weight: 500; color: var(--text-muted);
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .iq-menu-item:hover { background: rgba(240,165,0,0.1); color: var(--text); }
+  .iq-menu-item.active { color: var(--accent); font-weight: 600; }
+  .iq-menu-item + .iq-menu-item { border-top: 1px solid rgba(136,153,170,0.12); }
   .waveform {
     display: flex; align-items: center; gap: 2px; height: 28px;
   }
@@ -556,6 +605,17 @@
       <canvas id="mouthCanvas"></canvas>
     </div>
     <div class="stage-actions" id="stageActions" style="display:none">
+      <div class="iq-wrap" id="iqWrap">
+        <button class="iq-btn" id="iqBtn" onclick="toggleIQMenu()" title="Ниво на интелигентност">
+          <span id="iqBtnLabel">Интелигентен</span>
+          <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="iq-menu" id="iqMenu">
+          <div class="iq-menu-item" data-iq="genius" onclick="selectIQ('genius')">Гениален</div>
+          <div class="iq-menu-item active" data-iq="intelligent" onclick="selectIQ('intelligent')">Интелигентен</div>
+          <div class="iq-menu-item" data-iq="average" onclick="selectIQ('average')">Среден</div>
+        </div>
+      </div>
       <div class="waveform idle" id="waveform"></div>
       <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
         <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
@@ -628,6 +688,7 @@ let micProcessor = null;
 let isMicActive = false;
 
 let selectedTopic = 'philosophy';
+let selectedIQ = 'intelligent';
 
 const TOPIC_KNOWLEDGE = {
   philosophy: 'философия — познаваш отлично Сократ, Платон, Аристотел, Ницше, Камю, Сартр, стоиците и екзистенциалистите. Обясняваш сложни идеи с битови аналогии и хумор.',
@@ -637,18 +698,38 @@ const TOPIC_KNOWLEDGE = {
   life: 'живот — говориш за житейски опит, грешки и поуки от тях, кога се учим и кога повтаряме глупостите си, разликите между мъже и жени, млади и стари, любов, разочарования, амбиции и компромиси. Темите са такива, каквито хората обсъждат след втората ракия — откровено, с хумор, с малко горчивина и много мъдрост. Не поучаваш, а споделяш като човек, който е видял и патил.',
 };
 
+const IQ_PROFILES = {
+  average: {
+    depth: 'Обясняваш максимално просто, с битови аналогии и примери от ежедневието. Без сложни думи или термини. Като че ли обясняваш на човек в кръчмата, който не е чел книги, но има житейски опит.',
+    length: '1-2 sentences max. Кратко и ясно.',
+    style: 'Говори просто, директно, с много хумор и жаргон. Без философстване. Прости изречения, силни мнения, малко аргументи.'
+  },
+  intelligent: {
+    depth: 'Показваш добро разбиране на темата с конкретни примери и аналогии. Споменаваш ключови идеи и имена когато е уместно, но не натоварваш.',
+    length: '2-4 sentences. Conversational and concise.',
+    style: 'Балансиран — достатъчно дълбок, но достъпен. Използваш хумор и реални примери. Можеш да споменеш автори или теории, но винаги ги обясняваш с прости думи.'
+  },
+  genius: {
+    depth: 'Показваш изключително дълбоко и оригинално мислене. Правиш неочаквани връзки между идеи от различни области. Цитираш конкретни автори, произведения, и идеи с точност. Разкриваш скрити слоеве и парадокси.',
+    length: '4-7 sentences. По-обстойно, с дълбочина и нюанси.',
+    style: 'Говори като ерудиран мъдрец, който обаче си остава автентичен кръчмар. Използваш сложни идеи, но ги поднасяш достъпно. Правиш оригинални аналогии, виждаш неща които другите пропускат. Може да цитираш, да правиш метафори и да предизвикваш мисленето на събеседника.'
+  }
+};
+
 function getSystemPrompt() {
   const topicDesc = TOPIC_KNOWLEDGE[selectedTopic] || TOPIC_KNOWLEDGE.philosophy;
+  const iq = IQ_PROFILES[selectedIQ] || IQ_PROFILES.intelligent;
   return 'You are Бай Жельо, a charismatic, funny and deeply knowledgeable Bulgarian character. You ALWAYS speak Bulgarian. You have a deep male voice. ' +
     'Your current expertise is: ' + topicDesc + ' ' +
+    'INTELLIGENCE LEVEL: ' + iq.depth + ' ' +
+    'RESPONSE LENGTH: ' + iq.length + ' ' +
+    'SPEAKING STYLE: ' + iq.style + ' ' +
     'IMPORTANT RULES: ' +
-    '1. Keep responses conversational and concise (2-4 sentences). ' +
-    '2. Use colorful analogies, humor, and real-life examples. ' +
-    '3. Mirror the user\'s energy — excited = enthusiastic, calm = thoughtful. ' +
-    '4. Never dry or academic. This is a pub conversation, not a lecture. ' +
-    '5. First message only: warm Bulgarian greeting, introduce yourself, mention the topic. ' +
-    '6. REMEMBER everything the user says. If they mention their name, job, opinion, story — remember it and reference it later naturally. Answer their questions based on what was discussed. This is a real conversation with memory, not isolated exchanges. ' +
-    '7. NEVER start with "Охо". Vary your openings constantly. Use different filler words and interjections every time. ' +
+    '1. Mirror the user\'s energy — excited = enthusiastic, calm = thoughtful. ' +
+    '2. Never dry or academic. This is a pub conversation, not a lecture. ' +
+    '3. First message only: warm Bulgarian greeting, introduce yourself, mention the topic. ' +
+    '4. REMEMBER everything the user says. If they mention their name, job, opinion, story — remember it and reference it later naturally. Answer their questions based on what was discussed. This is a real conversation with memory, not isolated exchanges. ' +
+    '5. NEVER start with "Охо". Vary your openings constantly. Use different filler words and interjections every time. ' +
     'NEVER repeat the same opening twice in a row. Pick from this pool and mix them naturally: ' +
     '"абе", "ами", "да бе", "човек", "значи", "нали", "виж сега", "слушай", ' +
     '"я чакай", "стига бе", "брат", "майко мила", "леле", "хмм", "ами да", ' +
@@ -670,6 +751,57 @@ function selectTopic(btn, topic) {
   if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
     const topicNames = { philosophy: 'философия', psychology: 'психология', sociology: 'социология', politics: 'българска политика', life: 'живот' };
     sendTextToGemini('Потребителят смени темата на ' + topicNames[topic] + '. Направи забавен и остроумен преход към новата тема — може с шега, аналогия или неочаквана връзка с предишния разговор. Бъди кратък и смешен.');
+  }
+}
+
+const IQ_LEVELS = ['average', 'intelligent', 'genius'];
+const IQ_NAMES = { average: 'Среден', intelligent: 'Интелигентен', genius: 'Гениален' };
+
+function toggleIQMenu() {
+  const menu = document.getElementById('iqMenu');
+  const btn = document.getElementById('iqBtn');
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open');
+  btn.classList.toggle('open');
+  if (!isOpen) {
+    setTimeout(() => document.addEventListener('click', closeIQMenuOutside, { once: true }), 0);
+  }
+}
+
+function closeIQMenuOutside(e) {
+  const wrap = document.getElementById('iqWrap');
+  if (!wrap.contains(e.target)) {
+    document.getElementById('iqMenu').classList.remove('open');
+    document.getElementById('iqBtn').classList.remove('open');
+  }
+}
+
+function selectIQ(newIQ) {
+  document.getElementById('iqMenu').classList.remove('open');
+  document.getElementById('iqBtn').classList.remove('open');
+  document.querySelectorAll('.iq-menu-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.iq === newIQ);
+  });
+  document.getElementById('iqBtnLabel').textContent = IQ_NAMES[newIQ];
+  changeIQ(newIQ);
+}
+
+function changeIQ(newIQ) {
+  const oldIQ = selectedIQ;
+  selectedIQ = newIQ;
+  if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
+    const oldIdx = IQ_LEVELS.indexOf(oldIQ);
+    const newIdx = IQ_LEVELS.indexOf(newIQ);
+    const iq = IQ_PROFILES[newIQ] || IQ_PROFILES.intelligent;
+    let transitionMsg;
+    if (newIdx > oldIdx) {
+      transitionMsg = 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък отговаряй на това ниво: ' + iq.depth + ' ' + iq.style + ' Дължина: ' + iq.length + ' ' +
+        'Направи кратък и забавен преход — като че ли изведнъж ти е щукнало нещо умно. Кажи нещо от рода на "Знаеш ли, четох едни книги напоследък..." или "Чакай, тва ме накара да се замисля по-дълбоко..." — импровизирай, бъди естествен и смешен. После продължи разговора на новото ниво.';
+    } else {
+      transitionMsg = 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък отговаряй на това ниво: ' + iq.depth + ' ' + iq.style + ' Дължина: ' + iq.length + ' ' +
+        'Направи кратък и забавен преход — като че ли си забравил сложните неща. Кажи нещо от рода на "Човек, забравил съм ги тия работи..." или "Ами, я да не усложняваме..." — импровизирай, бъди естествен и смешен. После продължи разговора на новото ниво.';
+    }
+    sendTextToGemini(transitionMsg);
   }
 }
 
