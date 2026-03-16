@@ -561,6 +561,23 @@
 
   .note { font-size: 0.72rem; color: var(--text-muted); opacity: 0.5; text-align: center; line-height: 1.5; }
 
+  .toilet-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(15,25,35,0.85);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s;
+  }
+  .toilet-overlay.visible { opacity: 1; pointer-events: auto; }
+  .toilet-box {
+    background: var(--bg-card); border: 2px solid var(--accent);
+    border-radius: var(--radius); padding: 28px 24px;
+    text-align: center; max-width: 320px; width: 90%;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  }
+  .toilet-box .emoji { font-size: 3rem; margin-bottom: 12px; }
+  .toilet-box .msg { font-size: 0.9rem; color: var(--text); line-height: 1.6; margin-bottom: 16px; }
+  .toilet-box .timer { font-size: 0.75rem; color: var(--text-muted); }
+
   .quota-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
     display: flex; justify-content: center; gap: 18px;
@@ -1127,7 +1144,12 @@ async function connect() {
         startMic();
 
         // Character opens the conversation
-        sendTextToGemini('Greet the user and introduce yourself. Be warm and enthusiastic.');
+        if (isToiletReturn) {
+          isToiletReturn = false;
+          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно от рода на "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?" и продължи разговора от там, където спря.');
+        } else {
+          sendTextToGemini('Greet the user and introduce yourself. Be warm and enthusiastic.');
+        }
         return;
       }
 
@@ -1188,23 +1210,59 @@ async function connect() {
 
     ws.onerror = (e) => {
       console.error('WebSocket error:', e);
-      setStatus('Connection error', false);
-      disconnect();
+      // onerror is always followed by onclose, so let onclose handle recovery
     };
 
     ws.onclose = (e) => {
       console.log('WebSocket closed:', e.code, e.reason);
-      if (isConnected) {
-        setStatus('Connection closed', false);
+      if (!isConnected) return;
+      const reason = (e.reason || '').toLowerCase();
+      const isFatal = reason.includes('api key') || reason.includes('invalid') || reason.includes('denied') || reason.includes('permission') || reason.includes('authenticate');
+      if (isFatal) {
+        setCookie('gemini_api_key', '', -1);
+        setStatus('Invalid API key. Please enter a new one.', false);
         disconnect();
+        return;
       }
+      // All other errors: toilet break + auto-reconnect
+      showToiletBreak();
     };
 
   } catch (err) {
     console.error('Connection error:', err);
-    setStatus('Failed to connect: ' + err.message, false);
-    connectBtn.disabled = false;
+    const msg = (err.message || '').toLowerCase();
+    const isFatal = msg.includes('api key') || msg.includes('invalid') || msg.includes('denied');
+    if (isFatal) {
+      setStatus('Failed to connect: ' + err.message, false);
+      connectBtn.disabled = false;
+    } else {
+      showToiletBreak();
+    }
   }
+}
+
+let isToiletReturn = false;
+
+function showToiletBreak() {
+  // Soft disconnect without resetting UI
+  if (ws) { ws.close(); ws = null; }
+  isConnected = false;
+  stopMic();
+  isToiletReturn = true;
+  const overlay = document.getElementById('toiletOverlay');
+  const timerEl = document.getElementById('toiletTimer');
+  overlay.classList.add('visible');
+  let sec = 30;
+  timerEl.textContent = sec;
+  const countdown = setInterval(() => {
+    sec--;
+    timerEl.textContent = sec;
+    if (sec <= 0) {
+      clearInterval(countdown);
+      overlay.classList.remove('visible');
+      connect();
+    }
+  }, 1000);
 }
 
 function disconnect() {
@@ -2455,6 +2513,13 @@ function setStatus(msg, active) {
   el.className = 'status' + (active ? ' active' : '');
 }
 </script>
+<div class="toilet-overlay" id="toiletOverlay">
+  <div class="toilet-box">
+    <div class="emoji">🚽🍺</div>
+    <div class="msg">Бай Жельо отиде до тоалетната да направи място за още бира. Връща се след малко...</div>
+    <div class="timer" id="toiletTimer">30</div>
+  </div>
+</div>
 <div class="quota-bar" id="quotaBar">
   <span id="quotaDay"></span>
   <a href="#" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;" style="pointer-events:auto;color:var(--text-muted);text-decoration:none;opacity:0.6;">reset key</a>
