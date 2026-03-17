@@ -628,7 +628,7 @@
 <body>
 
 <div class="app">
-  <h1>Поговори с бай Жельо<br><span style="font-style:italic; font-size:0.55em; font-weight:300">Алкохолик-събеседник, който много ги разбира нещата</span></h1>
+  <h1>Поговори с бай Жельо<br><span id="subtitle" style="font-style:italic; font-size:0.55em; font-weight:300">Алкохолик-събеседник, който много ги разбира нещата</span></h1>
 
   <div class="topics" id="topics">
     <button class="topic-btn active" onclick="selectNearby(this)">Кво става наоколо</button>
@@ -918,7 +918,19 @@ function cycleLang() {
 }
 
 let nearbyCache = null;
-let waitingForCityVoice = 0; // 0=not waiting, 1=avatar asked (skip next turn), 2=user answered (grab city)
+let waitingForCityVoice = 0;
+
+function updateSubtitle() {
+  const city = getCookie('user_city');
+  const el = document.getElementById('subtitle');
+  if (city) {
+    el.textContent = 'В момента е в ' + city + ' и знае какво се случва там';
+  } else {
+    el.textContent = 'Алкохолик-събеседник, който много ги разбира нещата';
+  }
+}
+// Update on load
+document.addEventListener('DOMContentLoaded', updateSubtitle); // 0=not waiting, 1=avatar asked (skip next turn), 2=user answered (grab city)
 
 function selectNearby(btn) {
   document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
@@ -936,7 +948,7 @@ function selectNearby(btn) {
   // Have saved city but no cache yet — announce toilet, wait for turnComplete
   const savedCity = getCookie('user_city');
   if (savedCity) {
-    waitingForCityVoice = 3;
+    waitingForCityVoice = 10;
     safeSwitchCommand('Кажи кратко и смешно че трябва да идеш до тоалетната, и като се върнеш ще разкажеш кво става в ' + savedCity + '.');
     return;
   }
@@ -990,6 +1002,7 @@ async function fetchNearbyEvents(city) {
 function startNearbyFlow(city) {
   console.log('Nearby flow — city:', city);
   setCookie('user_city', city, 30);
+  updateSubtitle();
 
   // Show toilet overlay — avatar already announced going to toilet
   const overlay = document.getElementById('toiletOverlay');
@@ -1349,7 +1362,7 @@ async function connect() {
             );
           } else if (savedCity) {
             // Have city but no events cache — greet, announce toilet, fetch events
-            waitingForCityVoice = 3;
+            waitingForCityVoice = 10; // wait for toilet announcement to finish
             sendTextToGemini(
               'Поздрави потребителя кратко и смешно. Кажи че знаеш че сте в ' + savedCity + '. ' +
               'После кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират, и като се върнеш ще му разкажеш кво става в ' + savedCity + '.'
@@ -1419,25 +1432,34 @@ async function connect() {
 
           // Waiting for user to say city
           if (waitingForCityVoice === 1) {
-            // Avatar finished asking — wait for next turn (user answers, avatar confirms)
+            // Avatar finished asking — wait for user answer + avatar confirmation
             waitingForCityVoice = 2;
             console.log('State 1→2: avatar asked, waiting for user answer');
-          } else if (waitingForCityVoice >= 2) {
-            // Avatar confirmed + announced toilet — grab city and go
+          } else if (waitingForCityVoice >= 2 && waitingForCityVoice < 10) {
+            // Try to grab city from transcript
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
             const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() : null;
-            console.log('City from transcript:', city, '| History:', conversationHistory.slice(-4).map(e => e.role + ': ' + e.text.substring(0, 60)));
+            console.log('City from transcript:', city, '| state:', waitingForCityVoice);
             if (city) {
-              waitingForCityVoice = 0;
-              startNearbyFlow(city);
+              // Got city — now tell avatar to announce toilet
+              waitingForCityVoice = 10; // special state: waiting for toilet announcement to finish
+              setCookie('user_city', city, 30);
+              updateSubtitle();
+              console.log('City saved, avatar announcing toilet for:', city);
+              sendTextToGemini('Добре, ' + city + ' значи! Кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става в ' + city + '. Бъди кратък.');
             } else if (waitingForCityVoice < 5) {
-              // Transcript might not have arrived yet, wait one more turn
               waitingForCityVoice++;
               console.log('No city yet, waiting... state:', waitingForCityVoice);
             } else {
               waitingForCityVoice = 0;
               console.warn('No city after retries');
             }
+          } else if (waitingForCityVoice === 10) {
+            // Avatar finished announcing toilet — NOW open toilet window
+            waitingForCityVoice = 0;
+            const city = getCookie('user_city');
+            console.log('Toilet announced, opening window for:', city);
+            if (city) startNearbyFlow(city);
           }
 
           if (isMuted) {
@@ -1539,6 +1561,7 @@ function disconnect() {
   releaseWakeLock();
   setCookie('user_city', '', -1);
   nearbyCache = null;
+  updateSubtitle();
   if (ws) {
     ws.close();
     ws = null;
