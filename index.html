@@ -947,50 +947,6 @@ function cityCaptured(rawCity) {
   sendTextToGemini('Потвърди града на потребителя и кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става там. Бъди кратък.');
 }
 
-// Use LLM to extract city name. Retries on 429 with delay.
-async function cleanCityName(raw, retryCount) {
-  retryCount = retryCount || 0;
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return raw.trim();
-  try {
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text:
-            'The user was asked which city they are in. They replied: "' + raw + '"\n' +
-            'Extract ONLY the city name. No country, no filler words, no explanation.\n' +
-            'If the speech is garbled, try to guess the closest real city name.\n' +
-            'If the user did NOT say a city (e.g. they changed the subject, said "I don\'t know", refused, or said something unrelated), reply with exactly: NONE\n' +
-            'Otherwise reply with just the city name, nothing else. Example: Сливен or Amsterdam or Barcelona'
-          }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 20 }
-        })
-      }
-    );
-    if (res.status === 429 && retryCount < 3) {
-      const delay = (retryCount + 1) * 2000;
-      console.warn('City LLM 429 — retrying in', delay, 'ms (attempt', retryCount + 1, ')');
-      await new Promise(r => setTimeout(r, delay));
-      return cleanCityName(raw, retryCount + 1);
-    }
-    if (!res.ok) {
-      console.warn('City LLM returned', res.status);
-      return raw.trim();
-    }
-    const data = await res.json();
-    const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-    console.log('LLM city extraction:', raw, '→', city);
-    if (city.toUpperCase() === 'NONE') return null;
-    return city || raw.trim();
-  } catch (err) {
-    console.error('City extraction LLM error:', err);
-    return raw.trim();
-  }
-}
-
 // Poll for user transcript (inputTranscription often lags behind turnComplete)
 let cityPollTimer = null;
 async function pollForCity(attempt) {
@@ -1056,20 +1012,24 @@ function selectNearby(btn) {
   );
 }
 
-async function fetchNearbyEvents(city) {
+// Single LLM call: extract clean city name + fetch events together
+// Returns { city: "clean name", events: [...] or string or null }
+async function fetchCityAndEvents(rawCity) {
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return null;
+  if (!apiKey) return { city: rawCity, events: null };
   try {
     const today = new Date().toISOString().slice(0, 10);
     const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
     const responseLang = langMap[selectedLang] || 'Bulgarian';
-    const prompt = 'Location: ' + city + '. Date: ' + today + '. ' +
-      'List 5-8 interesting things happening in or near ' + city + ' today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
+    const prompt = 'The user said they are in: "' + rawCity + '"\n\n' +
+      'TASK 1: Extract the correct city name from what the user said. Fix any speech-to-text errors. Remove filler words, country names, prepositions. Just the city name.\n\n' +
+      'TASK 2: Date: ' + today + '. List 5-8 interesting things happening in or near that city today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
       'Each item: name, 1-line description, when, where, and a "context" field with 2-3 sentences of background info, fun facts, or talking points that a colorful bar regular could use to chat about this event in an entertaining way. ' +
-      'Be specific and factual. ' +
-      'Respond in ' + responseLang + '. ' +
-      'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]';
-    console.log('Fetching events — sending to LLM:', prompt);
+      'Be specific and factual.\n\n' +
+      'Respond in ' + responseLang + '.\n' +
+      'Respond ONLY with this JSON format (no markdown, no extra text):\n' +
+      '{"city":"CLEAN CITY NAME","events":[{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]}';
+    console.log('Fetching city+events for:', rawCity);
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
       {
@@ -1084,22 +1044,25 @@ async function fetchNearbyEvents(city) {
     );
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('Events raw response:', text);
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    console.log('City+events raw response:', text.substring(0, 300));
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const events = JSON.parse(jsonMatch[0]);
-      console.log('Events parsed:', events.map(e => '- ' + e.name + ' (' + e.when + ')').join('\n'));
-      return events;
+      const parsed = JSON.parse(jsonMatch[0]);
+      const city = parsed.city || rawCity;
+      const events = parsed.events || null;
+      console.log('Extracted city:', city, '| events:', events ? events.length : 0);
+      return { city, events };
     }
-    return text;
+    return { city: rawCity, events: text };
   } catch (err) {
-    console.error('Events fetch error:', err);
-    return null;
+    console.error('City+events fetch error:', err);
+    return { city: rawCity, events: null };
   }
 }
 
 async function startNearbyFlow(rawCity) {
   console.log('Nearby flow — raw city:', rawCity);
+  let cleanedCity = rawCity; // will be updated by LLM call
 
   // Show toilet overlay — avatar already announced going to toilet
   const overlay = document.getElementById('toiletOverlay');
@@ -1111,15 +1074,15 @@ async function startNearbyFlow(rawCity) {
   if (ws) { ws.close(); ws = null; }
   stopMic();
 
-  // Now that WS is closed, use LLM to extract clean city name (no 429 conflict)
-  const city = await cleanCityName(rawCity) || rawCity;
-  console.log('Clean city:', rawCity, '→', city);
-  setCookie('user_city', city, 30);
-  // Subtitle updates AFTER toilet overlay closes (see countdown below)
-
-  // Fetch real events during toilet break
+  // Single LLM call: extract clean city name + fetch events (no separate cleanCityName call)
   const today = new Date().toISOString().slice(0, 10);
-  fetchNearbyEvents(city).then(events => {
+  fetchCityAndEvents(rawCity).then(result => {
+    const city = result.city;
+    const events = result.events;
+    setCookie('user_city', city, 30);
+    // Store clean city for subtitle update when overlay closes
+    cleanedCity = city;
+    console.log('Clean city:', rawCity, '→', city);
     if (events && Array.isArray(events)) {
       nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
         events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
@@ -1142,9 +1105,9 @@ async function startNearbyFlow(rawCity) {
     if (sec <= 0) {
       clearInterval(countdown);
       overlay.classList.remove('visible');
-      updateSubtitle(city);
+      updateSubtitle(cleanedCity);
       if (!nearbyCache) {
-        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Разкажи какво интересно се случва. Импровизирай.';
+        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanedCity + '. Разкажи какво интересно се случва. Импровизирай.';
       }
       isToiletReturn = false;
       isSilentReconnect = false;
