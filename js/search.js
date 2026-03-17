@@ -36,7 +36,8 @@ export async function searchAndNarrate(query, opts) {
     { model: 'gemini-2.5-flash' }
   );
 
-  if (knowledgeResult && !knowledgeResult.startsWith('NEED_LIVE_DATA') && knowledgeResult !== '__429__') {
+  if (knowledgeResult === '__429__') return '__429__';
+  if (knowledgeResult && !knowledgeResult.startsWith('NEED_LIVE_DATA')) {
     console.log('[search] model knowledge sufficient:', knowledgeResult.substring(0, 200));
     return knowledgeResult;
   }
