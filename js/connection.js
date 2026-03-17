@@ -221,6 +221,15 @@ export async function connect() {
           },
           outputAudioTranscription: {},
           inputAudioTranscription: {},
+          realtimeInputConfig: {
+            automaticActivityDetection: {
+              disabled: false,
+              startOfSpeechSensitivity: 'START_OF_SPEECH_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_OF_SPEECH_SENSITIVITY_LOW',
+              prefixPaddingMs: 100,
+              silenceTimeoutMs: 1000,
+            }
+          },
           systemInstruction: {
             parts: [{ text: getSystemPrompt() }]
           }
