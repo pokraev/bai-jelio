@@ -1063,9 +1063,10 @@ function selectNearby(btn) {
 
 // Single LLM call: extract clean city name + fetch events together
 // Returns { city: "clean name", events: [...] or string or null }
-async function fetchCityAndEvents(rawCity) {
+async function fetchCityAndEvents(rawCity, retryCount) {
+  retryCount = retryCount || 0;
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return { city: rawCity, events: null };
+  if (!apiKey) return { city: null, events: null };
   try {
     const today = new Date().toISOString().slice(0, 10);
     const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
@@ -1092,6 +1093,12 @@ async function fetchCityAndEvents(rawCity) {
         })
       }
     );
+    if (res.status === 429 && retryCount < 5) {
+      const delay = (retryCount + 1) * 3000;
+      console.warn('fetchCityAndEvents 429 — retrying in', delay, 'ms (attempt', retryCount + 1, ')');
+      await new Promise(r => setTimeout(r, delay));
+      return fetchCityAndEvents(rawCity, retryCount + 1);
+    }
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log('City+events raw response:', text.substring(0, 300));
