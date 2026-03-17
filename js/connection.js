@@ -357,17 +357,16 @@ export function sendSystemInstruction(text) {
 export function safeSwitchCommand(text) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   const micStream = getMicStream();
-  // Temporarily mute mic to avoid audio conflict
+  // Immediately stop everything — like an interruption
   if (micStream) micStream.getAudioTracks().forEach(t => { t.enabled = false; });
-  // Stop any playing audio
   audioPlayer.stop();
   bus.emit('audio:playing-changed', { playing: false });
-  // Small delay to let things settle, then send
+  bus.emit('turn:interrupted');
+  // Send the new instruction
   setTimeout(() => {
     sendSystemInstruction(text);
-    // Re-enable mic after send (unless user has muted)
     if (!getIsMuted() && micStream) micStream.getAudioTracks().forEach(t => { t.enabled = true; });
-  }, 200);
+  }, 100);
 }
 
 /**
