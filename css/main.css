@@ -448,11 +448,25 @@ select {
 
 .stage-actions {
   display: flex; justify-content: center; align-items: center; gap: 14px;
-  margin-top: 8px;
+  margin-top: 18px;
+}
+.actions-row {
+  display: contents;
+}
+@media (max-width: 480px) {
+  .stage-actions {
+    flex-wrap: wrap; gap: 10px;
+  }
+  .actions-row {
+    display: flex; justify-content: center; align-items: center; gap: 14px;
+    width: 100%;
+  }
+  .actions-row-top { margin-bottom: 2px; }
 }
 .iq-wrap {
-  position: relative; display: inline-block;
+  position: relative; display: inline-block; min-width: 120px;
 }
+.iq-wrap .iq-btn { width: 100%; justify-content: center; }
 .iq-wrap .iq-label {
   position: absolute; top: -14px; left: 50%;
   transform: translateX(-50%); white-space: nowrap;
@@ -501,6 +515,7 @@ select {
 .iq-menu-item + .iq-menu-item { border-top: 1px solid rgba(136,153,170,0.12); }
 .waveform {
   display: flex; align-items: center; gap: 2px; height: 28px;
+  width: 40px; justify-content: center;
 }
 .waveform .bar {
   width: 3px; border-radius: 2px;

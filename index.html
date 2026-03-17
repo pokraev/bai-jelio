@@ -67,39 +67,43 @@
       <canvas id="mouthCanvas"></canvas>
     </div>
     <div class="stage-actions" id="stageActions" style="display:none">
-      <div class="iq-wrap" id="voiceWrap">
-        <button class="iq-btn" id="voiceBtn" onclick="toggleVoiceMenu()" title="Глас">
-          <span id="voiceBtnLabel">Enceladus</span>
-          <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-        <div class="iq-menu" id="voiceMenu"></div>
-      </div>
-      <div class="iq-wrap" id="iqWrap">
-        <button class="iq-btn" id="iqBtn" onclick="toggleIQMenu()" title="Ниво на интелигентност">
-          <span id="iqBtnLabel">Интелигентен</span>
-          <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-        <div class="iq-menu" id="iqMenu">
-          <div class="iq-menu-item" data-iq="genius" onclick="selectIQ('genius')">Гениален</div>
-          <div class="iq-menu-item active" data-iq="intelligent" onclick="selectIQ('intelligent')">Интелигентен</div>
-          <div class="iq-menu-item" data-iq="average" onclick="selectIQ('average')">Среден</div>
+      <div class="actions-row actions-row-top">
+        <div class="iq-wrap" id="voiceWrap">
+          <button class="iq-btn" id="voiceBtn" onclick="toggleVoiceMenu()" title="Глас">
+            <span id="voiceBtnLabel">Enceladus</span>
+            <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="iq-menu" id="voiceMenu"></div>
+        </div>
+        <div class="iq-wrap" id="iqWrap">
+          <button class="iq-btn" id="iqBtn" onclick="toggleIQMenu()" title="Ниво на интелигентност">
+            <span id="iqBtnLabel">Интелигентен</span>
+            <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="iq-menu" id="iqMenu">
+            <div class="iq-menu-item" data-iq="genius" onclick="selectIQ('genius')">Гениален</div>
+            <div class="iq-menu-item active" data-iq="intelligent" onclick="selectIQ('intelligent')">Интелигентен</div>
+            <div class="iq-menu-item" data-iq="average" onclick="selectIQ('average')">Среден</div>
+          </div>
         </div>
       </div>
-      <button class="round-btn lang-btn" id="langBtn" onclick="cycleLang()" title="Language">
-        <span id="langLabel">BG</span>
-      </button>
-      <div class="waveform idle" id="waveform"></div>
-      <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
-        <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-        <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-      </button>
-      <input type="range" id="micGain" min="0" max="1" step="0.01" value="0.5" oninput="setMicGain(this.value)" title="Mic sensitivity" style="width:40px; display:none" class="mic-gain-inline">
-      <button class="round-btn round-btn-danger" id="disconnectBtn" onclick="disconnect()" title="Disconnect">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-      </button>
-      <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-      </button>
+      <div class="actions-row actions-row-bottom">
+        <button class="round-btn lang-btn" id="langBtn" onclick="cycleLang()" title="Language">
+          <span id="langLabel">BG</span>
+        </button>
+        <div class="waveform idle" id="waveform"></div>
+        <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
+          <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </button>
+        <input type="range" id="micGain" min="0" max="1" step="0.01" value="0.5" oninput="setMicGain(this.value)" title="Mic sensitivity" style="width:40px; display:none" class="mic-gain-inline">
+        <button class="round-btn round-btn-danger" id="disconnectBtn" onclick="disconnect()" title="Disconnect">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+        </button>
+        <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
     </div>
   </div>
 
