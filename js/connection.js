@@ -224,8 +224,8 @@ export async function connect() {
           realtimeInputConfig: {
             automaticActivityDetection: {
               disabled: false,
-              prefixPaddingMs: 100,
-              silenceTimeoutMs: 1000,
+              prefix_padding_ms: 100,
+              silence_timeout_ms: 1000,
             }
           },
           systemInstruction: {
