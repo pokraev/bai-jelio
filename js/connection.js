@@ -308,7 +308,15 @@ export function disconnect() {
   connectBtn.disabled = false;
   document.getElementById('stageActions').style.display = 'none';
   document.getElementById('micGain').style.display = 'none';
-  document.getElementById('configSection').style.display = '';
+  const savedKey = getCookie('gemini_api_key');
+  const cheersBtn = document.getElementById('cheersBtn');
+  if (savedKey) {
+    document.getElementById('configSection').style.display = 'none';
+    if (cheersBtn) cheersBtn.style.display = '';
+  } else {
+    document.getElementById('configSection').style.display = '';
+    if (cheersBtn) cheersBtn.style.display = 'none';
+  }
   document.getElementById('configStatus').textContent = 'Disconnected';
   document.getElementById('stage').classList.remove('speaking', 'listening');
 
@@ -421,6 +429,8 @@ function handleSetupComplete(apiKey) {
   document.getElementById('stageActions').style.display = 'flex';
   document.getElementById('micGain').style.display = '';
   document.getElementById('configSection').style.display = 'none';
+  const cheersBtn = document.getElementById('cheersBtn');
+  if (cheersBtn) cheersBtn.style.display = 'none';
   document.getElementById('configStatus').textContent = 'Connected to Gemini Live';
   setStatus('', false);
 

@@ -95,12 +95,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     initPositioning();
   }
 
-  // Restore API key from cookie and auto-connect
+  // Restore API key from cookie — show "Наздраве!" button instead of key input
   const savedKey = getCookie('gemini_api_key');
   if (savedKey) {
     const input = document.getElementById('apiKey');
     if (input) input.value = savedKey;
-    connect();
+    const configSection = document.getElementById('configSection');
+    const cheersBtn = document.getElementById('cheersBtn');
+    if (configSection) configSection.style.display = 'none';
+    if (cheersBtn) cheersBtn.style.display = '';
   }
 });
 
