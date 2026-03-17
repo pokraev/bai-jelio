@@ -529,6 +529,11 @@ function handleServerContent(content) {
     }
     pendingBotText = '';
 
+    // If muted, pause after this turn — block further model output until unmuted
+    if (getIsMuted()) {
+      setMutedAfterTurn(true);
+    }
+
     bus.emit('turn:complete');
   }
 
