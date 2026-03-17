@@ -1,7 +1,7 @@
 // ── Intent parser: decides if a user message needs live web data ──
 
 import { geminiRest, canCallRest } from './gemini-rest.js';
-import { getContext } from './memory.js';
+import { getConversationSummary } from './memory.js';
 
 const CLASSIFY_COOLDOWN_MS = 120_000; // max 1 LLM classification per 2 min
 let lastClassifyTime = 0;
@@ -57,7 +57,7 @@ export async function parseIntent(userMessage, conversationContext) {
     if (timeMatch) result.resolvedTimeframe = timeMatch;
 
     // Attempt to pull location from conversation context
-    const ctx = conversationContext || getContext();
+    const ctx = conversationContext || { summary: getConversationSummary() };
     if (ctx.summary) {
       // Simple heuristic: look for city mention in summary
       result.resolvedLocation = null; // caller can enrich from city state
@@ -78,7 +78,7 @@ export async function parseIntent(userMessage, conversationContext) {
 
   try {
     lastClassifyTime = Date.now();
-    const ctx = conversationContext || getContext();
+    const ctx = conversationContext || { summary: getConversationSummary() };
     const contextStr = ctx.summary ? 'Conversation context: ' + ctx.summary + '\n' : '';
 
     const response = await geminiRest(
