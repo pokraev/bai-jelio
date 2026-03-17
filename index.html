@@ -911,14 +911,11 @@ function getSystemPrompt() {
     lang.greeting + ' ' + lang.rules;
 }
 
-// Deferred knowledge — sent after connection is warm
-function sendDeferredKnowledge() {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  setTimeout(() => {
-    sendTextToGemini('СИСТЕМНА ИНСТРУКЦИЯ (допълнително знание, не отговаряй на това): ' +
-      'Познаваш Iron Maiden, Metallica, Black Sabbath, Judas Priest, Dio, Motörhead, Slayer, Megadeth, Pantera, Tool, Opeth, Gojira. ' +
-      BEER_KNOWLEDGE);
-  }, 3000);
+// Deferred knowledge — appended to the next user-facing prompt, not sent separately
+function getDeferredKnowledge() {
+  return ' [ДОПЪЛНИТЕЛНО ЗНАНИЕ — не споменавай освен ако не те питат: ' +
+    'Познаваш Iron Maiden, Metallica, Black Sabbath, Judas Priest, Dio, Motörhead, Slayer, Megadeth, Pantera, Tool, Opeth, Gojira. ' +
+    BEER_KNOWLEDGE + ']';
 }
 
 function cycleLang() {
@@ -943,7 +940,6 @@ function cityCaptured(rawCity) {
   waitingForCityVoice = 0;
   console.log('City captured (raw):', rawCity, '— starting nearby flow');
   startNearbyFlow(rawCity);
-  sendDeferredKnowledge();
 }
 
 // Poll for user transcript (inputTranscription often lags behind turnComplete)
@@ -958,7 +954,6 @@ async function pollForCity(attempt) {
     } else {
       waitingForCityVoice = 0;
       console.warn('No city after polling, moving on');
-      sendDeferredKnowledge();
     }
     return;
   }
@@ -1464,56 +1459,36 @@ async function connect() {
         startMic();
 
         // Character opens the conversation
+        const deferredKnowledge = getDeferredKnowledge();
         if (isSilentReconnect) {
-          // Silent retry — just continue where we left off, no fanfare
           isSilentReconnect = false;
           const summary = getConversationSummary();
-          sendTextToGemini('Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary);
+          sendTextToGemini('Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary + deferredKnowledge);
         } else if (isNearbyConnect) {
-          // Returning from toilet — discuss nearby events
           isNearbyConnect = false;
           const summary = getConversationSummary();
           sendTextToGemini(
-            'Ти си Бай Жельо и ТОКУ ЩО се върна от тоалетната. Кажи нещо кратко и смешно за тоалетната (импровизирай), ' +
-            'после ВЕДНАГА премини към кво става наоколо. ' + nearbyCache + ' ' + summary
+            'ТОКУ ЩО се върна от тоалетната. Кажи нещо кратко и смешно за тоалетната, после ВЕДНАГА премини към кво става наоколо. ' +
+            nearbyCache + ' ' + summary + deferredKnowledge
           );
         } else if (isToiletReturn) {
-          // Toilet break was shown — do the funny return
           isToiletReturn = false;
           const summary = getConversationSummary();
-          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно от рода на "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?" и продължи разговора от там, където спря. ' + summary);
+          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко смешно и продължи разговора. ' + summary + deferredKnowledge);
         } else {
-          // Check if we have saved location
           const savedCity = getCookie('user_city');
           if (savedCity && nearbyCache) {
-            // Have city + cached events — greet and discuss directly
             waitingForCityVoice = 0;
-            sendTextToGemini(
-              'Поздрави потребителя кратко и смешно. Вие сте в ' + savedCity + '. ' + nearbyCache
-            );
+            sendTextToGemini('Поздрави кратко и смешно. Вие сте в ' + savedCity + '. ' + nearbyCache + deferredKnowledge);
           } else if (savedCity) {
-            // Have city but no events cache — greet, announce toilet, fetch events
             pendingCity = savedCity;
-            waitingForCityVoice = 10; // wait for toilet announcement to finish
-            sendTextToGemini(
-              'Поздрави потребителя кратко и смешно. Кажи че знаеш че сте в ' + savedCity + '. ' +
-              'После кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират, и като се върнеш ще му разкажеш кво става в ' + savedCity + '.'
-            );
+            waitingForCityVoice = 10;
+            sendTextToGemini('Поздрави кратко. Вие сте в ' + savedCity + '. Кажи кратко и смешно че отскачаш до тоалетната и като се върнеш ще разкажеш кво става.' + deferredKnowledge);
           } else {
-            // First time — greet + ask where they are
             waitingForCityVoice = 1;
-            sendTextToGemini(
-              'Поздрави потребителя кратко с нещо умно или смешно. После кажи че си малко пийнал и си забравил къде сте. ' +
-              'Попитай го смешно в кой град са — импровизирай. Изчакай отговор. ' +
-              'Когато каже града, потвърди го И кажи че отскачаш до тоалетната в ЕДНО кратко изречение. Пример: "Хаха, [град] значи! Чакай да отскоча до WC-то, бирите напират."'
-            );
+            sendTextToGemini('Поздрави кратко и попитай смешно в кой град сте — забравил си, пийнал си. Изчакай отговор.' + deferredKnowledge);
           }
         }
-        // Send heavy knowledge after connection is warm (delay if waiting for city)
-        if (waitingForCityVoice === 0) {
-          sendDeferredKnowledge();
-        }
-        // otherwise sendDeferredKnowledge is called after city flow completes
         connectRetries = 0; // Reset retry counter on success
         return;
       }
@@ -1583,7 +1558,6 @@ async function connect() {
             console.log('Toilet announced, opening window for:', city);
             if (city) {
               startNearbyFlow(city);
-              sendDeferredKnowledge();
             }
           }
 
