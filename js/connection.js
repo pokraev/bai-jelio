@@ -226,8 +226,8 @@ export async function connect() {
               languageCode: langCode
             }
           },
-          outputAudioTranscription: { languageCode: langCode },
-          inputAudioTranscription: { languageCode: langCode },
+          outputAudioTranscription: {},
+          inputAudioTranscription: { language_code: langCode },
           systemInstruction: {
             parts: [{ text: getSystemPrompt() }]
           }
