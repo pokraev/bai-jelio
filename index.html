@@ -600,6 +600,16 @@
   .toilet-box .emoji { font-size: 3rem; margin-bottom: 12px; }
   .toilet-box .msg { font-size: 0.9rem; color: var(--text); line-height: 1.6; margin-bottom: 16px; }
   .toilet-box .timer { font-size: 0.75rem; color: var(--text-muted); }
+  .toilet-box .modal-btns { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+  .toilet-box .modal-btn {
+    padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer;
+    font-family: 'Roboto Condensed', sans-serif; font-weight: 600; font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .modal-btn-ok { background: var(--accent); color: var(--bg-deep); }
+  .modal-btn-ok:hover { box-shadow: 0 4px 16px var(--accent-glow); }
+  .modal-btn-skip { background: transparent; border: 1.5px solid var(--text-muted) !important; color: var(--text-muted); }
+  .modal-btn-skip:hover { border-color: var(--text) !important; color: var(--text); }
 
   .quota-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -621,14 +631,15 @@
   <h1>Поговори с бай Жельо<br><span style="font-style:italic; font-size:0.55em; font-weight:300">Алкохолик-събеседник, който много ги разбира нещата</span></h1>
 
   <div class="topics" id="topics">
-    <button class="topic-btn active" onclick="selectTopic(this, 'philosophy')">Философия</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'philosophy')">Философия</button>
     <button class="topic-btn" onclick="selectTopic(this, 'psychology')">Психология</button>
     <button class="topic-btn" onclick="selectTopic(this, 'sociology')">Социология</button>
     <button class="topic-btn" onclick="selectTopic(this, 'science')">Наука</button>
     <button class="topic-btn" onclick="selectTopic(this, 'politics')">Политика</button>
     <button class="topic-btn" onclick="selectTopic(this, 'music')">Музика</button>
     <button class="topic-btn" onclick="selectTopic(this, 'literature')">Литература</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'life')">Живот</button>
+    <button class="topic-btn active" onclick="selectTopic(this, 'life')">Живот</button>
+    <button class="topic-btn" onclick="selectNearby(this)">Кво става наоколо</button>
   </div>
 
   <div class="controls">
@@ -784,7 +795,7 @@ let micContext = null;
 let micProcessor = null;
 let isMicActive = false;
 
-let selectedTopic = 'philosophy';
+let selectedTopic = 'life';
 let selectedIQ = 'intelligent';
 let selectedLang = 'bg';
 let wakeLock = null;
@@ -811,7 +822,7 @@ const TOPIC_KNOWLEDGE = {
   politics: 'българска политика — познаваш отлично българската политическа сцена, партиите, политиците, скандалите, изборите и парламентарните кризи. Говориш САМО за българска политика. Коментираш остроумно и с хумор, правиш аналогии с ежедневието.',
   music: 'музика — познаваш отлично българската и световната музика. От народна музика, чалга и поп-фолк до рок, джаз, класика и електронна музика. Знаеш Щурците, ФСБ, Тангра, Лили Иванова, Васил Найденов, но и Pink Floyd, The Beatles, Led Zeppelin, Miles Davis, Bach, Beethoven, Radiohead, Kendrick Lamar. Разбираш от ритъм, мелодия, текстове и емоцията зад музиката. Говориш за песни като за спомени — всяка песен е свързана с момент, място, човек. Можеш да спориш за чалга vs. рок, за автентичност vs. комерсиалност, за това коя песен те кара да плачеш след полунощ.',
   literature: 'литература — познаваш отлично българската и световната литература. Ботев, Вазов, Яворов, Елин Пелин, Йовков, Далчев, Вапцаров, Багряна, но и Достоевски, Толстой, Шекспир, Камю, Маркес, Хемингуей, Буковски, Кафка. Познаваш и поезия, и проза, и драма. Можеш да цитираш, да обясняваш символи и образи, да свързваш литературата с живота. Говориш за книги като за нещо живо — не академично, а като човек, който е чел до зори и е плакал над страници след третата ракия.',
-  life: 'живот — говориш за житейски опит, грешки и поуки от тях, кога се учим и кога повтаряме глупостите си, разликите между мъже и жени, млади и стари, любов, разочарования, амбиции и компромиси. Темите са такива, каквито хората обсъждат след втората ракия — откровено, с хумор, с малко горчивина и много мъдрост. Не поучаваш, а споделяш като човек, който е видял и патил.',
+  life: 'живот — универсални човешки теми: смисълът на живота, жени vs мъже, богати vs бедни, млади vs стари, любов и разочарования, амбиции и компромиси, лайфстайл, щастие, самота, успех и провал, семейство, приятелство, предателство, мечти, страхове, остаряване, свобода, отговорност. НЕ е специфично за България — това са теми, които вълнуват хората по цял свят. Говориш откровено, с хумор и мъдрост. Не поучаваш, а споделяш като човек, който е видял и патил.',
 };
 
 const IQ_PROFILES = {
@@ -879,8 +890,8 @@ function getSystemPrompt() {
     lang.speak + ' ' +
     'Тема (80%): ' + topicDesc + ' Стой в тази тема. ' +
     'Памет (10%): връщай се към обсъждани неща. ' +
-    'Лични интереси (10%): крафт бира и хеви метъл. Рядко, като аналогия. ' +
-    'Адаптирай се към потребителя — следи какво харесва, спри теми които не го интересуват. ' +
+    'Лични интереси: обичаш крафт бира и хеви метъл, но НЕ ги споменавай по своя инициатива. Само ако потребителят ИЗРИЧНО попита за бира или музика. ' +
+    'АДАПТАЦИЯ: Следи какво харесва потребителя. Ако поиска да спреш тема — ВЕДНАГА спри завинаги. Разговорът е за НЕГО. Улавяй интересите му и адаптирай. ' +
     'Ниво: ' + iq.depth + ' Стил: ' + iq.style + ' Дължина: ' + iq.length + ' ' +
     lang.greeting + ' ' + lang.rules + ' ' +
     'Обръщения: "брат", "лек", "мой", "чуек", "бате", "човек".';
@@ -904,6 +915,153 @@ function cycleLang() {
     const langNames = { bg: 'български', en: 'English', es: 'español' };
     safeSwitchCommand('СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък говори САМО на ' + langNames[selectedLang] + '. Направи кратък преход към новия език.');
   }
+}
+
+let nearbyCache = null;
+
+async function fetchNearbyEvents(location) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return null;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'Location: ' + location + '. Date: ' + today + '. ' +
+            'List 5-8 interesting things happening nearby today/this week: events, festivals, concerts, exhibitions, sports, weather, news. ' +
+            'Each: name, 1-line description, when, where. Be specific and factual. ' +
+            'JSON array only: [{"name":"...","desc":"...","when":"...","where":"..."}]'
+          }] }],
+          generationConfig: { temperature: 0.3 }
+        })
+      }
+    );
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('Nearby events raw:', text);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const events = JSON.parse(jsonMatch[0]);
+      console.log('Nearby events:', events.map(e => e.name));
+      return events;
+    }
+    return text;
+  } catch (err) {
+    console.error('Nearby fetch error:', err);
+    return null;
+  }
+}
+
+function buildNearbyContext(events) {
+  if (!events) return 'КОНТЕКСТ: Не успя да намериш информация. Импровизирай — попитай потребителя кво го интересува.';
+  let ctx = 'КОНТЕКСТ (НЕ питай къде е потребителят — вие сте заедно): ';
+  if (Array.isArray(events)) {
+    ctx += events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + ')').join('. ') + '. ';
+  } else {
+    ctx += events + ' ';
+  }
+  ctx += 'Разкажи ТОЧНО 2 от тях кратко и интересно. Попитай кое иска да обсъдим първо.';
+  return ctx;
+}
+
+function selectNearby(btn) {
+  document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTopic = 'nearby';
+
+  if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+  // Already cached — just switch, no modal
+  if (nearbyCache) {
+    safeSwitchCommand('Потребителят иска пак да говорим кво става наоколо. ' + nearbyCache);
+    return;
+  }
+
+  // First time — show location permission modal
+  document.getElementById('locationModal').classList.add('visible');
+}
+
+function nearbyAccept() {
+  document.getElementById('locationModal').classList.remove('visible');
+
+  if (!navigator.geolocation) {
+    nearbyCache = 'КОНТЕКСТ: Няма геолокация. Попитай потребителя в кой град е.';
+    safeSwitchCommand(nearbyCache);
+    return;
+  }
+
+  // Request geolocation — this triggers the browser prompt
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude.toFixed(4);
+      const lon = pos.coords.longitude.toFixed(4);
+      console.log('Location acquired:', lat, lon);
+      startNearbyToilet(lat, lon);
+    },
+    (err) => {
+      const reasons = { 1: 'PERMISSION_DENIED', 2: 'POSITION_UNAVAILABLE', 3: 'TIMEOUT' };
+      console.warn('Geolocation:', reasons[err.code] || err.code, err.message);
+      // Fallback — ask by voice
+      waitingForLocation = true;
+      safeSwitchCommand('Кажи смешно: "Абе, нещо ми се завива свят... къде бяхме? В кой град сме, че съм забравил?" Изчакай потребителя да отговори.');
+    },
+    { timeout: 8000, maximumAge: 600000, enableHighAccuracy: false }
+  );
+}
+
+let waitingForLocation = false;
+
+function nearbySkip() {
+  document.getElementById('locationModal').classList.remove('visible');
+  waitingForLocation = true;
+  safeSwitchCommand('Кажи нещо смешно от рода на "Абе, нещо съм пийнал повечко и съм забравил къде сме... кажи ми в кой град сме, че да ти разкажа кво става наоколо." Изчакай отговор.');
+}
+
+function startNearbyToilet(lat, lon) {
+  safeSwitchCommand('Кажи бързо: "Добре, дай да мина до тоалетната, като се върна ще ти разкажа кво става." Бъди кратък.');
+  runNearbyToilet(() => fetchNearbyEvents(lat + ',' + lon));
+}
+
+function startNearbyToiletByCity(city) {
+  safeSwitchCommand('Кажи бързо: "Добре, дай до тоалетната, като се върна ще ти кажа кво става в ' + city + '." Бъди кратък.');
+  runNearbyToilet(() => fetchNearbyEvents(city));
+}
+
+function runNearbyToilet(fetchFn) {
+  setTimeout(() => {
+    const overlay = document.getElementById('toiletOverlay');
+    const timerEl = document.getElementById('toiletTimer');
+    overlay.classList.add('visible');
+
+    if (ws) { ws.close(); ws = null; }
+    isConnected = false;
+    stopMic();
+
+    fetchFn().then(events => {
+      nearbyCache = buildNearbyContext(events);
+      console.log('Nearby cache ready');
+    });
+
+    let sec = 20;
+    timerEl.textContent = sec;
+    const countdown = setInterval(() => {
+      sec--;
+      timerEl.textContent = sec;
+      if (sec <= 0) {
+        clearInterval(countdown);
+        overlay.classList.remove('visible');
+        if (!nearbyCache) nearbyCache = 'КОНТЕКСТ: Информацията не зареди навреме. Импровизирай.';
+        isToiletReturn = false;
+        isSilentReconnect = false;
+        isNearbyConnect = true;
+        connect();
+      }
+    }, 1000);
+  }, 2000);
 }
 
 function selectTopic(btn, topic) {
@@ -1195,6 +1353,11 @@ async function connect() {
           isSilentReconnect = false;
           const summary = getConversationSummary();
           sendTextToGemini('Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary);
+        } else if (isNearbyConnect) {
+          // Returning from nearby toilet break with location data
+          isNearbyConnect = false;
+          const summary = getConversationSummary();
+          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно, после премини директно към кво става наоколо. ' + nearbyCache + ' Завърши с въпрос. ' + summary);
         } else if (isToiletReturn) {
           // Toilet break was shown — do the funny return
           isToiletReturn = false;
@@ -1248,6 +1411,7 @@ async function connect() {
         // User speech transcription
         const inText = content.inputTranscription?.text;
         if (inText) {
+          console.log('User transcript:', inText);
           appendTranscript('user', inText);
         }
 
@@ -1255,6 +1419,26 @@ async function connect() {
           audioPlayer.complete();
           transcriptCharQueue = [];
           trackUsage();
+
+          // If waiting for location from user voice, grab it and start toilet flow
+          if (waitingForLocation) {
+            waitingForLocation = false;
+            console.log('Conversation history:', conversationHistory.map(e => e.role + ': ' + e.text.substring(0, 80)));
+            // Try user transcript first, fall back to bot response (which likely confirms the city)
+            const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
+            const lastBot = [...conversationHistory].reverse().find(e => e.role === 'bot');
+            const location = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() :
+                             (lastBot ? lastBot.text.trim() : null);
+            if (location) {
+              console.log('Location detected:', location);
+              startNearbyToiletByCity(location);
+            } else {
+              console.warn('No location found in conversation');
+              nearbyCache = 'КОНТЕКСТ: Не успя да разбереш локацията. Попитай отново.';
+              safeSwitchCommand(nearbyCache);
+            }
+          }
+
           if (isMuted) {
             mutedAfterTurn = true;
             setStatus('Paused — unmute to continue', false);
@@ -1310,7 +1494,9 @@ async function connect() {
 
 let isToiletReturn = false;
 let isSilentReconnect = false;
+let isNearbyConnect = false;
 let connectRetries = 0;
+
 
 function showToiletBreak() {
   connectRetries++;
@@ -2664,6 +2850,16 @@ function setStatus(msg, active) {
   el.className = 'status' + (active ? ' active' : '');
 }
 </script>
+<div class="toilet-overlay" id="locationModal">
+  <div class="toilet-box">
+    <div class="emoji">📍🍺</div>
+    <div class="msg">Бай Жельо малко е пийнал и е забравил къде е. Позволи му да провери локацията в браузъра, за да ти разкаже кво става наоколо.</div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-ok" onclick="nearbyAccept()">Добре</button>
+      <button class="modal-btn modal-btn-skip" onclick="nearbySkip()">Забрави</button>
+    </div>
+  </div>
+</div>
 <div class="toilet-overlay" id="toiletOverlay">
   <div class="toilet-box">
     <div class="emoji">🚽🍺</div>
