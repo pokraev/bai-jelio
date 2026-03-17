@@ -122,9 +122,11 @@ bus.on('mic:muted', ({ muted }) => {
     const el = document.getElementById(id);
     if (el) { el.disabled = muted; el.style.opacity = muted ? '0.3' : ''; el.style.pointerEvents = muted ? 'none' : ''; }
   });
-  // Grey overlay on avatar
+  // Grey overlay on avatar + muted visuals on title/subtitle
   const stage = document.getElementById('stage');
   if (stage) stage.classList.toggle('muted-overlay', muted);
+  const app = document.querySelector('.app');
+  if (app) app.classList.toggle('muted-state', muted);
   // Disable topic buttons
   document.querySelectorAll('.topic-btn').forEach(b => {
     b.disabled = muted;
