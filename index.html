@@ -935,7 +935,7 @@ let pendingCity = null; // city waiting for toilet announcement to finish
 let isSearching = false;
 let pendingBotText = '';
 
-// Web search: show overlay, close WS, search via Gemini, reconnect with results
+// Web search: show overlay, close WS, search via Gemini with Google Search, reconnect with results
 async function startWebSearch(query) {
   const overlay = document.getElementById('searchOverlay');
   overlay.classList.add('visible');
@@ -947,29 +947,52 @@ async function startWebSearch(query) {
   if (ws) { ws.close(); ws = null; }
   stopMic();
 
-  // Do the grounded search via Gemini
+  // Grounded search via Gemini + Google Search tool (with retry on 429)
   const apiKey = document.getElementById('apiKey').value.trim();
   let searchResult = 'Не намерих нищо конкретно.';
-  try {
-    const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
-    const responseLang = langMap[selectedLang] || 'Bulgarian';
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Search query: ' + query + '\nProvide a concise, factual summary of the search results. Respond in ' + responseLang + '. Keep it under 200 words.' }] }],
-          generationConfig: { temperature: 0.3 },
-          tools: [{ google_search: {} }]
-        })
+  const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
+  const responseLang = langMap[selectedLang] || 'Bulgarian';
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = attempt * 3000;
+        console.warn('Search retry in', delay, 'ms (attempt', attempt + 1, ')');
+        await new Promise(r => setTimeout(r, delay));
       }
-    );
-    const data = await res.json();
-    searchResult = data.candidates?.[0]?.content?.parts?.[0]?.text || searchResult;
-    console.log('Search result:', searchResult.substring(0, 200));
-  } catch (err) {
-    console.error('Search error:', err);
+      const res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text:
+              'Use Google Search to find current information about: ' + query + '\n\n' +
+              'Summarize the search results concisely and factually. Include specific names, dates, numbers, URLs if relevant. ' +
+              'Respond in ' + responseLang + '. Keep it under 300 words.'
+            }] }],
+            generationConfig: { temperature: 0.3 },
+            tools: [{ google_search: {} }]
+          })
+        }
+      );
+      if (res.status === 429) {
+        console.warn('Search got 429');
+        continue;
+      }
+      const data = await res.json();
+      console.log('Search raw response:', JSON.stringify(data).substring(0, 500));
+      // Extract text from all parts (Gemini may split across multiple parts)
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text).map(p => p.text);
+      if (textParts.length > 0) {
+        searchResult = textParts.join('\n');
+      }
+      console.log('Search result:', searchResult.substring(0, 300));
+      break; // success
+    } catch (err) {
+      console.error('Search error (attempt ' + (attempt + 1) + '):', err);
+    }
   }
 
   // Hide overlay and reconnect with search results
@@ -978,7 +1001,6 @@ async function startWebSearch(query) {
   isSilentReconnect = false;
   isToiletReturn = false;
   isNearbyConnect = false;
-  // Store results for the reconnect prompt
   searchCache = searchResult;
   isSearchReconnect = true;
   connect();
