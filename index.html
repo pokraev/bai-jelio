@@ -947,18 +947,18 @@ async function startWebSearch(query) {
   if (ws) { ws.close(); ws = null; }
   stopMic();
 
-  // Grounded search via Gemini + Google Search tool (with retry on 429)
   const apiKey = document.getElementById('apiKey').value.trim();
   let searchResult = 'Не намерих нищо конкретно.';
   const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
   const responseLang = langMap[selectedLang] || 'Bulgarian';
 
+  // Step 1: Google Search via Gemini grounding — get raw search results
+  let searchSnippets = [];
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       if (attempt > 0) {
-        const delay = attempt * 3000;
-        console.warn('Search retry in', delay, 'ms (attempt', attempt + 1, ')');
-        await new Promise(r => setTimeout(r, delay));
+        await new Promise(r => setTimeout(r, attempt * 3000));
+        console.warn('Search retry attempt', attempt + 1);
       }
       const res = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
@@ -966,32 +966,64 @@ async function startWebSearch(query) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text:
-              'Use Google Search to find current information about: ' + query + '\n\n' +
-              'Summarize the search results concisely and factually. Include specific names, dates, numbers, URLs if relevant. ' +
-              'Respond in ' + responseLang + '. Keep it under 300 words.'
-            }] }],
-            generationConfig: { temperature: 0.3 },
+            contents: [{ parts: [{ text: query }] }],
+            generationConfig: { temperature: 0 },
             tools: [{ google_search: {} }]
           })
         }
       );
-      if (res.status === 429) {
-        console.warn('Search got 429');
-        continue;
-      }
+      if (res.status === 429) continue;
       const data = await res.json();
-      console.log('Search raw response:', JSON.stringify(data).substring(0, 500));
-      // Extract text from all parts (Gemini may split across multiple parts)
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const textParts = parts.filter(p => p.text).map(p => p.text);
-      if (textParts.length > 0) {
-        searchResult = textParts.join('\n');
+      console.log('Search grounding response:', JSON.stringify(data).substring(0, 800));
+      // Extract grounding chunks (actual search results)
+      const grounding = data.candidates?.[0]?.groundingMetadata;
+      const chunks = grounding?.groundingChunks || grounding?.searchEntryPoint?.renderedContent ? [] : [];
+      const support = grounding?.groundingSupports || [];
+      if (grounding?.groundingChunks) {
+        searchSnippets = grounding.groundingChunks.slice(0, 5).map(c => {
+          const web = c.web || {};
+          return (web.title || '') + ': ' + (web.uri || '') + ' — ' + (web.snippet || '');
+        });
       }
-      console.log('Search result:', searchResult.substring(0, 300));
-      break; // success
+      // Also grab the model's text summary as fallback
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const modelText = parts.filter(p => p.text).map(p => p.text).join('\n');
+      if (searchSnippets.length === 0 && modelText) {
+        searchSnippets = [modelText];
+      }
+      console.log('Search snippets:', searchSnippets.length);
+      break;
     } catch (err) {
       console.error('Search error (attempt ' + (attempt + 1) + '):', err);
+    }
+  }
+
+  // Step 2: Send top results to LLM for a concise narrative
+  if (searchSnippets.length > 0) {
+    try {
+      const narrativeRes = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text:
+              'The user asked: "' + query + '"\n\n' +
+              'Here are the top search results:\n' + searchSnippets.join('\n') + '\n\n' +
+              'Create a concise, factual narrative from these results. Include specific names, dates, facts. ' +
+              'Respond in ' + responseLang + '. Keep it under 200 words. No markdown.'
+            }] }],
+            generationConfig: { temperature: 0.3 }
+          })
+        }
+      );
+      const narrativeData = await narrativeRes.json();
+      const narrative = narrativeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (narrative) searchResult = narrative;
+      console.log('Search narrative:', searchResult.substring(0, 300));
+    } catch (err) {
+      console.error('Narrative error:', err);
+      searchResult = searchSnippets.join('. ');
     }
   }
 
