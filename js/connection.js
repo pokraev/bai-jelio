@@ -221,15 +221,6 @@ export async function connect() {
           },
           outputAudioTranscription: {},
           inputAudioTranscription: {},
-          realtimeInputConfig: {
-            activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
-            turnCoverage: 'TURN_INCLUDES_ALL_INPUT',
-            automaticActivityDetection: {
-              disabled: false,
-              startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
-            }
-          },
           systemInstruction: {
             parts: [{ text: getSystemPrompt() }]
           }
