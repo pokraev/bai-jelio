@@ -1006,20 +1006,20 @@ function nearbyAccept() {
       const reasons = { 1: 'PERMISSION_DENIED', 2: 'POSITION_UNAVAILABLE', 3: 'TIMEOUT' };
       console.warn('Geolocation:', reasons[err.code] || err.code, err.message);
       // Fallback — ask by voice
-      waitingForLocation = true;
-      safeSwitchCommand('Кажи смешно: "Абе, нещо ми се завива свят... къде бяхме? В кой град сме, че съм забравил?" Изчакай потребителя да отговори.');
+      waitingForCityVoice = true;
+      safeSwitchCommand('Кажи нещо смешно: "Абе, нещо ми се завива свят и GPS-а ми не хваща... в кой град сме бе, че съм забравил? Кажи ми и после дай до тоалетната." Изчакай отговор.');
     },
     { timeout: 8000, maximumAge: 600000, enableHighAccuracy: false }
   );
 }
 
-let waitingForLocation = false;
-
 function nearbySkip() {
   document.getElementById('locationModal').classList.remove('visible');
-  waitingForLocation = true;
-  safeSwitchCommand('Кажи нещо смешно от рода на "Абе, нещо съм пийнал повечко и съм забравил къде сме... кажи ми в кой град сме, че да ти разкажа кво става наоколо." Изчакай отговор.');
+  safeSwitchCommand('Кажи нещо смешно и различно всеки път, в този стил: "Да бе лек, разбира се... аз май малко се понапих и забравих къде сме. Ама кажи ми в кой град сме, че да ти разкажа кво става. И после дай до тоалетната, че бирите напират да си ходят." Изчакай потребителя да каже град или район. Когато каже — потвърди кратко и смешно.');
+  waitingForCityVoice = true;
 }
+
+let waitingForCityVoice = false;
 
 function startNearbyToilet(lat, lon) {
   safeSwitchCommand('Кажи бързо: "Добре, дай да мина до тоалетната, като се върна ще ти разкажа кво става." Бъди кратък.');
@@ -1420,22 +1420,20 @@ async function connect() {
           transcriptCharQueue = [];
           trackUsage();
 
-          // If waiting for location from user voice, grab it and start toilet flow
-          if (waitingForLocation) {
-            waitingForLocation = false;
-            console.log('Conversation history:', conversationHistory.map(e => e.role + ': ' + e.text.substring(0, 80)));
-            // Try user transcript first, fall back to bot response (which likely confirms the city)
+          // If waiting for city from user voice, grab it and start toilet+fetch flow
+          if (waitingForCityVoice) {
+            waitingForCityVoice = false;
+            console.log('History:', conversationHistory.map(e => e.role + ': ' + e.text.substring(0, 80)));
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
             const lastBot = [...conversationHistory].reverse().find(e => e.role === 'bot');
+            // User transcript has the city, or bot's confirmation contains it
             const location = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() :
                              (lastBot ? lastBot.text.trim() : null);
             if (location) {
-              console.log('Location detected:', location);
+              console.log('City from voice:', location);
               startNearbyToiletByCity(location);
             } else {
-              console.warn('No location found in conversation');
-              nearbyCache = 'КОНТЕКСТ: Не успя да разбереш локацията. Попитай отново.';
-              safeSwitchCommand(nearbyCache);
+              console.warn('No city detected in conversation');
             }
           }
 
