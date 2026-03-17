@@ -1486,7 +1486,7 @@ async function connect() {
             sendTextToGemini('Поздрави кратко. Вие сте в ' + savedCity + '. Кажи кратко и смешно че отскачаш до тоалетната и като се върнеш ще разкажеш кво става.' + deferredKnowledge);
           } else {
             waitingForCityVoice = 1;
-            sendTextToGemini('Поздрави кратко и попитай смешно в кой град сте — забравил си, пийнал си. Изчакай отговор.' + deferredKnowledge);
+            sendTextToGemini('Поздрави кратко и попитай смешно в кой град сте — забравил си, пийнал си. Изчакай отговор. Когато каже града — потвърди И кажи че отскачаш до тоалетната (бирите напират). Всичко в ЕДНО кратко изречение.' + deferredKnowledge);
           }
         }
         connectRetries = 0; // Reset retry counter on success
