@@ -112,7 +112,7 @@ function stopSummarizer() {
 }
 
 function feedEnrichmentBuffer(role, text) {
-  conversationBuffer += (role === 'user' ? 'User: ' : 'Bai Zhelyo: ') + text + '\n';
+  conversationBuffer += (role === 'user' ? 'User: ' : 'Бай Жельо: ') + text + '\n';
   if (conversationBuffer.length > 5000) {
     conversationBuffer = conversationBuffer.slice(-4000);
   }
@@ -512,7 +512,7 @@ function handleServerContent(content) {
       pendingUserText = '';
     }
     if (pendingBotText) {
-      console.log('🍺 Bai Zhelyo:', pendingBotText.trim());
+      console.log('🍺 Бай Жельо:', pendingBotText.trim());
     }
 
     // Detect search trigger from accumulated bot output
