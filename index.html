@@ -685,6 +685,13 @@
       <canvas id="mouthCanvas"></canvas>
     </div>
     <div class="stage-actions" id="stageActions" style="display:none">
+      <div class="iq-wrap" id="voiceWrap">
+        <button class="iq-btn" id="voiceBtn" onclick="toggleVoiceMenu()" title="Глас">
+          <span id="voiceBtnLabel">Orus</span>
+          <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="iq-menu" id="voiceMenu"></div>
+      </div>
       <div class="iq-wrap" id="iqWrap">
         <button class="iq-btn" id="iqBtn" onclick="toggleIQMenu()" title="Ниво на интелигентност">
           <span id="iqBtnLabel">Интелигентен</span>
@@ -1163,6 +1170,70 @@ function changeIQ(newIQ) {
   }
 }
 
+// ── Voice Selection ──
+const VOICES = [
+  { id: 'Orus',    label: 'Orus' },
+  { id: 'Charon',  label: 'Charon' },
+  { id: 'Fenrir',  label: 'Fenrir' },
+  { id: 'Puck',    label: 'Puck' },
+  { id: 'Kore',    label: 'Kore' },
+  { id: 'Aoede',   label: 'Aoede' },
+  { id: 'Leda',    label: 'Leda' },
+  { id: 'Perseus', label: 'Perseus' },
+  { id: 'Iapetus', label: 'Iapetus' },
+  { id: 'Umbriel', label: 'Umbriel' }
+];
+let selectedVoice = 'Orus';
+
+// Build voice menu items on load
+document.addEventListener('DOMContentLoaded', () => {
+  const menu = document.getElementById('voiceMenu');
+  VOICES.forEach(v => {
+    const item = document.createElement('div');
+    item.className = 'iq-menu-item' + (v.id === selectedVoice ? ' active' : '');
+    item.dataset.voice = v.id;
+    item.textContent = v.label;
+    item.onclick = () => selectVoice(v.id);
+    menu.appendChild(item);
+  });
+});
+
+function toggleVoiceMenu() {
+  const menu = document.getElementById('voiceMenu');
+  const btn = document.getElementById('voiceBtn');
+  const isOpen = menu.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  if (isOpen) {
+    setTimeout(() => document.addEventListener('click', closeVoiceMenuOutside, { once: true }), 0);
+  }
+}
+
+function closeVoiceMenuOutside(e) {
+  const wrap = document.getElementById('voiceWrap');
+  if (!wrap.contains(e.target)) {
+    document.getElementById('voiceMenu').classList.remove('open');
+    document.getElementById('voiceBtn').classList.remove('open');
+  }
+}
+
+function selectVoice(voiceId) {
+  document.getElementById('voiceMenu').classList.remove('open');
+  document.getElementById('voiceBtn').classList.remove('open');
+  document.querySelectorAll('#voiceMenu .iq-menu-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.voice === voiceId);
+  });
+  document.getElementById('voiceBtnLabel').textContent = voiceId;
+  if (voiceId === selectedVoice) return;
+  selectedVoice = voiceId;
+  // Reconnect with new voice (voice is set in the setup message, can't change mid-session)
+  if (isConnected) {
+    console.log('Voice changed to', voiceId, '— reconnecting');
+    isSilentReconnect = true;
+    if (ws) { isConnected = false; ws.close(); ws = null; }
+    connect();
+  }
+}
+
 // ── Audio Playback (PCM 24kHz from Gemini) ──
 class GeminiAudioPlayer {
   constructor() {
@@ -1331,7 +1402,7 @@ async function connect() {
             responseModalities: ['AUDIO'],
             speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Orus' }
+                prebuiltVoiceConfig: { voiceName: selectedVoice }
               }
             }
           },
