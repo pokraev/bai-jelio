@@ -56,7 +56,7 @@ h1 span { color: var(--text); font-weight: 400; font-size: 0.85em; }
   width: min(580px, calc(100vw - 32px));
   flex-shrink: 0;
   overflow: visible;
-  margin: 0 auto;
+  margin: 16px auto 8px;
 }
 .stage {
   position: relative;
@@ -409,9 +409,9 @@ select {
 
 .topics { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .topic-btn {
-  padding: 8px 16px; background: var(--bg-card);
-  border: 1.5px solid rgba(240,165,0,0.15); border-radius: 20px;
-  color: var(--text-muted); font-size: 0.82rem; cursor: pointer;
+  padding: 12px 24px; background: var(--bg-card);
+  border: 1.5px solid rgba(240,165,0,0.15); border-radius: 24px;
+  color: var(--text-muted); font-size: 0.95rem; cursor: pointer;
   transition: all 0.2s; font-family: 'Roboto Condensed', sans-serif;
 }
 .topic-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(240,165,0,0.08); }
@@ -424,18 +424,18 @@ select {
 .lips-gear.active { opacity: 1; border-color: var(--success); color: var(--success); }
 
 .stage-actions {
-  display: flex; justify-content: center; align-items: center; gap: 14px;
-  margin-top: 18px;
+  display: flex; justify-content: center; align-items: center; gap: 18px;
+  margin-top: 24px;
 }
 .actions-row {
   display: contents;
 }
 @media (max-width: 480px) {
   .stage-actions {
-    flex-direction: column; gap: 12px;
+    flex-direction: column; gap: 16px;
   }
   .actions-row {
-    display: flex; justify-content: center; align-items: center; gap: 14px;
+    display: flex; justify-content: center; align-items: center; gap: 16px;
   }
 }
 .iq-wrap {
@@ -449,10 +449,10 @@ select {
   letter-spacing: 0.5px; text-transform: uppercase; pointer-events: none;
 }
 .iq-btn {
-  height: 44px; min-width: 0; width: auto;
+  height: 52px; min-width: 0; width: auto;
   font-family: 'Roboto Condensed', sans-serif;
-  font-size: 0.65rem; font-weight: 600; letter-spacing: 0.3px;
-  padding: 0 12px;
+  font-size: 0.82rem; font-weight: 600; letter-spacing: 0.3px;
+  padding: 0 20px;
   border-radius: 22px;
   border: 1.5px solid rgba(240,165,0,0.4);
   background: var(--bg-card);
@@ -480,8 +480,8 @@ select {
   opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0);
 }
 .iq-menu-item {
-  padding: 6px 10px; font-family: 'Roboto Condensed', sans-serif;
-  font-size: 0.7rem; font-weight: 500; color: var(--text-muted);
+  padding: 8px 14px; font-family: 'Roboto Condensed', sans-serif;
+  font-size: 0.82rem; font-weight: 500; color: var(--text-muted);
   cursor: pointer; transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
@@ -499,7 +499,7 @@ select {
 }
 .waveform.idle .bar { background: var(--text-muted); opacity: 0.3; }
 .round-btn {
-  width: 44px; height: 44px; border-radius: 50%;
+  width: 52px; height: 52px; border-radius: 50%;
   border: 1.5px solid rgba(240,165,0,0.4);
   background: var(--bg-card); color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
@@ -508,8 +508,8 @@ select {
 .round-btn:hover { border-color: var(--accent); color: var(--text); transform: translateY(-1px); }
 .round-btn.muted { background: rgba(255,107,107,0.15); border-color: var(--danger); color: var(--danger); }
 .lang-btn {
-  width: 44px; height: 44px; border-radius: 50%;
-  padding: 0; font-size: 0.6rem; font-weight: 700;
+  width: 52px; height: 52px; border-radius: 50%;
+  padding: 0; font-size: 0.75rem; font-weight: 700;
   letter-spacing: 0.5px; color: var(--accent);
   display: flex; align-items: center; justify-content: center;
 }
@@ -521,7 +521,7 @@ select {
 #disconnectBtn.disconnected { border-color: var(--danger); color: var(--danger); }
 #muteBtn.mic-active { border-color: var(--success); color: var(--success); }
 #muteBtn.muted { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
-.round-btn-connect { border-color: rgba(240,165,0,0.4); color: var(--accent); }
+.round-btn-connect { border-color: rgba(240,165,0,0.4); color: var(--accent); width: 52px; height: 52px; }
 .round-btn-connect:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 4px 16px var(--accent-glow); }
 .round-btn-connect:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .round-btn-connect.connected { background: var(--success); border-color: var(--success); }
