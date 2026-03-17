@@ -1117,10 +1117,10 @@ async function fetchCityAndEvents(rawCity, retryCount) {
   }
 }
 
-async function startNearbyFlow(rawCity) {
+function startNearbyFlow(rawCity) {
   console.log('Nearby flow — raw city:', rawCity);
 
-  // Show toilet overlay — avatar already announced going to toilet
+  // Show toilet overlay and start countdown immediately
   const overlay = document.getElementById('toiletOverlay');
   const timerEl = document.getElementById('toiletTimer');
   overlay.classList.add('visible');
@@ -1130,50 +1130,49 @@ async function startNearbyFlow(rawCity) {
   if (ws) { ws.close(); ws = null; }
   stopMic();
 
-  // Single LLM call: extract clean city name + fetch events
-  // WAIT for the result before starting the countdown — city must be confirmed
+  // LLM call runs in parallel with countdown
   const today = new Date().toISOString().slice(0, 10);
-  const result = await fetchCityAndEvents(rawCity);
-  const city = result.city;
-  const events = result.events;
-  console.log('Clean city:', rawCity, '→', city);
+  let cleanCity = null;
+  const llmDone = fetchCityAndEvents(rawCity).then(result => {
+    cleanCity = result.city;
+    const events = result.events;
+    console.log('Clean city:', rawCity, '→', cleanCity);
+    if (!cleanCity) return; // no city detected
+    setCookie('user_city', cleanCity, 30);
+    if (events && Array.isArray(events) && events.length > 0) {
+      nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + cleanCity + '): ' +
+        events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
+        'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
+    } else if (events && typeof events === 'string') {
+      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanCity + '. Днес е ' + today + '. Ето какво намерих: ' + events +
+        ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
+    } else {
+      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanCity + '. Днес е ' + today + '. ' +
+        'Разкажи какво интересно се случва в ' + cleanCity + '. Импровизирай с познанията си за района. Бъди конкретен.';
+    }
+    console.log('Nearby cache ready:', nearbyCache.substring(0, 200) + '...');
+  });
 
-  // No city detected — user didn't say a city. Skip nearby flow, reconnect normally.
-  if (!city) {
-    console.log('No city detected, skipping nearby flow');
-    overlay.classList.remove('visible');
-    isSilentReconnect = true;
-    connect();
-    return;
-  }
-
-  setCookie('user_city', city, 30);
-
-  if (events && Array.isArray(events) && events.length > 0) {
-    nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
-      events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
-      'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
-  } else if (events && typeof events === 'string') {
-    nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
-      ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
-  } else {
-    nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
-      'Разкажи какво интересно се случва в ' + city + '. Импровизирай с познанията си за района. Бъди конкретен.';
-  }
-  console.log('Nearby cache ready:', nearbyCache.substring(0, 200) + '...');
-
-  // Now start countdown — city is confirmed
+  // Countdown starts immediately
   let sec = 30;
   timerEl.textContent = sec;
-  const countdown = setInterval(() => {
+  const countdown = setInterval(async () => {
     sec--;
     timerEl.textContent = sec;
     if (sec <= 0) {
       clearInterval(countdown);
+      await llmDone; // ensure LLM finished before reconnecting
       overlay.classList.remove('visible');
-      updateSubtitle(city);
+      if (!cleanCity) {
+        // No city detected — reconnect silently, no subtitle update
+        console.log('No city detected, skipping nearby flow');
+        isSilentReconnect = true;
+        connect();
+        return;
+      }
+      updateSubtitle(cleanCity);
       if (!nearbyCache) {
-        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Разкажи какво интересно се случва. Импровизирай.';
+        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanCity + '. Разкажи какво интересно се случва. Импровизирай.';
       }
       isToiletReturn = false;
       isSilentReconnect = false;
