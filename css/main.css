@@ -455,13 +455,11 @@ select {
 }
 @media (max-width: 480px) {
   .stage-actions {
-    flex-wrap: wrap; gap: 10px;
+    flex-direction: column; gap: 12px;
   }
   .actions-row {
     display: flex; justify-content: center; align-items: center; gap: 14px;
-    width: 100%;
   }
-  .actions-row-top { margin-bottom: 2px; }
 }
 .iq-wrap {
   position: relative; display: inline-block; min-width: 120px;
