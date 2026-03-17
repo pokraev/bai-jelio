@@ -638,7 +638,7 @@
     <button class="topic-btn" onclick="selectTopic(this, 'politics')">Политика</button>
     <button class="topic-btn" onclick="selectTopic(this, 'music')">Музика</button>
     <button class="topic-btn" onclick="selectTopic(this, 'literature')">Литература</button>
-    <button class="topic-btn active" onclick="selectTopic(this, 'life')">Живот</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'life')">Живот</button>
     <button class="topic-btn" onclick="selectNearby(this)">Кво става наоколо</button>
   </div>
 
@@ -795,7 +795,7 @@ let micContext = null;
 let micProcessor = null;
 let isMicActive = false;
 
-let selectedTopic = 'life';
+let selectedTopic = 'nearby';
 let selectedIQ = 'intelligent';
 let selectedLang = 'bg';
 let wakeLock = null;
@@ -933,18 +933,25 @@ function selectNearby(btn) {
     return;
   }
 
-  // First time — avatar asks where they are
+  // Have saved city but no cache yet — go to toilet
+  const savedCity = getCookie('user_city');
+  if (savedCity) {
+    safeSwitchCommand('Кажи кратко и смешно че трябва да идеш до тоалетната, и като се върнеш ще разкажеш кво става в ' + savedCity + '.');
+    setTimeout(() => startNearbyFlow(savedCity), 4000);
+    return;
+  }
+
+  // No city — ask
   waitingForCityVoice = 1;
   safeSwitchCommand(
-    'Ти си малко пийнал и си забравил къде сте. Попитай потребителя в кой град сте — кажи нещо смешно, ' +
-    'импровизирай, например: "Абе лек, аз нещо се понапих и забравих къде сме... в кой град сме бе?" ' +
-    'Изчакай потребителя да отговори. Когато каже град или район — потвърди кратко и смешно, ' +
-    'после кажи че трябва да идеш до тоалетната защото бирите напират, и като се върнеш ще му разкажеш кво става наоколо.'
+    'Ти си малко пийнал и си забравил къде сте. Попитай потребителя смешно в кой град са. Изчакай отговор. ' +
+    'Когато каже — потвърди, после кажи че идеш до тоалетната и като се върнеш ще разкажеш кво става.'
   );
 }
 
 function startNearbyFlow(city) {
   console.log('Nearby flow — city:', city);
+  setCookie('user_city', city, 30);
   const today = new Date().toISOString().slice(0, 10);
   nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
     'Ти познаваш района. Разкажи какво интересно се случва в ' + city + ' днес или тази седмица — ' +
@@ -1283,7 +1290,25 @@ async function connect() {
           const summary = getConversationSummary();
           sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно от рода на "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?" и продължи разговора от там, където спря. ' + summary);
         } else {
-          sendTextToGemini('Greet the user and introduce yourself. Be warm and enthusiastic.');
+          // Check if we have saved location
+          const savedCity = getCookie('user_city');
+          if (savedCity) {
+            // We know the city — greet and go straight to toilet for events
+            waitingForCityVoice = 0;
+            sendTextToGemini(
+              'Поздрави потребителя кратко и смешно. Кажи че знаеш че сте в ' + savedCity + '. ' +
+              'После кажи че трябва да идеш до тоалетната, защото бирите напират, и като се върнеш ще му разкажеш кво става в ' + savedCity + '. Бъди кратък и смешен.'
+            );
+            // Start toilet flow after avatar speaks
+            setTimeout(() => startNearbyFlow(savedCity), 6000);
+          } else {
+            // First time — greet + ask where they are
+            waitingForCityVoice = 1;
+            sendTextToGemini(
+              'Поздрави потребителя кратко с нещо умно или смешно. После кажи че си малко пийнал и си забравил къде сте. ' +
+              'Попитай го смешно в кой град са — импровизирай. Изчакай отговор.'
+            );
+          }
         }
         // Send heavy knowledge after connection is warm
         sendDeferredKnowledge();
@@ -2778,6 +2803,6 @@ function setStatus(msg, active) {
 </div>
 <div class="quota-bar" id="quotaBar">
   <span id="quotaDay"></span>
-  <a href="#" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;" style="pointer-events:auto;color:var(--text-muted);text-decoration:none;opacity:0.6;">reset key</a>
+  <a href="#" onclick="setCookie('gemini_api_key','',-1);setCookie('user_city','',-1);location.reload();return false;" style="pointer-events:auto;color:var(--text-muted);text-decoration:none;opacity:0.6;">reset</a>
 </div>
 </body></html>
