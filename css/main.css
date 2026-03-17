@@ -160,7 +160,8 @@ input::placeholder { color: var(--text-muted); opacity: 0.5; }
 .status.active { color: var(--success); }
 
 .config-section {
-  width: 100%;
+  width: 80%;
+  margin: 0 auto;
   background: rgba(240,165,0,0.04);
   border: 1.5px solid rgba(240,165,0,0.12);
   border-radius: var(--radius);
@@ -544,8 +545,8 @@ select {
 #disconnectBtn.disconnected { border-color: var(--danger); color: var(--danger); }
 #muteBtn.mic-active { border-color: var(--success); color: var(--success); }
 #muteBtn.muted { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
-.round-btn-connect { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); }
-.round-btn-connect:hover { color: var(--bg-deep); box-shadow: 0 4px 16px var(--accent-glow); }
+.round-btn-connect { border-color: rgba(240,165,0,0.4); color: var(--accent); }
+.round-btn-connect:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 4px 16px var(--accent-glow); }
 .round-btn-connect:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .round-btn-connect.connected { background: var(--success); border-color: var(--success); }
 .round-btn-gear { opacity: 0.35; }
