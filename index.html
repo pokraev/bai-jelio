@@ -971,7 +971,8 @@ async function cleanCityName(raw) {
             'The user was asked which city they are in. They replied: "' + raw + '"\n' +
             'Extract ONLY the city name. No country, no filler words, no explanation.\n' +
             'If the speech is garbled, try to guess the closest real city name.\n' +
-            'Reply with just the city name, nothing else. Example: Сливен or Amsterdam or Barcelona'
+            'If the user did NOT say a city (e.g. they changed the subject, said "I don\'t know", refused, or said something unrelated), reply with exactly: NONE\n' +
+            'Otherwise reply with just the city name, nothing else. Example: Сливен or Amsterdam or Barcelona'
           }] }],
           generationConfig: { temperature: 0, maxOutputTokens: 20 }
         })
@@ -984,6 +985,7 @@ async function cleanCityName(raw) {
     const data = await res.json();
     const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
     console.log('LLM city extraction:', raw, '→', city);
+    if (city.toUpperCase() === 'NONE') return null;
     return city || regexCleanCity(raw);
   } catch (err) {
     console.error('City extraction LLM error:', err);
@@ -1008,13 +1010,19 @@ async function pollForCity(attempt) {
   }
   const city = await cleanCityName(raw);
   console.log('Poll city attempt', attempt, ':', raw, '→', city);
-  if (city && city.length > 1) {
+  if (city === null) {
+    // LLM determined user didn't say a city — move on without nearby flow
+    waitingForCityVoice = 0;
+    console.log('No city detected, skipping nearby flow');
+    sendDeferredKnowledge();
+  } else if (city && city.length > 1) {
     cityCaptured(city);
   } else if (attempt < 8) {
     cityPollTimer = setTimeout(() => pollForCity(attempt + 1), 1000);
   } else {
     waitingForCityVoice = 0;
-    console.warn('No city after polling');
+    console.warn('No city after polling, moving on');
+    sendDeferredKnowledge();
   }
 }
 
