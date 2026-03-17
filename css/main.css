@@ -461,7 +461,8 @@ select {
     display: flex; align-items: center; justify-content: center;
   }
   .stage {
-    max-height: 100%; aspect-ratio: 580 / 340; flex-shrink: 1;
+    width: 100%; height: auto;
+    max-height: 100%; aspect-ratio: 580 / 340;
   }
   .stage img {
     width: 100%; height: 100%;
