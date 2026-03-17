@@ -1069,14 +1069,15 @@ async function fetchCityAndEvents(rawCity) {
     const today = new Date().toISOString().slice(0, 10);
     const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
     const responseLang = langMap[selectedLang] || 'Bulgarian';
-    const prompt = 'The user said they are in: "' + rawCity + '"\n\n' +
-      'TASK 1: Extract the correct city name from what the user said. Fix any speech-to-text errors. Remove filler words, country names, prepositions. Just the city name.\n\n' +
-      'TASK 2: Date: ' + today + '. List 5-8 interesting things happening in or near that city today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
-      'Each item: name, 1-line description, when, where, and a "context" field with 2-3 sentences of background info, fun facts, or talking points that a colorful bar regular could use to chat about this event in an entertaining way. ' +
-      'Be specific and factual.\n\n' +
+    const prompt = 'The user was asked which city they are in. They replied: "' + rawCity + '"\n\n' +
+      'TASK 1: Determine if the user actually said a city name. If they changed the subject, refused, said something unrelated, or did NOT mention any city — set "city" to "NONE".\n' +
+      'If they DID say a city: extract just the city name. Fix speech-to-text errors. Remove filler words, country names, prepositions. Just the clean city name.\n\n' +
+      'TASK 2: If a city was found, date: ' + today + '. List 5-8 interesting things happening in or near that city today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
+      'Each item: name, 1-line description, when, where, and a "context" field with 2-3 sentences of background info and talking points. ' +
+      'Be specific and factual. If no city was found, set "events" to [].\n\n' +
       'Respond in ' + responseLang + '.\n' +
-      'Respond ONLY with this JSON format (no markdown, no extra text):\n' +
-      '{"city":"CLEAN CITY NAME","events":[{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]}';
+      'Respond ONLY with this JSON (no markdown, no extra text):\n' +
+      '{"city":"CLEAN CITY NAME or NONE","events":[{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]}';
     console.log('Fetching city+events for:', rawCity);
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
@@ -1096,15 +1097,15 @@ async function fetchCityAndEvents(rawCity) {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      const city = parsed.city || rawCity;
+      const city = (parsed.city && parsed.city.toUpperCase() !== 'NONE') ? parsed.city : null;
       const events = parsed.events || null;
       console.log('Extracted city:', city, '| events:', events ? events.length : 0);
       return { city, events };
     }
-    return { city: rawCity, events: text };
+    return { city: null, events: text };
   } catch (err) {
     console.error('City+events fetch error:', err);
-    return { city: rawCity, events: null };
+    return { city: null, events: null };
   }
 }
 
@@ -1127,14 +1128,24 @@ async function startNearbyFlow(rawCity) {
   const result = await fetchCityAndEvents(rawCity);
   const city = result.city;
   const events = result.events;
-  setCookie('user_city', city, 30);
   console.log('Clean city:', rawCity, '→', city);
 
-  if (events && Array.isArray(events)) {
+  // No city detected — user didn't say a city. Skip nearby flow, reconnect normally.
+  if (!city) {
+    console.log('No city detected, skipping nearby flow');
+    overlay.classList.remove('visible');
+    isSilentReconnect = true;
+    connect();
+    return;
+  }
+
+  setCookie('user_city', city, 30);
+
+  if (events && Array.isArray(events) && events.length > 0) {
     nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
       events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
       'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
-  } else if (events) {
+  } else if (events && typeof events === 'string') {
     nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
       ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
   } else {
