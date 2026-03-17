@@ -1115,64 +1115,89 @@ function selectNearby(btn) {
   );
 }
 
-// Single LLM call: extract clean city name + fetch events together
-// Returns { city: "clean name", events: [...] or string or null }
-async function fetchCityAndEvents(rawCity, retryCount) {
-  retryCount = retryCount || 0;
+// Extract city name from raw transcript using regex (no API call needed)
+function extractCity(raw) {
+  let text = raw.trim();
+  // Strip leading filler
+  text = text.replace(/^(абе\s+|ами\s+|ами\s+ние\s+|аз\s+съм\s+(от|в|във|на)\s+|ние\s+сме\s+(от|в|във)\s+|съм\s+(от|в|във)\s+|сме\s+(от|в|във)\s+|май\s+сме\s+(от|в|във)\s+|според\s+мен[еа]?\s+сме\s+(от|в|във)\s+|намираме\s+се\s+(от|в|във)\s+|от\s+|във?\s+|во\s+|на\s+|о\s+|i'?\s*m\s+(in|from)\s+|we'?\s*re\s+in\s+|in\s+|from\s+|estoy\s+en\s+|en\s+)/i, '');
+  // Take part before comma (city, not country)
+  text = text.split(',')[0].trim();
+  // Strip trailing filler
+  text = text.replace(/\s+(сме|съм|сега|де|бе|ба|бре|лек|брат|мой|божели|we are|right now).*$/i, '');
+  // Remove trailing period
+  text = text.replace(/\.\s*$/, '').trim();
+  // If nothing useful left, return null
+  if (!text || text.length < 2) return null;
+  // Capitalize first letter
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// Fetch events for a city using gemini-2.0-flash-lite (different model = separate rate limit)
+async function fetchEvents(city) {
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return { city: null, events: null };
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
-    const responseLang = langMap[selectedLang] || 'Bulgarian';
-    const prompt = 'The user was asked which city they are in. They replied: "' + rawCity + '"\n\n' +
-      'TASK 1: Determine if the user actually said a city name. If they changed the subject, refused, said something unrelated, or did NOT mention any city — set "city" to "NONE".\n' +
-      'If they DID say a city: extract just the city name. Fix speech-to-text errors. Remove filler words, country names, prepositions. Just the clean city name.\n\n' +
-      'TASK 2: If a city was found, date: ' + today + '. List 5-8 interesting things happening in or near that city today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
-      'Each item: name, 1-line description, when, where, and a "context" field with 2-3 sentences of background info and talking points. ' +
-      'Be specific and factual. If no city was found, set "events" to [].\n\n' +
-      'Respond in ' + responseLang + '.\n' +
-      'Respond ONLY with this JSON (no markdown, no extra text):\n' +
-      '{"city":"CLEAN CITY NAME or NONE","events":[{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]}';
-    console.log('Fetching city+events for:', rawCity);
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3 },
-          tools: [{ google_search: {} }]
-        })
+  if (!apiKey) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
+  const responseLang = langMap[selectedLang] || 'Bulgarian';
+  const prompt = 'City: ' + city + '. Date: ' + today + '. ' +
+    'List 5-8 interesting things happening in or near ' + city + ' today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
+    'Each item: name, 1-line description, when, where, and a "context" field with 2-3 sentences of background info and talking points for casual conversation. ' +
+    'Be specific and factual. Respond in ' + responseLang + '. ' +
+    'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]';
+
+  // Try gemini-2.0-flash-lite first (separate rate limit from live session model)
+  const models = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+  for (const model of models) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 3000));
+        console.log('Fetching events via', model, 'attempt', attempt + 1);
+        const res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(apiKey),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.3 },
+              tools: [{ google_search: {} }]
+            })
+          }
+        );
+        if (res.status === 429) { console.warn(model, '429'); continue; }
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log('Events response (' + model + '):', text.substring(0, 200));
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const events = JSON.parse(jsonMatch[0]);
+          if (events.length > 0) return events;
+        }
+        return text || null;
+      } catch (err) {
+        console.error('Events fetch error (' + model + '):', err);
       }
-    );
-    if (res.status === 429 && retryCount < 5) {
-      const delay = (retryCount + 1) * 3000;
-      console.warn('fetchCityAndEvents 429 — retrying in', delay, 'ms (attempt', retryCount + 1, ')');
-      await new Promise(r => setTimeout(r, delay));
-      return fetchCityAndEvents(rawCity, retryCount + 1);
     }
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('City+events raw response:', text.substring(0, 300));
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const city = (parsed.city && parsed.city.toUpperCase() !== 'NONE') ? parsed.city : null;
-      const events = parsed.events || null;
-      console.log('Extracted city:', city, '| events:', events ? events.length : 0);
-      return { city, events };
-    }
-    return { city: null, events: text };
-  } catch (err) {
-    console.error('City+events fetch error:', err);
-    return { city: null, events: null };
   }
+  return null;
 }
 
 function startNearbyFlow(rawCity) {
   console.log('Nearby flow — raw city:', rawCity);
+
+  // Extract city with regex (instant, no API call)
+  const city = extractCity(rawCity);
+  console.log('City extracted:', rawCity, '→', city);
+
+  if (!city) {
+    // No city detected — skip toilet, reconnect silently
+    console.log('No city in transcript, skipping nearby flow');
+    isSilentReconnect = true;
+    connect();
+    return;
+  }
+
+  setCookie('user_city', city, 30);
 
   // Show toilet overlay and start countdown immediately
   const overlay = document.getElementById('toiletOverlay');
@@ -1184,25 +1209,19 @@ function startNearbyFlow(rawCity) {
   if (ws) { ws.close(); ws = null; }
   stopMic();
 
-  // LLM call runs in parallel with countdown
+  // Fetch events in parallel with countdown (tries multiple models to avoid 429)
   const today = new Date().toISOString().slice(0, 10);
-  let cleanCity = null;
-  const llmDone = fetchCityAndEvents(rawCity).then(result => {
-    cleanCity = result.city;
-    const events = result.events;
-    console.log('Clean city:', rawCity, '→', cleanCity);
-    if (!cleanCity) return; // no city detected
-    setCookie('user_city', cleanCity, 30);
+  const eventsDone = fetchEvents(city).then(events => {
     if (events && Array.isArray(events) && events.length > 0) {
-      nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + cleanCity + '): ' +
+      nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
         events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
         'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
     } else if (events && typeof events === 'string') {
-      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanCity + '. Днес е ' + today + '. Ето какво намерих: ' + events +
+      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
         ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
     } else {
-      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanCity + '. Днес е ' + today + '. ' +
-        'Разкажи какво интересно се случва в ' + cleanCity + '. Импровизирай с познанията си за района. Бъди конкретен.';
+      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
+        'Разкажи какво интересно се случва в ' + city + '. Импровизирай с познанията си за района. Бъди конкретен.';
     }
     console.log('Nearby cache ready:', nearbyCache.substring(0, 200) + '...');
   });
@@ -1215,18 +1234,11 @@ function startNearbyFlow(rawCity) {
     timerEl.textContent = sec;
     if (sec <= 0) {
       clearInterval(countdown);
-      await llmDone; // ensure LLM finished before reconnecting
+      await eventsDone; // ensure events fetch finished
       overlay.classList.remove('visible');
-      if (!cleanCity) {
-        // No city detected — reconnect silently, no subtitle update
-        console.log('No city detected, skipping nearby flow');
-        isSilentReconnect = true;
-        connect();
-        return;
-      }
-      updateSubtitle(cleanCity);
+      updateSubtitle(city);
       if (!nearbyCache) {
-        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanCity + '. Разкажи какво интересно се случва. Импровизирай.';
+        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Разкажи какво интересно се случва. Импровизирай.';
       }
       isToiletReturn = false;
       isSilentReconnect = false;
