@@ -4,7 +4,7 @@
 
 import bus from './events.js';
 import { getCookie, setCookie } from './config.js';
-import { loadPrompts, getDeferredKnowledge } from './prompts.js';
+import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import { startMic, stopMic, toggleMute, setMicGain, setWebSocket } from './microphone.js';
 import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected } from './connection.js';
@@ -38,6 +38,9 @@ window.disconnect = disconnect;
 window.setCookie = setCookie;
 window.getCookie = getCookie;
 
+// Debug: read-only prompt inspection from console
+window._debugPrompts = { getDeferredKnowledge, getSystemPrompt };
+
 // ── Connect / Disconnect toggle ──
 
 function toggleConnection() {
@@ -53,6 +56,19 @@ function toggleConnection() {
 document.addEventListener('DOMContentLoaded', async () => {
   // Load prompt text files
   await loadPrompts();
+
+  // Developer console help
+  console.log('%c🍺 Бай Жельо — Debug Console', 'font-size:14px;font-weight:bold;color:#f0a500');
+  console.table({
+    'memory.history':        { description: 'Array of {role, text} turns (copy)' },
+    'memory.summary':        { description: 'Formatted summary for reconnect' },
+    'memory.full':           { description: 'Full history as readable text' },
+    'memory.count':          { description: 'Number of stored turns' },
+    'memory.reconnectPrompt':{ description: 'Exact text injected on reconnect' },
+    'memory.print()':        { description: 'Print full history to console' },
+    '_debugPrompts.getSystemPrompt()':      { description: 'Current assembled system prompt' },
+    '_debugPrompts.getDeferredKnowledge()': { description: 'Beer + metal knowledge block' },
+  });
 
   // Init voice menu dropdown and waveform bars
   initVoiceMenu();

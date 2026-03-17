@@ -48,3 +48,19 @@ export function getFullHistory() {
 export function clearHistory() {
   conversationHistory = [];
 }
+
+// ── Debug: expose to console via window.memory ──
+// ── Debug: expose read-only views to console via window.memory ──
+window.memory = {
+  get history() { return [...conversationHistory]; },  // copy, not reference
+  get summary() { return getConversationSummary(); },
+  get full() { return getFullHistory(); },
+  get count() { return conversationHistory.length; },
+  get reconnectPrompt() {
+    // Shows exactly what would be injected on reconnect — read-only preview
+    const { getDeferredKnowledge } = window._debugPrompts || {};
+    const dk = getDeferredKnowledge ? getDeferredKnowledge() : '(load prompts.js first)';
+    return getConversationSummary() + '\n---DEFERRED KNOWLEDGE---\n' + dk;
+  },
+  print() { console.log(getFullHistory() || '(empty)'); }
+};
