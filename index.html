@@ -906,7 +906,7 @@ function getSystemPrompt() {
     'Тема (80%): ' + topicDesc + ' Стой в тази тема. ' +
     'Памет (10%): връщай се към обсъждани неща. ' +
     'Лични интереси: обичаш крафт бира и хеви метъл, но НЕ ги споменавай по своя инициатива. Само ако потребителят ИЗРИЧНО попита за бира или музика. ' +
-    'ТЪРСЕНЕ: Когато потребителят иска да провериш нещо в интернет — разпознавай фрази като: "потърси", "провери", "провери в интернет", "какво казват по интернет", "виж в нета", "намери", "гугълни", "чекни", "search", "google it", "look it up", "check online", "busca", "búscalo". Също когато попита нещо конкретно-фактическо, което не знаеш със сигурност (дата, резултат, цена, новина) — предложи да потърсиш. Кажи ТОЧНО "Чакай да проверя" и след това кажи ТОЧНО "ТЪРСЯ:" последвана от заявката на английски. Пример: "Чакай да проверя... ТЪРСЯ: best craft beer festivals Europe 2026". Не измисляй отговор — изчакай резултатите. ' +
+    'ТЪРСЕНЕ: Когато потребителят иска да провериш нещо в интернет (потърси, провери, виж в нета, гугълни, чекни, search, google it, busca, и др.), или попита нещо фактическо което не знаеш — кажи нещо естествено като "Чакай да видя в телефона" или "Дай да проверя". После ЗАДЪЛЖИТЕЛНО завърши с ТЪРСЯ: и заявката на английски. Пример: "Абе чакай, да видя какво казват... ТЪРСЯ: craft beer festivals Europe 2026". Не казвай заявката на глас — само маркера ТЪРСЯ: трябва да е там. Не измисляй отговор — изчакай резултатите. ' +
     'АДАПТАЦИЯ: Следи какво харесва потребителя. Ако поиска да спреш тема — ВЕДНАГА спри завинаги. Разговорът е за НЕГО. ' +
     'Ниво: ' + iq.depth + ' Стил: ' + iq.style + ' Дължина: ' + iq.length + ' ' +
     lang.greeting + ' ' + lang.rules;
@@ -933,6 +933,7 @@ let nearbyCache = null;
 let waitingForCityVoice = 0;
 let pendingCity = null; // city waiting for toilet announcement to finish
 let isSearching = false;
+let pendingBotText = '';
 
 // Web search: show overlay, close WS, search via Gemini, reconnect with results
 async function startWebSearch(query) {
@@ -1601,14 +1602,8 @@ async function connect() {
         if (outText) {
           feedTranscriptToLipSync(outText);
           appendTranscript('bot', outText);
-          // Detect search trigger
-          const searchMatch = outText.match(/ТЪРСЯ:\s*(.+)/i);
-          if (searchMatch && !isSearching) {
-            const query = searchMatch[1].trim();
-            console.log('Search triggered:', query);
-            isSearching = true;
-            startWebSearch(query);
-          }
+          // Accumulate for search detection (chunks arrive separately)
+          pendingBotText += outText;
         }
         // User speech transcription
         const inText = content.inputTranscription?.text;
@@ -1621,6 +1616,20 @@ async function connect() {
           audioPlayer.complete();
           transcriptCharQueue = [];
           trackUsage();
+
+          // Detect search trigger from accumulated bot output
+          if (pendingBotText && !isSearching) {
+            const searchMatch = pendingBotText.match(/ТЪРСЯ:\s*(.+)/i);
+            if (searchMatch) {
+              const query = searchMatch[1].trim();
+              console.log('Search triggered:', query);
+              pendingBotText = '';
+              isSearching = true;
+              startWebSearch(query);
+              return; // skip other turnComplete handling
+            }
+          }
+          pendingBotText = '';
 
           // Waiting for user to say city
           if (waitingForCityVoice === 1) {
