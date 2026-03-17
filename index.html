@@ -1115,21 +1115,41 @@ function selectNearby(btn) {
   );
 }
 
-// Extract city name from raw transcript using regex (no API call needed)
-function extractCity(raw) {
-  let text = raw.trim();
-  // Strip leading filler
-  text = text.replace(/^(абе\s+|ами\s+|ами\s+ние\s+|аз\s+съм\s+(от|в|във|на)\s+|ние\s+сме\s+(от|в|във)\s+|съм\s+(от|в|във)\s+|сме\s+(от|в|във)\s+|май\s+сме\s+(от|в|във)\s+|според\s+мен[еа]?\s+сме\s+(от|в|във)\s+|намираме\s+се\s+(от|в|във)\s+|от\s+|във?\s+|во\s+|на\s+|о\s+|i'?\s*m\s+(in|from)\s+|we'?\s*re\s+in\s+|in\s+|from\s+|estoy\s+en\s+|en\s+)/i, '');
-  // Take part before comma (city, not country)
-  text = text.split(',')[0].trim();
-  // Strip trailing filler
-  text = text.replace(/\s+(сме|съм|сега|де|бе|ба|бре|лек|брат|мой|божели|we are|right now).*$/i, '');
-  // Remove trailing period
-  text = text.replace(/\.\s*$/, '').trim();
-  // If nothing useful left, return null
-  if (!text || text.length < 2) return null;
-  // Capitalize first letter
-  return text.charAt(0).toUpperCase() + text.slice(1);
+// Extract city name from raw transcript via LLM (gemini-2.0-flash-lite — separate rate limit)
+async function extractCity(raw) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 2000));
+      const res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text:
+              'The user was asked which city they are in. They said: "' + raw + '"\n' +
+              'Extract ONLY the city name. Remove filler words, country names, prepositions, slang.\n' +
+              'Fix speech-to-text errors if needed. Guess the closest real city.\n' +
+              'If the user did NOT say any city, reply: NONE\n' +
+              'Reply with ONLY the city name or NONE. Nothing else.'
+            }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 20 }
+          })
+        }
+      );
+      if (res.status === 429) { console.warn('extractCity 429, attempt', attempt + 1); continue; }
+      const data = await res.json();
+      const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+      console.log('LLM city extraction:', raw, '→', city);
+      if (!city || city.toUpperCase() === 'NONE') return null;
+      return city;
+    } catch (err) {
+      console.error('extractCity error:', err);
+    }
+  }
+  return null;
 }
 
 // Fetch events for a city using gemini-2.0-flash-lite (different model = separate rate limit)
@@ -1182,32 +1202,33 @@ async function fetchEvents(city) {
   return null;
 }
 
-function startNearbyFlow(rawCity) {
+async function startNearbyFlow(rawCity) {
   console.log('Nearby flow — raw city:', rawCity);
 
-  // Extract city with regex (instant, no API call)
-  const city = extractCity(rawCity);
+  // Show toilet overlay immediately while extracting city
+  const overlay = document.getElementById('toiletOverlay');
+  const timerEl = document.getElementById('toiletTimer');
+  overlay.classList.add('visible');
+
+  // Close WS before LLM calls
+  isConnected = false;
+  if (ws) { ws.close(); ws = null; }
+  stopMic();
+
+  // Extract city via LLM (gemini-2.0-flash-lite — separate rate limit)
+  const city = await extractCity(rawCity);
   console.log('City extracted:', rawCity, '→', city);
 
   if (!city) {
     // No city detected — skip toilet, reconnect silently
     console.log('No city in transcript, skipping nearby flow');
+    overlay.classList.remove('visible');
     isSilentReconnect = true;
     connect();
     return;
   }
 
   setCookie('user_city', city, 30);
-
-  // Show toilet overlay and start countdown immediately
-  const overlay = document.getElementById('toiletOverlay');
-  const timerEl = document.getElementById('toiletTimer');
-  overlay.classList.add('visible');
-
-  // Set isConnected=false BEFORE closing WS so onclose doesn't trigger disconnect()
-  isConnected = false;
-  if (ws) { ws.close(); ws = null; }
-  stopMic();
 
   // Fetch events in parallel with countdown (tries multiple models to avoid 429)
   const today = new Date().toISOString().slice(0, 10);
