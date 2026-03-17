@@ -918,55 +918,8 @@ function cycleLang() {
 }
 
 let nearbyCache = null;
-
-async function fetchNearbyEvents(location) {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return null;
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text:
-            'Location: ' + location + '. Date: ' + today + '. ' +
-            'List 5-8 interesting things happening nearby today/this week: events, festivals, concerts, exhibitions, sports, weather, news. ' +
-            'Each: name, 1-line description, when, where. Be specific and factual. ' +
-            'JSON array only: [{"name":"...","desc":"...","when":"...","where":"..."}]'
-          }] }],
-          generationConfig: { temperature: 0.3 }
-        })
-      }
-    );
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('Nearby events raw:', text);
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      const events = JSON.parse(jsonMatch[0]);
-      console.log('Nearby events:', events.map(e => e.name));
-      return events;
-    }
-    return text;
-  } catch (err) {
-    console.error('Nearby fetch error:', err);
-    return null;
-  }
-}
-
-function buildNearbyContext(events) {
-  if (!events) return 'КОНТЕКСТ: Не успя да намериш информация. Импровизирай — попитай потребителя кво го интересува.';
-  let ctx = 'КОНТЕКСТ (НЕ питай къде е потребителят — вие сте заедно): ';
-  if (Array.isArray(events)) {
-    ctx += events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + ')').join('. ') + '. ';
-  } else {
-    ctx += events + ' ';
-  }
-  ctx += 'Разкажи ТОЧНО 2 от тях кратко и интересно. Попитай кое иска да обсъдим първо.';
-  return ctx;
-}
+let waitingForCityVoice = false;
+let userCity = null;
 
 function selectNearby(btn) {
   document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
@@ -975,63 +928,25 @@ function selectNearby(btn) {
 
   if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-  // Already cached — just switch, no modal
+  // Already have context — just switch
   if (nearbyCache) {
     safeSwitchCommand('Потребителят иска пак да говорим кво става наоколо. ' + nearbyCache);
     return;
   }
 
-  // First time — show location permission modal
-  document.getElementById('locationModal').classList.add('visible');
-}
-
-function nearbyAccept() {
-  document.getElementById('locationModal').classList.remove('visible');
-
-  if (!navigator.geolocation) {
-    nearbyCache = 'КОНТЕКСТ: Няма геолокация. Попитай потребителя в кой град е.';
-    safeSwitchCommand(nearbyCache);
-    return;
-  }
-
-  // Request geolocation — this triggers the browser prompt
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const lat = pos.coords.latitude.toFixed(4);
-      const lon = pos.coords.longitude.toFixed(4);
-      console.log('Location acquired:', lat, lon);
-      startNearbyToilet(lat, lon);
-    },
-    (err) => {
-      const reasons = { 1: 'PERMISSION_DENIED', 2: 'POSITION_UNAVAILABLE', 3: 'TIMEOUT' };
-      console.warn('Geolocation:', reasons[err.code] || err.code, err.message);
-      // Fallback — ask by voice
-      waitingForCityVoice = true;
-      safeSwitchCommand('Кажи нещо смешно: "Абе, нещо ми се завива свят и GPS-а ми не хваща... в кой град сме бе, че съм забравил? Кажи ми и после дай до тоалетната." Изчакай отговор.');
-    },
-    { timeout: 8000, maximumAge: 600000, enableHighAccuracy: false }
-  );
-}
-
-function nearbySkip() {
-  document.getElementById('locationModal').classList.remove('visible');
-  safeSwitchCommand('Кажи нещо смешно и различно всеки път, в този стил: "Да бе лек, разбира се... аз май малко се понапих и забравих къде сме. Ама кажи ми в кой град сме, че да ти разкажа кво става. И после дай до тоалетната, че бирите напират да си ходят." Изчакай потребителя да каже град или район. Когато каже — потвърди кратко и смешно.');
+  // First time — avatar asks where they are
   waitingForCityVoice = true;
+  safeSwitchCommand('Кажи нещо смешно и различно всеки път, в стил: "Да бе лек... аз май малко се понапих и забравих къде сме. В кой град сме бе? Кажи ми, че после ще ида до тоалетната и като се върна ще ти разкажа кво става наоколо." Изчакай потребителя да каже град или район. Когато каже — потвърди кратко и смешно.');
 }
 
-let waitingForCityVoice = false;
+function startNearbyFlow(city) {
+  userCity = city;
+  console.log('Starting nearby flow for:', city);
 
-function startNearbyToilet(lat, lon) {
-  safeSwitchCommand('Кажи бързо: "Добре, дай да мина до тоалетната, като се върна ще ти разкажа кво става." Бъди кратък.');
-  runNearbyToilet(() => fetchNearbyEvents(lat + ',' + lon));
-}
+  // Avatar announces toilet
+  safeSwitchCommand('Кажи бързо и смешно: "Добре, ' + city + ' значи! Дай до тоалетната, че бирите напират, и като се върна ще ти разкажа кво става." Бъди кратък.');
 
-function startNearbyToiletByCity(city) {
-  safeSwitchCommand('Кажи бързо: "Добре, дай до тоалетната, като се върна ще ти кажа кво става в ' + city + '." Бъди кратък.');
-  runNearbyToilet(() => fetchNearbyEvents(city));
-}
-
-function runNearbyToilet(fetchFn) {
+  // After avatar speaks, show toilet and reconnect
   setTimeout(() => {
     const overlay = document.getElementById('toiletOverlay');
     const timerEl = document.getElementById('toiletTimer');
@@ -1041,12 +956,13 @@ function runNearbyToilet(fetchFn) {
     isConnected = false;
     stopMic();
 
-    fetchFn().then(events => {
-      nearbyCache = buildNearbyContext(events);
-      console.log('Nearby cache ready');
-    });
+    const today = new Date().toISOString().slice(0, 10);
+    nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
+      'Разкажи какво интересно се случва в ' + city + ' днес или тази седмица — събития, фестивали, концерти, изложби, спорт, време, новини. ' +
+      'Бъди конкретен и кратък. Кажи ТОЧНО 2 интересни неща и попитай кое иска да обсъдим първо. НЕ питай къде е потребителят — вие сте заедно.';
+    console.log('Nearby cache set for:', city);
 
-    let sec = 20;
+    let sec = 15;
     timerEl.textContent = sec;
     const countdown = setInterval(() => {
       sec--;
@@ -1054,14 +970,13 @@ function runNearbyToilet(fetchFn) {
       if (sec <= 0) {
         clearInterval(countdown);
         overlay.classList.remove('visible');
-        if (!nearbyCache) nearbyCache = 'КОНТЕКСТ: Информацията не зареди навреме. Импровизирай.';
         isToiletReturn = false;
         isSilentReconnect = false;
         isNearbyConnect = true;
         connect();
       }
     }, 1000);
-  }, 2000);
+  }, 3000);
 }
 
 function selectTopic(btn, topic) {
@@ -1420,20 +1335,20 @@ async function connect() {
           transcriptCharQueue = [];
           trackUsage();
 
-          // If waiting for city from user voice, grab it and start toilet+fetch flow
+          // If waiting for city from user voice, grab it and start toilet flow
           if (waitingForCityVoice) {
             waitingForCityVoice = false;
             console.log('History:', conversationHistory.map(e => e.role + ': ' + e.text.substring(0, 80)));
+            // Get city from user transcript or bot's confirmation
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
             const lastBot = [...conversationHistory].reverse().find(e => e.role === 'bot');
-            // User transcript has the city, or bot's confirmation contains it
-            const location = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() :
-                             (lastBot ? lastBot.text.trim() : null);
-            if (location) {
-              console.log('City from voice:', location);
-              startNearbyToiletByCity(location);
+            const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() :
+                         (lastBot ? lastBot.text.trim() : null);
+            if (city) {
+              console.log('City from voice:', city);
+              startNearbyFlow(city);
             } else {
-              console.warn('No city detected in conversation');
+              console.warn('No city detected');
             }
           }
 
@@ -2848,16 +2763,6 @@ function setStatus(msg, active) {
   el.className = 'status' + (active ? ' active' : '');
 }
 </script>
-<div class="toilet-overlay" id="locationModal">
-  <div class="toilet-box">
-    <div class="emoji">📍🍺</div>
-    <div class="msg">Бай Жельо малко е пийнал и е забравил къде е. Позволи му да провери локацията в браузъра, за да ти разкаже кво става наоколо.</div>
-    <div class="modal-btns">
-      <button class="modal-btn modal-btn-ok" onclick="nearbyAccept()">Добре</button>
-      <button class="modal-btn modal-btn-skip" onclick="nearbySkip()">Забрави</button>
-    </div>
-  </div>
-</div>
 <div class="toilet-overlay" id="toiletOverlay">
   <div class="toilet-box">
     <div class="emoji">🚽🍺</div>
