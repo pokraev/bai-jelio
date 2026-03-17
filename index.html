@@ -935,16 +935,16 @@ let nearbyCache = null;
 let waitingForCityVoice = 0;
 let pendingCity = null; // city waiting for toilet announcement to finish
 
-// Once city is captured, save it, tell the avatar to announce the toilet,
-// and wait for that announcement to finish (turnComplete at state 10).
-function cityCaptured(city) {
+// Once city transcript is captured, tell the avatar to announce toilet.
+// The raw transcript is passed — LLM cleaning happens in startNearbyFlow
+// after the WS is closed (to avoid 429 rate limit conflicts).
+function cityCaptured(rawCity) {
   if (cityPollTimer) { clearTimeout(cityPollTimer); cityPollTimer = null; }
-  pendingCity = city;
+  pendingCity = rawCity;
   waitingForCityVoice = 10;
-  setCookie('user_city', city, 30);
-  updateSubtitle(city);
-  console.log('City captured:', city, '— avatar announcing toilet');
-  sendTextToGemini('Добре, ' + city + ' значи! Кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става в ' + city + '. Бъди кратък.');
+  console.log('City captured (raw):', rawCity, '— avatar announcing toilet');
+  // The avatar heard the user — it knows the real city name, so it will say it correctly
+  sendTextToGemini('Потвърди града на потребителя и кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става там. Бъди кратък.');
 }
 
 // Use LLM to extract city name. Retries on 429 with delay.
@@ -1002,26 +1002,15 @@ async function pollForCity(attempt) {
       cityPollTimer = setTimeout(() => pollForCity(attempt + 1), 1000);
     } else {
       waitingForCityVoice = 0;
-      console.warn('No city after polling');
+      console.warn('No city after polling, moving on');
+      sendDeferredKnowledge();
     }
     return;
   }
-  const city = await cleanCityName(raw);
-  console.log('Poll city attempt', attempt, ':', raw, '→', city);
-  if (city === null) {
-    // LLM determined user didn't say a city — move on without nearby flow
-    waitingForCityVoice = 0;
-    console.log('No city detected, skipping nearby flow');
-    sendDeferredKnowledge();
-  } else if (city && city.length > 1) {
-    cityCaptured(city);
-  } else if (attempt < 8) {
-    cityPollTimer = setTimeout(() => pollForCity(attempt + 1), 1000);
-  } else {
-    waitingForCityVoice = 0;
-    console.warn('No city after polling, moving on');
-    sendDeferredKnowledge();
-  }
+  // Pass raw transcript directly — LLM cleaning happens during toilet break
+  // (when WS is closed and API key rate limit is free)
+  console.log('Poll city attempt', attempt, ': raw =', raw);
+  cityCaptured(raw);
 }
 
 function updateSubtitle(cityOverride) {
@@ -1109,10 +1098,8 @@ async function fetchNearbyEvents(city) {
   }
 }
 
-function startNearbyFlow(city) {
-  console.log('Nearby flow — city:', city);
-  setCookie('user_city', city, 30);
-  updateSubtitle(city);
+async function startNearbyFlow(rawCity) {
+  console.log('Nearby flow — raw city:', rawCity);
 
   // Show toilet overlay — avatar already announced going to toilet
   const overlay = document.getElementById('toiletOverlay');
@@ -1123,6 +1110,12 @@ function startNearbyFlow(city) {
   isConnected = false;
   if (ws) { ws.close(); ws = null; }
   stopMic();
+
+  // Now that WS is closed, use LLM to extract clean city name (no 429 conflict)
+  const city = await cleanCityName(rawCity) || rawCity;
+  console.log('Clean city:', rawCity, '→', city);
+  setCookie('user_city', city, 30);
+  updateSubtitle(city);
 
   // Fetch real events during toilet break
   const today = new Date().toISOString().slice(0, 10);
