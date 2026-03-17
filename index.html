@@ -631,6 +631,7 @@
   <h1>Поговори с бай Жельо<br><span style="font-style:italic; font-size:0.55em; font-weight:300">Алкохолик-събеседник, който много ги разбира нещата</span></h1>
 
   <div class="topics" id="topics">
+    <button class="topic-btn active" onclick="selectNearby(this)">Кво става наоколо</button>
     <button class="topic-btn" onclick="selectTopic(this, 'philosophy')">Философия</button>
     <button class="topic-btn" onclick="selectTopic(this, 'psychology')">Психология</button>
     <button class="topic-btn" onclick="selectTopic(this, 'sociology')">Социология</button>
@@ -639,7 +640,6 @@
     <button class="topic-btn" onclick="selectTopic(this, 'music')">Музика</button>
     <button class="topic-btn" onclick="selectTopic(this, 'literature')">Литература</button>
     <button class="topic-btn" onclick="selectTopic(this, 'life')">Живот</button>
-    <button class="topic-btn" onclick="selectNearby(this)">Кво става наоколо</button>
   </div>
 
   <div class="controls">
@@ -954,20 +954,20 @@ async function fetchNearbyEvents(city) {
   if (!apiKey) return null;
   try {
     const today = new Date().toISOString().slice(0, 10);
-    console.log('Fetching events for:', city, 'date:', today);
+    const prompt = 'Location: ' + city + '. Date: ' + today + '. ' +
+      'List 5-8 interesting things happening in or near ' + city + ' today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
+      'Each item: name, 1-line description, when, where. Be specific and factual. ' +
+      'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"..."}]';
+    console.log('Fetching events — sending to LLM:', prompt);
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text:
-            'Location: ' + city + '. Date: ' + today + '. ' +
-            'List 5-8 interesting things happening in or near ' + city + ' today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
-            'Each item: name, 1-line description, when, where. Be specific and factual. ' +
-            'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"..."}]'
-          }] }],
-          generationConfig: { temperature: 0.3 }
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3 },
+          tools: [{ google_search: {} }]
         })
       }
     );
@@ -1341,12 +1341,18 @@ async function connect() {
         } else {
           // Check if we have saved location
           const savedCity = getCookie('user_city');
-          if (savedCity) {
-            // We know the city — greet and announce toilet
-            waitingForCityVoice = 3; // waiting for toilet announcement to finish
+          if (savedCity && nearbyCache) {
+            // Have city + cached events — greet and discuss directly
+            waitingForCityVoice = 0;
+            sendTextToGemini(
+              'Поздрави потребителя кратко и смешно. Вие сте в ' + savedCity + '. ' + nearbyCache
+            );
+          } else if (savedCity) {
+            // Have city but no events cache — greet, announce toilet, fetch events
+            waitingForCityVoice = 3;
             sendTextToGemini(
               'Поздрави потребителя кратко и смешно. Кажи че знаеш че сте в ' + savedCity + '. ' +
-              'После кажи че трябва да идеш до тоалетната, защото бирите напират, и като се върнеш ще му разкажеш кво става в ' + savedCity + '. Бъди кратък и смешен.'
+              'После кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират, и като се върнеш ще му разкажеш кво става в ' + savedCity + '.'
             );
           } else {
             // First time — greet + ask where they are
@@ -1413,24 +1419,25 @@ async function connect() {
 
           // Waiting for user to say city
           if (waitingForCityVoice === 1) {
-            // First turnComplete = avatar finished asking. Now wait for user answer + avatar confirmation.
+            // Avatar finished asking — wait for next turn (user answers, avatar confirms)
             waitingForCityVoice = 2;
-          } else if (waitingForCityVoice === 2) {
-            // Avatar confirmed city — now tell it to announce toilet
-            waitingForCityVoice = 3;
+            console.log('State 1→2: avatar asked, waiting for user answer');
+          } else if (waitingForCityVoice >= 2) {
+            // Avatar confirmed + announced toilet — grab city and go
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
-            const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() : getCookie('user_city');
-            console.log('City confirmed:', city);
+            const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() : null;
+            console.log('City from transcript:', city, '| History:', conversationHistory.slice(-4).map(e => e.role + ': ' + e.text.substring(0, 60)));
             if (city) {
-              setCookie('user_city', city, 30);
-              sendTextToGemini('Добре, ' + city + ' значи! Кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става в ' + city + '.');
+              waitingForCityVoice = 0;
+              startNearbyFlow(city);
+            } else if (waitingForCityVoice < 5) {
+              // Transcript might not have arrived yet, wait one more turn
+              waitingForCityVoice++;
+              console.log('No city yet, waiting... state:', waitingForCityVoice);
+            } else {
+              waitingForCityVoice = 0;
+              console.warn('No city after retries');
             }
-          } else if (waitingForCityVoice === 3) {
-            // Avatar finished announcing toilet — NOW show toilet overlay
-            waitingForCityVoice = 0;
-            const city = getCookie('user_city');
-            console.log('Toilet announced, starting flow for:', city);
-            if (city) startNearbyFlow(city);
           }
 
           if (isMuted) {
@@ -1530,6 +1537,8 @@ function showToiletBreak() {
 
 function disconnect() {
   releaseWakeLock();
+  setCookie('user_city', '', -1);
+  nearbyCache = null;
   if (ws) {
     ws.close();
     ws = null;
