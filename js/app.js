@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (savedKey) {
     const input = document.getElementById('apiKey');
     if (input) input.value = savedKey;
+    connect();
   }
 });
 
