@@ -596,13 +596,11 @@ export function showToiletBreak() {
  * @param {string} query
  */
 export async function startWebSearch(query) {
-  // If grounding already blocked this session, don't even try
+  // If grounding already blocked this session, respond directly without disconnecting
   if (groundingBlocked) {
     console.log('[search] grounding blocked for session, skipping');
-    searchCache = 'КАЖИ ТОЧНО ТОВА (не променяй): "Абе мой, нали ти казах че днес не мога да търся повече. Утре пак."';
     isSearching = false;
-    reconnectReason = 'search';
-    connect();
+    sendTextToGemini('КАЖИ ТОЧНО ТОВА (не променяй): "Абе мой, нали ти казах че днес не мога да търся повече. Утре пак."');
     return;
   }
 

@@ -74,17 +74,13 @@ export async function geminiRest(prompt, options) {
         let quotaScope = 'unknown'; // 'per-minute', 'per-day', or 'unknown'
         try {
           const errData = await res.json();
-          // Full error details available in errData if needed for debugging
           if (errData.error?.details) {
             for (const d of errData.error.details) {
               if (d.retryDelay) {
                 const match = String(d.retryDelay).match(/(\d+)/);
                 if (match) retrySeconds = parseInt(match[1], 10);
-                console.warn('[gemini-rest] retry_after_body:', d.retryDelay);
               }
               if (d.metadata) {
-                console.warn('[gemini-rest] quota_metadata:', JSON.stringify(d.metadata));
-                // Try to detect if it's daily or per-minute
                 const metaStr = JSON.stringify(d.metadata).toLowerCase();
                 if (metaStr.includes('per_day') || metaStr.includes('daily') || metaStr.includes('day')) {
                   quotaScope = 'per-day';
@@ -92,17 +88,11 @@ export async function geminiRest(prompt, options) {
                   quotaScope = 'per-minute';
                 }
               }
-              // Log ALL fields for debugging
-              if (d['@type']) console.warn('[gemini-rest] error_type:', d['@type']);
-              if (d.reason) console.warn('[gemini-rest] reason:', d.reason);
-              if (d.domain) console.warn('[gemini-rest] domain:', d.domain);
             }
           }
-          // Also check error message for clues
           const errMsg = (errData.error?.message || '').toLowerCase();
           if (errMsg.includes('per day') || errMsg.includes('daily')) quotaScope = 'per-day';
           if (errMsg.includes('per minute')) quotaScope = 'per-minute';
-          console.warn('[gemini-rest] error_message:', errData.error?.message);
         } catch (_) {}
 
         // If retrySeconds > 3600, likely daily quota
