@@ -222,10 +222,12 @@ export async function connect() {
           outputAudioTranscription: {},
           inputAudioTranscription: {},
           realtimeInputConfig: {
+            activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+            turnCoverage: 'TURN_INCLUDES_ALL_INPUT',
             automaticActivityDetection: {
               disabled: false,
-              prefix_padding_ms: 100,
-              silence_timeout_ms: 1000,
+              startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
             }
           },
           systemInstruction: {
