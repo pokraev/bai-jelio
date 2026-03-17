@@ -947,33 +947,54 @@ function cityCaptured(city) {
   sendTextToGemini('Добре, ' + city + ' значи! Кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става в ' + city + '. Бъди кратък.');
 }
 
-// Strip filler words from user transcript to extract just the city name
-// e.g. "В Хага сме" → "Хага", "Во Сливен сме божели" → "Сливен"
-function cleanCityName(raw) {
-  let city = raw.trim();
-  // Strip leading filler (case-insensitive, supports bg/en/es)
-  city = city.replace(/^(аз\s+съм\s+(от|в|във|на)\s+|ние\s+сме\s+(от|в|във)\s+|съм\s+(от|в|във)\s+|сме\s+(от|в|във)\s+|от\s+|във?\s*|во\s+|на\s+|о\s+|i'?\s*m\s+(in|from)\s+|we'?\s*re\s+in\s+|in\s+|from\s+|estoy\s+en\s+|en\s+)/i, '');
-  // Take only the part before a comma (city, not country)
-  city = city.split(',')[0].trim();
-  // Strip trailing filler — everything after the city name (filler words, extra text)
-  city = city.replace(/\s+(сме|съм|сега|де|бе|ба|божели|we are|right now).*$/i, '');
-  // If multiple words remain, keep only capitalized words (likely the city name)
-  const words = city.split(/\s+/);
-  if (words.length > 3) {
-    // Too many words — keep first 2 (handles "Сан Франциско", "Ню Йорк")
-    city = words.slice(0, 2).join(' ');
+// Use LLM to extract just the city name from user transcript
+// e.g. "Во Сливен сме божели" → "Сливен"
+async function cleanCityName(raw) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return raw.trim();
+  try {
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'The user was asked which city they are in. They replied: "' + raw + '"\n' +
+            'Extract ONLY the city name. No country, no filler words, no explanation.\n' +
+            'Reply with just the city name, nothing else. Example: "Сливен" or "Amsterdam" or "Barcelona"'
+          }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 20 }
+        })
+      }
+    );
+    const data = await res.json();
+    const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    console.log('LLM city extraction:', raw, '→', city);
+    return city || raw.trim();
+  } catch (err) {
+    console.error('City extraction LLM error:', err);
+    return raw.trim();
   }
-  return city.trim();
 }
 
 // Poll for user transcript (inputTranscription often lags behind turnComplete)
 let cityPollTimer = null;
-function pollForCity(attempt) {
+async function pollForCity(attempt) {
   if (waitingForCityVoice === 0 || waitingForCityVoice === 1 || waitingForCityVoice >= 10) return;
   const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
   const raw = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() : null;
-  const city = raw ? cleanCityName(raw) : null;
-  console.log('Poll city attempt', attempt, ':', city);
+  if (!raw) {
+    if (attempt < 8) {
+      cityPollTimer = setTimeout(() => pollForCity(attempt + 1), 1000);
+    } else {
+      waitingForCityVoice = 0;
+      console.warn('No city after polling');
+    }
+    return;
+  }
+  const city = await cleanCityName(raw);
+  console.log('Poll city attempt', attempt, ':', raw, '→', city);
   if (city && city.length > 1) {
     cityCaptured(city);
   } else if (attempt < 8) {
@@ -1570,19 +1591,9 @@ async function connect() {
             waitingForCityVoice = 2;
             console.log('State 1→2: avatar asked, waiting for user answer');
           } else if (waitingForCityVoice === 2) {
-            // Avatar confirmed the city vocally — try to grab it from transcript.
-            // inputTranscription often arrives AFTER turnComplete, so poll if not found.
-            const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
-            const raw = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() : null;
-            const city = raw ? cleanCityName(raw) : null;
-            console.log('City from transcript:', city);
-            if (city && city.length > 1) {
-              cityCaptured(city);
-            } else {
-              // Start polling — transcript will arrive shortly
-              waitingForCityVoice = 5; // parking state while polling
-              pollForCity(1);
-            }
+            // Avatar confirmed the city vocally — poll for transcript + LLM extraction
+            waitingForCityVoice = 5; // parking state while polling
+            pollForCity(1);
           } else if (waitingForCityVoice === 10) {
             // Avatar finished toilet announcement — open toilet window
             waitingForCityVoice = 0;
