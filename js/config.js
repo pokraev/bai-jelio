@@ -101,7 +101,7 @@ export function getCookie(name) {
 let _selectedTopic = 'life';
 let _selectedIQ    = 'intelligent';
 let _selectedLang  = 'bg';
-let _selectedVoice = 'Charon';
+let _selectedVoice = 'Iapetus';
 
 export function getSelectedTopic()          { return _selectedTopic; }
 export function setSelectedTopic(v)         { _selectedTopic = v; }
