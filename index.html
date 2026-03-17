@@ -1056,7 +1056,6 @@ async function fetchCityAndEvents(rawCity) {
 
 async function startNearbyFlow(rawCity) {
   console.log('Nearby flow — raw city:', rawCity);
-  let cleanedCity = rawCity; // will be updated by LLM call
 
   // Show toilet overlay — avatar already announced going to toilet
   const overlay = document.getElementById('toiletOverlay');
@@ -1068,29 +1067,29 @@ async function startNearbyFlow(rawCity) {
   if (ws) { ws.close(); ws = null; }
   stopMic();
 
-  // Single LLM call: extract clean city name + fetch events (no separate cleanCityName call)
+  // Single LLM call: extract clean city name + fetch events
+  // WAIT for the result before starting the countdown — city must be confirmed
   const today = new Date().toISOString().slice(0, 10);
-  fetchCityAndEvents(rawCity).then(result => {
-    const city = result.city;
-    const events = result.events;
-    setCookie('user_city', city, 30);
-    // Store clean city for subtitle update when overlay closes
-    cleanedCity = city;
-    console.log('Clean city:', rawCity, '→', city);
-    if (events && Array.isArray(events)) {
-      nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
-        events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
-        'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
-    } else if (events) {
-      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
-        ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
-    } else {
-      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
-        'Разкажи какво интересно се случва в ' + city + '. Импровизирай с познанията си за района. Бъди конкретен.';
-    }
-    console.log('Nearby cache ready:', nearbyCache.substring(0, 200) + '...');
-  });
+  const result = await fetchCityAndEvents(rawCity);
+  const city = result.city;
+  const events = result.events;
+  setCookie('user_city', city, 30);
+  console.log('Clean city:', rawCity, '→', city);
 
+  if (events && Array.isArray(events)) {
+    nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
+      events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
+      'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
+  } else if (events) {
+    nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
+      ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
+  } else {
+    nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
+      'Разкажи какво интересно се случва в ' + city + '. Импровизирай с познанията си за района. Бъди конкретен.';
+  }
+  console.log('Nearby cache ready:', nearbyCache.substring(0, 200) + '...');
+
+  // Now start countdown — city is confirmed
   let sec = 30;
   timerEl.textContent = sec;
   const countdown = setInterval(() => {
@@ -1099,9 +1098,9 @@ async function startNearbyFlow(rawCity) {
     if (sec <= 0) {
       clearInterval(countdown);
       overlay.classList.remove('visible');
-      updateSubtitle(cleanedCity);
+      updateSubtitle(city);
       if (!nearbyCache) {
-        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + cleanedCity + '. Разкажи какво интересно се случва. Импровизирай.';
+        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Разкажи какво интересно се случва. Импровизирай.';
       }
       isToiletReturn = false;
       isSilentReconnect = false;
