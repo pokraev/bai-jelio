@@ -57,25 +57,21 @@ h1 span { color: var(--text); font-weight: 400; font-size: 0.85em; }
   flex-shrink: 0;
   overflow: visible;
   margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .stage {
   position: relative;
   width: min(580px, calc(100vw - 32px));
   height: calc(min(580px, calc(100vw - 32px)) * 340 / 580);
-  max-height: 100%;
   border-radius: 50%; overflow: hidden;
   box-shadow: 0 0 0 3px var(--accent), 0 0 40px var(--accent-glow), 0 20px 60px rgba(0,0,0,0.5);
-  aspect-ratio: 580 / 340;
+  flex-shrink: 0;
 }
 .stage img {
   position: absolute;
-  width: 100%; height: 100%;
-  left: 0; top: 0;
+  width: 580px; height: 340px;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 1;
-  object-fit: cover;
 }
 .stage.muted-overlay {
   box-shadow: 0 0 0 3px rgba(136,153,170,0.4), 0 0 40px rgba(136,153,170,0.1), 0 20px 60px rgba(0,0,0,0.5);
@@ -91,8 +87,9 @@ h1 span { color: var(--text); font-weight: 400; font-size: 0.85em; }
 }
 #mouthCanvas {
   position: absolute;
-  width: 100%; height: 100%;
-  left: 0; top: 0;
+  width: 580px; height: 340px;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   pointer-events: none;
 }
@@ -459,7 +456,24 @@ select {
 @media (max-width: 480px) {
   body { height: 100dvh; overflow: hidden; }
   .app { height: 100%; }
-  .stage-wrap { flex: 1 1 0; min-height: 0; flex-shrink: 1; }
+  .stage-wrap {
+    flex: 1 1 0; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage {
+    max-height: 100%; aspect-ratio: 580 / 340; flex-shrink: 1;
+  }
+  .stage img {
+    width: 100%; height: 100%;
+    left: 0; top: 0;
+    transform: none;
+    object-fit: cover;
+  }
+  #mouthCanvas {
+    width: 100%; height: 100%;
+    left: 0; top: 0;
+    transform: none;
+  }
   .stage-actions {
     flex-direction: column; gap: 12px;
   }
