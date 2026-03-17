@@ -918,7 +918,7 @@ function cycleLang() {
 }
 
 let nearbyCache = null;
-let waitingForCityVoice = false;
+let waitingForCityVoice = 0; // 0=not waiting, 1=avatar asked (skip next turn), 2=user answered (grab city)
 
 function selectNearby(btn) {
   document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
@@ -934,7 +934,7 @@ function selectNearby(btn) {
   }
 
   // First time — avatar asks where they are
-  waitingForCityVoice = true;
+  waitingForCityVoice = 1;
   safeSwitchCommand(
     'Ти си малко пийнал и си забравил къде сте. Попитай потребителя в кой град сте — кажи нещо смешно, ' +
     'импровизирай, например: "Абе лек, аз нещо се понапих и забравих къде сме... в кой град сме бе?" ' +
@@ -1339,9 +1339,12 @@ async function connect() {
           transcriptCharQueue = [];
           trackUsage();
 
-          // Waiting for user to say city — avatar already asked and will confirm + announce toilet
-          if (waitingForCityVoice) {
-            waitingForCityVoice = false;
+          // Waiting for user to say city
+          if (waitingForCityVoice === 1) {
+            // First turnComplete = avatar finished asking. Now wait for user answer + avatar confirmation.
+            waitingForCityVoice = 2;
+          } else if (waitingForCityVoice === 2) {
+            waitingForCityVoice = 0;
             // Grab city from user or bot transcript
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
             const lastBot = [...conversationHistory].reverse().find(e => e.role === 'bot');
