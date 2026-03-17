@@ -212,6 +212,8 @@ export async function connect() {
     setWebSocket(ws);
 
     ws.onopen = () => {
+      const langCodes = { bg: 'bg', en: 'en', es: 'es' };
+      const langCode = langCodes[getSelectedLang()] || 'bg';
       const setupMsg = {
         setup: {
           model: GEMINI_MODEL,
@@ -220,11 +222,12 @@ export async function connect() {
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: { voiceName: getSelectedVoice() }
-              }
+              },
+              languageCode: langCode
             }
           },
-          outputAudioTranscription: {},
-          inputAudioTranscription: {},
+          outputAudioTranscription: { languageCode: langCode },
+          inputAudioTranscription: { languageCode: langCode },
           systemInstruction: {
             parts: [{ text: getSystemPrompt() }]
           }
