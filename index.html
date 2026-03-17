@@ -1016,9 +1016,10 @@ async function fetchNearbyEvents(city) {
     const responseLang = langMap[selectedLang] || 'Bulgarian';
     const prompt = 'Location: ' + city + '. Date: ' + today + '. ' +
       'List 5-8 interesting things happening in or near ' + city + ' today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
-      'Each item: name, 1-line description, when, where. Be specific and factual. ' +
+      'Each item: name, 1-line description, when, where, and a "context" field with 2-3 sentences of background info, fun facts, or talking points that a colorful bar regular could use to chat about this event in an entertaining way. ' +
+      'Be specific and factual. ' +
       'Respond in ' + responseLang + '. ' +
-      'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"..."}]';
+      'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"...","context":"..."}]';
     console.log('Fetching events — sending to LLM:', prompt);
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
@@ -1068,7 +1069,7 @@ function startNearbyFlow(city) {
   fetchNearbyEvents(city).then(events => {
     if (events && Array.isArray(events)) {
       nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
-        events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + ')').join('. ') + '. ' +
+        events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + '). Контекст: ' + (e.context || '')).join('. ') + '. ' +
         'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
     } else if (events) {
       nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
