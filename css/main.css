@@ -38,7 +38,7 @@ body::before {
 
 .app {
   position: relative; z-index: 1;
-  width: 100%; max-width: 640px;
+  width: 100%; max-width: 780px;
   padding: calc(60px + env(safe-area-inset-top)) 16px 16px;
   display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
@@ -186,7 +186,7 @@ input::placeholder { color: var(--text-muted); opacity: 0.5; }
 }
 
 .config-section {
-  width: 80%;
+  width: 100%;
   margin: 0 auto;
   background: rgba(240,165,0,0.04);
   border: 1.5px solid rgba(240,165,0,0.12);
@@ -451,6 +451,7 @@ select {
 .stage-actions {
   display: flex; justify-content: center; align-items: center; gap: 18px;
   margin-top: 24px;
+  width: 120%; margin-left: -10%;
 }
 .actions-row {
   display: contents;
@@ -464,7 +465,7 @@ select {
   }
 }
 .iq-wrap {
-  position: relative; display: inline-block; min-width: 120px;
+  position: relative; display: inline-block; width: 160px;
 }
 .iq-wrap .iq-btn { width: 100%; justify-content: center; }
 .iq-wrap .iq-label {
@@ -499,7 +500,7 @@ select {
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(6px);
   transition: opacity 0.2s, transform 0.2s;
-  z-index: 20; min-width: 0; width: max-content;
+  z-index: 20; width: 100%;
 }
 .iq-menu.open {
   opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0);
