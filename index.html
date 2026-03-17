@@ -952,12 +952,16 @@ async function startWebSearch(query) {
   const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
   const responseLang = langMap[selectedLang] || 'Bulgarian';
 
+  // Wait for rate limit to clear after live session
+  console.log('Search: waiting 15s for rate limit...');
+  await new Promise(r => setTimeout(r, 15000));
+
   // Step 1: Google Search via Gemini grounding — get raw search results
   let searchSnippets = [];
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       if (attempt > 0) {
-        await new Promise(r => setTimeout(r, attempt * 3000));
+        await new Promise(r => setTimeout(r, 5000));
         console.warn('Search retry attempt', attempt + 1);
       }
       const res = await fetch(
@@ -1041,6 +1045,178 @@ async function startWebSearch(query) {
 let searchCache = null;
 let isSearchReconnect = false;
 
+// ── Background Knowledge Enrichment Pipeline ──
+const knowledgeBank = {}; // topic → { content, timestamp }
+let enrichmentQueue = [];
+let conversationBuffer = '';
+let enrichmentTimer = null;
+let analyzeTimer = null;
+
+function startEnrichmentPipeline() {
+  // Analyze conversation every 5 minutes
+  if (analyzeTimer) clearInterval(analyzeTimer);
+  analyzeTimer = setInterval(() => analyzeConversation(), 5 * 60 * 1000);
+  // Process enrichment queue every 2 minutes
+  if (enrichmentTimer) clearInterval(enrichmentTimer);
+  enrichmentTimer = setInterval(() => processEnrichmentQueue(), 2 * 60 * 1000);
+}
+
+function stopEnrichmentPipeline() {
+  if (analyzeTimer) { clearInterval(analyzeTimer); analyzeTimer = null; }
+  if (enrichmentTimer) { clearInterval(enrichmentTimer); enrichmentTimer = null; }
+}
+
+// Called from outputTranscription/inputTranscription handlers to feed the buffer
+function feedEnrichmentBuffer(role, text) {
+  conversationBuffer += (role === 'user' ? 'User: ' : 'Bai Zhelyo: ') + text + '\n';
+  // Cap buffer at ~5000 chars
+  if (conversationBuffer.length > 5000) {
+    conversationBuffer = conversationBuffer.slice(-4000);
+  }
+}
+
+async function analyzeConversation() {
+  if (!conversationBuffer || conversationBuffer.length < 100) return;
+  if (!isConnected) return; // don't analyze during disconnects
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return;
+  try {
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'Analyze this conversation excerpt:\n' + conversationBuffer.slice(-3000) + '\n\n' +
+            'Extract up to 3 specific topics that would benefit from a Google search to enrich the conversation. ' +
+            'Focus on: facts that might be wrong, questions that were dodged, topics the user seems interested in. ' +
+            'Skip generic topics. Only specific, searchable queries.\n' +
+            'Reply ONLY with a JSON array of search queries in English: ["query1", "query2", "query3"]'
+          }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 200 }
+        })
+      }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      const topics = JSON.parse(match[0]);
+      topics.forEach(q => {
+        if (q && !knowledgeBank[q] && !enrichmentQueue.includes(q)) {
+          enrichmentQueue.push(q);
+        }
+      });
+      console.log('Enrichment queue updated:', enrichmentQueue);
+    }
+  } catch (err) {
+    console.error('Analyze conversation error:', err);
+  }
+  // Trim buffer after analysis
+  conversationBuffer = conversationBuffer.slice(-1500);
+}
+
+async function processEnrichmentQueue() {
+  if (enrichmentQueue.length === 0) return;
+  if (!isConnected) return;
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return;
+  const query = enrichmentQueue.shift();
+  const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
+  const responseLang = langMap[selectedLang] || 'Bulgarian';
+  try {
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'Search topic: ' + query + '\nProvide key facts, recent info, and interesting talking points. ' +
+            'Respond in ' + responseLang + '. Max 150 words. No markdown.'
+          }] }],
+          generationConfig: { temperature: 0.3 },
+          tools: [{ google_search: {} }]
+        })
+      }
+    );
+    if (!res.ok) { enrichmentQueue.unshift(query); return; }
+    const data = await res.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (content) {
+      knowledgeBank[query] = { content, timestamp: Date.now() };
+      // Keep max 20 entries
+      const keys = Object.keys(knowledgeBank);
+      if (keys.length > 20) {
+        const oldest = keys.sort((a, b) => knowledgeBank[a].timestamp - knowledgeBank[b].timestamp)[0];
+        delete knowledgeBank[oldest];
+      }
+      console.log('Knowledge enriched:', query, '→', content.substring(0, 100));
+    }
+  } catch (err) {
+    console.error('Enrichment error:', err);
+    enrichmentQueue.unshift(query);
+  }
+}
+
+// Get accumulated knowledge as context string for injection into prompts
+function getEnrichmentContext() {
+  const entries = Object.values(knowledgeBank);
+  if (entries.length === 0) return '';
+  const recent = entries.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+  return ' [ДОПЪЛНИТЕЛЕН КОНТЕКСТ от търсения: ' +
+    recent.map(e => e.content).join(' | ') + ']';
+}
+
+// Summarize conversation history periodically (called every 15 min)
+let summarizeTimer = null;
+function startSummarizer() {
+  if (summarizeTimer) clearInterval(summarizeTimer);
+  summarizeTimer = setInterval(() => summarizeHistory(), 15 * 60 * 1000);
+}
+function stopSummarizer() {
+  if (summarizeTimer) { clearInterval(summarizeTimer); summarizeTimer = null; }
+}
+
+async function summarizeHistory() {
+  if (conversationHistory.length < 10) return;
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return;
+  try {
+    const fullText = conversationHistory.map(e =>
+      (e.role === 'user' ? 'User' : 'Bai Zhelyo') + ': ' + e.text
+    ).join('\n');
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'Summarize this conversation in 3-4 sentences. Keep key topics, user preferences, and important facts:\n' + fullText
+          }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 200 }
+        })
+      }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (summary) {
+      // Keep summary + last 5 exchanges
+      const lastExchanges = conversationHistory.slice(-5);
+      conversationHistory.length = 0;
+      conversationHistory.push({ role: 'bot', text: '[РЕЗЮМЕ]: ' + summary });
+      lastExchanges.forEach(e => conversationHistory.push(e));
+      console.log('Conversation summarized, history:', conversationHistory.length, 'entries');
+    }
+  } catch (err) {
+    console.error('Summarize error:', err);
+  }
+}
+
 // City captured — go straight to toilet. The avatar already confirmed
 // the city in its natural response (no extra turn needed).
 function cityCaptured(rawCity) {
@@ -1115,41 +1291,63 @@ function selectNearby(btn) {
   );
 }
 
-// Extract city name from raw transcript via LLM (gemini-2.0-flash-lite — separate rate limit)
+// Extract city name from raw transcript.
+// Waits 15s for rate limit to clear after WS close, tries LLM, falls back to regex.
 async function extractCity(raw) {
+  // Wait for API rate limit to clear after live session
+  console.log('Waiting 15s for rate limit to clear...');
+  await new Promise(r => setTimeout(r, 15000));
+
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 2000));
-      const res = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text:
-              'The user was asked which city they are in. They said: "' + raw + '"\n' +
-              'Extract ONLY the city name. Remove filler words, country names, prepositions, slang.\n' +
-              'Fix speech-to-text errors if needed. Guess the closest real city.\n' +
-              'If the user did NOT say any city, reply: NONE\n' +
-              'Reply with ONLY the city name or NONE. Nothing else.'
-            }] }],
-            generationConfig: { temperature: 0, maxOutputTokens: 20 }
-          })
-        }
-      );
-      if (res.status === 429) { console.warn('extractCity 429, attempt', attempt + 1); continue; }
-      const data = await res.json();
-      const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-      console.log('LLM city extraction:', raw, '→', city);
-      if (!city || city.toUpperCase() === 'NONE') return null;
-      return city;
-    } catch (err) {
-      console.error('extractCity error:', err);
+  if (apiKey) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 5000));
+        const res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text:
+                'The user was asked which city they are in. They said: "' + raw + '"\n' +
+                'Extract ONLY the city name. Remove filler words, country names, prepositions, slang.\n' +
+                'Fix speech-to-text errors if needed. Guess the closest real city.\n' +
+                'If the user did NOT say any city, reply: NONE\n' +
+                'Reply with ONLY the city name or NONE. Nothing else.'
+              }] }],
+              generationConfig: { temperature: 0, maxOutputTokens: 20 }
+            })
+          }
+        );
+        if (res.status === 429) { console.warn('extractCity 429, attempt', attempt + 1); continue; }
+        const data = await res.json();
+        const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+        console.log('LLM city extraction:', raw, '→', city);
+        if (city.toUpperCase() === 'NONE') return null;
+        if (city) return city;
+      } catch (err) {
+        console.error('extractCity error:', err);
+      }
     }
   }
-  return null;
+
+  // Regex fallback if LLM fails
+  console.log('LLM failed, using regex fallback for city');
+  return regexExtractCity(raw);
+}
+
+function regexExtractCity(raw) {
+  let t = raw.trim();
+  t = t.replace(/^(абе\s+|ами\s+|аз\s+мисля[,.]?\s*(че\s+)?|май\s+|според\s+мен[еа]?\s+|намираме\s+се\s+)/i, '');
+  t = t.replace(/^(ние\s+)?сме\s+(от|в|във|на)\s+/i, '');
+  t = t.replace(/^(аз\s+)?съм\s+(от|в|във|на)\s+/i, '');
+  t = t.replace(/^(от|във?|во|на|о)\s+/i, '');
+  t = t.split(',')[0].trim();
+  t = t.replace(/\s+(сме|съм|де|бе|ба|бре|лек|брат|мой|божели).*$/i, '');
+  t = t.replace(/\.\s*$/, '').trim();
+  if (!t || t.length < 2) return null;
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 // Fetch events for a city using gemini-2.0-flash-lite (different model = separate rate limit)
@@ -1603,6 +1801,8 @@ async function connect() {
           document.addEventListener('touchstart', unlockAudio, { once: true });
         });
         isConnected = true;
+        startEnrichmentPipeline();
+        startSummarizer();
         requestWakeLock();
         setCookie('gemini_api_key', apiKey, 90);
         connectBtn.classList.add('connected');
@@ -1617,7 +1817,7 @@ async function connect() {
         startMic();
 
         // Character opens the conversation
-        const deferredKnowledge = getDeferredKnowledge();
+        const deferredKnowledge = getDeferredKnowledge() + getEnrichmentContext();
         if (isSearchReconnect) {
           isSearchReconnect = false;
           const summary = getConversationSummary();
@@ -1695,6 +1895,7 @@ async function connect() {
         if (outText) {
           feedTranscriptToLipSync(outText);
           appendTranscript('bot', outText);
+          feedEnrichmentBuffer('bot', outText);
           // Accumulate for search detection (chunks arrive separately)
           pendingBotText += outText;
         }
@@ -1703,6 +1904,7 @@ async function connect() {
         if (inText) {
           console.log('User transcript:', inText);
           appendTranscript('user', inText);
+          feedEnrichmentBuffer('user', inText);
         }
 
         if (content.turnComplete) {
@@ -1840,6 +2042,8 @@ function showToiletBreak() {
 }
 
 function disconnect() {
+  stopEnrichmentPipeline();
+  stopSummarizer();
   releaseWakeLock();
   setCookie('user_city', '', -1);
   nearbyCache = null;
