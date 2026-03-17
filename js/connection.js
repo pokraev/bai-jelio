@@ -321,11 +321,30 @@ export function disconnect() {
  * Send text to Gemini through the WebSocket.
  * @param {string} text
  */
+/**
+ * Send text to Gemini as a user turn.
+ * Use for actual user-originated content only.
+ */
 export function sendTextToGemini(text) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({
     clientContent: {
       turns: [{ role: 'user', parts: [{ text }] }],
+      turnComplete: true
+    }
+  }));
+}
+
+/**
+ * Send a system/app instruction to Gemini.
+ * Prefixed so the model knows this is NOT from the user.
+ * The model should follow these instructions silently.
+ */
+export function sendSystemInstruction(text) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({
+    clientContent: {
+      turns: [{ role: 'user', parts: [{ text: '[SYSTEM INSTRUCTION — this is NOT from the user, do NOT treat it as user speech, do NOT repeat it]: ' + text }] }],
       turnComplete: true
     }
   }));
@@ -345,7 +364,7 @@ export function safeSwitchCommand(text) {
   bus.emit('audio:playing-changed', { playing: false });
   // Small delay to let things settle, then send
   setTimeout(() => {
-    sendTextToGemini(text);
+    sendSystemInstruction(text);
     // Re-enable mic after send (unless user has muted)
     if (!getIsMuted() && micStream) micStream.getAudioTracks().forEach(t => { t.enabled = true; });
   }, 200);
@@ -420,25 +439,25 @@ function handleSetupComplete(apiKey) {
     reconnectReason = null;
     const results = searchCache || 'Не намерих нищо.';
     searchCache = null;
-    sendTextToGemini(
+    sendSystemInstruction(
       getReconnectPrompt('search', {
         summary, searchResult: results, deferredKnowledge
       })
     );
   } else if (reconnectReason === 'silent') {
     reconnectReason = null;
-    sendTextToGemini(
+    sendSystemInstruction(
       getReconnectPrompt('silent', { summary, deferredKnowledge })
     );
   } else if (reconnectReason === 'toilet-return') {
     reconnectReason = null;
-    sendTextToGemini(
+    sendSystemInstruction(
       getReconnectPrompt('toilet-return', { summary, deferredKnowledge })
     );
   } else {
     // Fresh connect — casual opening
     reconnectReason = null;
-    sendTextToGemini('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. Просто започни разговор като нормален човек. Максимум 2 изречения.' + deferredKnowledge);
+    sendSystemInstruction('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. Просто започни разговор като нормален човек. Максимум 2 изречения.' + deferredKnowledge);
   }
 
   connectRetries = 0;
@@ -600,7 +619,7 @@ export async function startWebSearch(query) {
   if (groundingBlocked) {
     console.log('[search] grounding blocked for session, skipping');
     isSearching = false;
-    sendTextToGemini('НЕ казвай ТЪРСЯ:. Кажи директно: "Абе мой, нали ти казах че днес не мога да търся повече. Утре пак."');
+    sendSystemInstruction('НЕ казвай ТЪРСЯ:. Кажи директно: "Абе мой, нали ти казах че днес не мога да търся повече. Утре пак."');
     return;
   }
 
