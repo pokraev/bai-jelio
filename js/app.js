@@ -131,9 +131,18 @@ bus.on('audio:playing-changed', ({ playing }) => {
   }
 });
 
-// ── Memory: feed transcripts to conversation history ──
-bus.on('transcript:user', ({ text }) => appendTranscript('user', text));
-bus.on('transcript:bot', ({ text }) => appendTranscript('bot', text));
+// ── Memory: feed AGGREGATED transcripts per turn (not per chunk) ──
+// connection.js emits 'turn:complete' with accumulated text
+let _memBotBuffer = '';
+let _memUserBuffer = '';
+bus.on('transcript:bot', ({ text }) => { _memBotBuffer += text; });
+bus.on('transcript:user', ({ text }) => { _memUserBuffer += text; });
+bus.on('turn:complete', () => {
+  if (_memUserBuffer.trim()) appendTranscript('user', _memUserBuffer.trim());
+  if (_memBotBuffer.trim()) appendTranscript('bot', _memBotBuffer.trim());
+  _memUserBuffer = '';
+  _memBotBuffer = '';
+});
 
 // ── Lip-sync wiring: feed transcript text + clear on turn/disconnect ──
 bus.on('transcript:bot', ({ text }) => feedTranscriptToLipSync(text));

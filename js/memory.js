@@ -28,7 +28,10 @@ export function appendTranscript(role, text) {
     conversationHistory = conversationHistory.slice(-MAX_HISTORY);
   }
 
-  console.log(`[memory] appended ${role} turn, unsummarized_turn_count: ${unsummarizedTurns.length}`);
+  // Only log occasionally to avoid console spam
+  if (unsummarizedTurns.length % 5 === 0) {
+    console.log(`[memory] ${conversationHistory.length} turns, ${unsummarizedTurns.length} unsummarized`);
+  }
   scheduleSummaryUpdate();
 }
 
@@ -76,15 +79,12 @@ export function scheduleSummaryUpdate() {
     summarizeNow();
   } else if (!summaryTimerId) {
     const waitMs = SUMMARY_COOLDOWN_MS - elapsed;
-    console.log(`[memory] summary_throttled, next in ${Math.round(waitMs / 1000)}s`);
     summaryTimerId = setTimeout(() => {
       summaryTimerId = null;
       if (unsummarizedTurns.length >= 2) {
         summarizeNow();
       }
     }, waitMs);
-  } else {
-    console.log(`[memory] summary_throttled, timer already pending`);
   }
 }
 
