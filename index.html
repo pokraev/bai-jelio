@@ -934,12 +934,14 @@ function cityCaptured(city) {
 }
 
 // Strip filler words from user transcript to extract just the city name
-// e.g. "В Хага сме" → "Хага", "О Сливен" → "Сливен", "Аз съм от София" → "София"
+// e.g. "В Хага сме" → "Хага", "Хавея, Испания сме" → "Хавея"
 function cleanCityName(raw) {
   let city = raw.trim();
   // Strip leading filler (case-insensitive, supports bg/en/es)
   city = city.replace(/^(аз\s+съм\s+(от|в|на)\s+|ние\s+сме\s+(от|в)\s+|съм\s+(от|в)\s+|сме\s+(от|в)\s+|от\s+|в\s+|на\s+|о\s+|i'?\s*m\s+(in|from)\s+|we'?\s*re\s+in\s+|in\s+|from\s+|estoy\s+en\s+|en\s+)/i, '');
-  // Strip trailing filler
+  // Take only the part before a comma (city, not country)
+  city = city.split(',')[0].trim();
+  // Strip trailing filler words
   city = city.replace(/\s+(сме|съм|сега|де|бе|ба|we are|right now)$/i, '');
   return city.trim();
 }
