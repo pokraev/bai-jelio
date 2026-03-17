@@ -944,7 +944,7 @@ function cityCaptured(rawCity) {
   waitingForCityVoice = 10;
   console.log('City captured (raw):', rawCity, '— avatar announcing toilet');
   // The avatar heard the user — it knows the real city name, so it will say it correctly
-  sendTextToGemini('Потвърди града на потребителя и кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става там. Бъди кратък.');
+  sendTextToGemini('Кажи ЕДНО кратко изречение: потвърди града и че отскачаш до тоалетната. Пример: "Хаха, [град] значи! Чакай да отскоча до тоалетната, бирите напират." Максимум 2 изречения, бъди смешен.');
 }
 
 // Poll for user transcript (inputTranscription often lags behind turnComplete)
