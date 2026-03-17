@@ -6,6 +6,16 @@
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
+
+// ── Debounce: 2s delay, last selected wins ──────────
+const _debounceTimers = {};
+function debouncedEmit(key, event, data, delay) {
+  if (_debounceTimers[key]) clearTimeout(_debounceTimers[key]);
+  _debounceTimers[key] = setTimeout(() => {
+    _debounceTimers[key] = null;
+    bus.emit(event, data);
+  }, delay || 2000);
+}
 import {
   VOICES, LANGS, LANG_LABELS, IQ_LEVELS, IQ_NAMES, TOPIC_KNOWLEDGE,
   getSelectedTopic, setSelectedTopic,
@@ -57,7 +67,7 @@ export function selectTopic(btn, topic) {
   setSelectedTopic(topic);
   document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  bus.emit('ui:topic-changed', { topic });
+  debouncedEmit('topic', 'ui:topic-changed', { topic });
 }
 
 
@@ -108,7 +118,7 @@ export function changeIQ(newIQ) {
   const langReminder = (getLangPrompt(getSelectedLang()) || {}).speak || '';
   const transitionMsg = 'СИСТЕМНА ИНСТРУКЦИЯ: ' + langReminder + ' От сега нататък отговаряй на това ниво: ' + (iq.depth || '') + ' ' + (iq.style || '') + ' Дължина: ' + (iq.length || '') + ' ' +
     'Направи кратък и забавен преход — импровизирай, бъди естествен и смешен. После продължи разговора на новото ниво.';
-  bus.emit('ui:iq-changed', { oldIQ, newIQ, transitionMsg });
+  debouncedEmit('iq', 'ui:iq-changed', { oldIQ, newIQ, transitionMsg });
 }
 
 // ── Voice Selection ─────────────────────────────────
@@ -144,7 +154,7 @@ export function selectVoice(voiceId) {
   document.getElementById('voiceBtnLabel').textContent = voiceId;
   if (voiceId === getSelectedVoice()) return;
   setSelectedVoice(voiceId);
-  bus.emit('ui:voice-changed', { voiceId });
+  debouncedEmit('voice', 'ui:voice-changed', { voiceId });
 }
 
 /**
@@ -178,7 +188,7 @@ export function cycleLang() {
   setSelectedLang(newLang);
   document.getElementById('langLabel').textContent = LANG_LABELS[newLang];
   const langNames = { bg: 'български', en: 'English', es: 'español' };
-  bus.emit('ui:lang-changed', {
+  debouncedEmit('lang', 'ui:lang-changed', {
     lang: newLang,
     switchMsg: 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък говори САМО на ' + langNames[newLang] + '. Направи кратък преход към новия език.'
   });
