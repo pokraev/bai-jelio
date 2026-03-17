@@ -10,130 +10,168 @@ This is a real-time voice conversation app powered by Google Gemini's Live Audio
 
 - **Real-time voice chat** with an AI character via WebSocket (Gemini Live Audio API)
 - **Animated avatar** with lip-sync, blinking eyes, and a mouth that moves when he talks
-- **7 conversation topics**: Philosophy, Psychology, Sociology, Politics, Music, Literature, Life
+- **8 conversation topics**: Life, Philosophy, Psychology, Sociology, Science, Politics, Music, Literature
 - **3 IQ levels**: Average (кръчмар mode), Intelligent (default), Genius (напил-се-и-цитира-Камю mode)
+- **5 voice presets**: Charon (default), Orus, Fenrir, Puck, Perseus
 - **3 languages**: Bulgarian (default), English (with thick Bulgarian accent), Spanish (same accent, different language)
-- **Hidden easter eggs**: There might be some surprises if you ask the right questions. We're not saying what. Just... try talking about drinks
+- **Web search**: Ask him to look something up — he grabs his phone, searches via Gemini with Google Search grounding, and reports back in character
+- **Location awareness**: Tell him where you are and he'll know about the place — famous landmarks, history, culture, what's going on
+- **Conversation memory**: Rolling summarization keeps context across long sessions (2+ hours)
 - **Smart mute**: Mute pauses the session after the avatar finishes talking — zero network usage until you unmute
-- **Screen Wake Lock**: Your phone won't fall asleep while Бай Жельо is talking. Because that would be rude
-- **Auto-connect**: Saved API key? Straight to the conversation. No clicking around
-- **Auto-recovery**: Any error = toilet break popup + 30s auto-reconnect. The conversation continues
+- **Screen Wake Lock**: Your phone won't fall asleep while Бай Жельо is talking
+- **Auto-connect**: Saved API key? Straight to the conversation
+- **Auto-recovery**: Any error = toilet break popup + 30s auto-reconnect
 
 ## Getting Started
 
 ### 1. Get a Gemini API Key
 
-You need a free Google Gemini API key. Yes, free. Like the advice you get from drunk uncles.
+You need a free Google Gemini API key.
 
 1. Go to [Google AI Studio](https://aistudio.google.com/)
 2. Click "Get API Key" → "Create API Key"
 3. Copy it
 4. Paste it into the app
 5. Press the play button
-6. Start arguing about whether Ботев or Вазов is the greater poet
+6. Start talking
 
-### 2. Deploy
+### 2. Serve Locally
 
-It's a single `index.html` + one `avatar.jpg`. That's it. No build step. No npm. No webpack. No existential crisis.
+The app uses ES modules, so it needs an HTTP server (won't work with `file://`).
 
 ```bash
-# Option A: Just open it
-open index.html
+# Start a local server
+python3 -m http.server 8080
 
-# Option B: GitHub Pages
+# Open in browser
+open http://localhost:8080
+```
+
+### 3. Deploy
+
+```bash
+# GitHub Pages
 git push origin main
 # Go to Settings → Pages → Deploy from main branch
 
-# Option C: Any static hosting
-# Literally drag and drop the two files anywhere
+# Any static hosting — upload all files preserving directory structure
 ```
 
-### 3. Talk
+### 4. Talk
 
-Click connect. Allow microphone. Start talking. Бай Жельо will greet you and ask a provocative question. From there, it's just like being at the pub — except this pub never closes and nobody judges you for talking to an AI at 3am.
+Click connect. Allow microphone. Start talking. Бай Жельо will greet you and say something wise or funny about life. From there, it's just like being at the pub.
 
-## Architecture (if you can call it that)
+## Project Structure
 
 ```
-index.html .... The entire app. Yes, all of it. One file.
-avatar.jpg .... Бай Жельо's handsome face.
-README.md ..... You are here. Congratulations.
+bai-jelio/
+  index.html              # HTML shell — just markup, no logic
+  avatar.jpg              # Бай Жельо's handsome face
+  css/
+    main.css              # All styles
+  js/
+    app.js                # Entry point — wires modules together
+    events.js             # Pub/sub event bus (decouples everything)
+    config.js             # Constants, cookies, state management
+    connection.js         # WebSocket lifecycle, reconnection logic
+    audio-player.js       # PCM 24kHz playback via Web Audio
+    microphone.js         # Mic capture, mute, gain control
+    search.js             # Web search (model knowledge + Google grounding)
+    memory.js             # Rolling conversation summary (1/min throttle)
+    intent.js             # Detects if user needs live data
+    gemini-rest.js        # REST API wrapper with RPM tracking
+    prompts.js            # Loads prompt templates, assembles system prompts
+    quota.js              # Daily usage tracking
+    ui-controls.js        # Topic/IQ/voice/language selectors
+    waveform.js           # Mic input waveform visualizer
+    avatar-renderer.js    # Canvas mouth/face drawing
+    lip-sync.js           # Viseme mapping, transcript + FFT lip-sync
+    eye-renderer.js       # Eyelid drawing, blink state machine
+    positioning.js        # Drag-to-position editor (hidden)
+    animation.js          # Main requestAnimationFrame loop
+    render-state.js       # Shared mutable state for rendering
+  prompts/
+    system-base.txt       # Core character prompt with placeholders
+    topic-*.txt           # Topic knowledge (8 files)
+    iq-*.txt              # IQ profiles (3 files)
+    lang-*.txt            # Language instructions (3 files)
+    deferred-knowledge.txt # Beer + metal knowledge (only on request)
+    search-trigger.txt    # Search detection instructions
 ```
-
-No frameworks. No dependencies. No node_modules black hole consuming your disk space. Just HTML, CSS, and JavaScript like the internet intended.
 
 ## What Gets Stored
 
 | What | Where | How Long | Why |
 |------|-------|----------|-----|
-| API Key | Cookie | 90 days | So you don't have to paste it every time like an animal |
+| API Key | Cookie | 90 days | So you don't have to paste it every time |
 | Daily request count | localStorage | 1 day | To show remaining quota |
-| Everything else | Nowhere | Never | We don't even have a server. Where would we put it? |
+| Conversation summary | sessionStorage | Session | Memory across reconnects |
+| Everything else | Nowhere | Never | No server. Pure client-side |
 
-**Privacy**: Everything runs 100% in your browser. Your API key goes directly to Google. We couldn't spy on you even if we wanted to. Which we don't. Бай Жельо has better things to do.
+**Privacy**: Everything runs 100% in your browser. Your API key goes directly to Google.
 
 ## Error Handling (The Toilet Protocol)
-
-When things go wrong (and they will — this is software), Бай Жельо handles it with grace:
 
 **Recoverable errors** (rate limits, socket drops, network hiccups):
 - A popup appears: "Бай Жельо отиде до тоалетната да направи място за още бира"
 - 30-second countdown timer
-- Auto-reconnects and continues: "Ехх, сега е много по-добре, има място за още бири. На какво бяхме?"
-- The conversation picks up where it left off
+- Auto-reconnects and continues where it left off
+
+**Search quota exhausted** (Google grounding daily limit):
+- Бай Жельо says he can't search right now with the free key
+- Suggests trying again tomorrow
+- Conversation continues normally
 
 **Fatal errors** (invalid API key, permission denied):
-- The saved cookie is cleared
-- You get sent back to the API key screen
-- No toilet jokes. This is serious.
+- Cookie cleared, back to API key screen
 
 ## Features in Detail
 
-### IQ Slider
-- **Среден (Average)**: 1-2 sentences. Simple words. Strong opinions. Zero citations. Peak кръчма energy.
-- **Интелигентен (Intelligent)**: 2-4 sentences. Balanced depth. Mentions authors but explains them. The sweet spot.
-- **Гениален (Genius)**: 4-7 sentences. Cross-references Достоевски with quantum physics. Makes you feel both smarter and dumber simultaneously.
+### Web Search
+Ask Бай Жельо to look something up ("потърси", "провери", "google it"). He'll:
+1. Say something natural like "Чакай да видя..."
+2. Show a phone overlay while searching
+3. Use model knowledge first (no quota cost)
+4. Use Google Search grounding only when needed
+5. Report findings in character — highlights the most interesting result, mentions there's more
 
-Switching mid-conversation is supported. Going up: "Знаеш ли, четох едни книги напоследък..." Going down: "Човек, забравил съм ги тия работи..."
+### IQ Slider
+- **Среден (Average)**: 1-2 sentences. Simple words. Strong opinions.
+- **Интелигентен (Intelligent)**: 2-4 sentences. Balanced depth. The sweet spot.
+- **Гениален (Genius)**: 4-7 sentences. Cross-references Достоевски with quantum physics.
+
+### Voice Selection
+5 male voices: Charon (default, informative), Orus (firm), Fenrir (excitable), Puck (upbeat), Perseus.
 
 ### Language Toggle
-Cycles through BG → EN → ES. He keeps his Bulgarian personality in all languages. And probably his accent too.
+Cycles through BG → EN → ES. Keeps his Bulgarian personality in all languages.
 
-### Mute (Smart Pause)
-Disables the mic track without releasing it. No permission re-prompts. But it's smarter than just going silent:
-
-1. When you mute, Бай Жельо finishes whatever he's saying — he's not rude, he doesn't get cut off mid-sentence
-2. Once he's done, the entire session pauses — no audio sent, no new responses generated, zero network chatter
-3. Status shows "Paused — unmute to continue"
-4. When you unmute, the conversation picks up exactly where you left off
-
-Think of it like putting your hand over the mic at the pub while you order another round. He waits. Patiently. Like a gentleman who's had too many beers but still has manners.
-
-### Reset Key
-Tiny link at the bottom of the page. Clears the cookie and reloads. For when you want to switch API keys, or when you want to pretend you never had this conversation.
+### Location Awareness
+Tell him where you are and he remembers. Ask about the place — what it's famous for, history, culture, what to do — and he talks from personal experience.
 
 ## Gemini API Limits (Free Tier)
 
-The free tier gives you ~1500 requests/day. The counter at the bottom tracks usage locally. Google doesn't expose remaining quota in response headers (thanks, Google), so we count manually.
-
-If you hit the per-minute limit, see: **The Toilet Protocol** above.
+- **Live Audio**: ~1500 requests/day
+- **Google Search grounding**: Limited per-minute quota (shared across all uses of the key)
+- The counter at the bottom tracks daily usage locally
 
 ## Tech Stack
 
-- **Frontend**: HTML/CSS/JS (circa 2024, but spiritually 2005)
+- **Frontend**: HTML/CSS/JS (ES modules, no build step)
 - **AI**: Google Gemini 2.5 Flash Native Audio Preview
-- **Voice**: Charon voice preset (deep, male, appropriately dramatic)
-- **Animation**: Canvas-based lip sync + CSS transitions
-- **Audio**: ScriptProcessorNode (deprecated but works everywhere, including file://)
-- **State Management**: Two cookies and a dream
+- **Voice**: 5 presets via Gemini Live API
+- **Animation**: Canvas-based lip sync + blink state machine
+- **Audio**: ScriptProcessorNode for mic, Web Audio API for playback
+- **Search**: Gemini REST API with optional Google Search grounding
+- **State**: Cookies + sessionStorage + event bus
 
 ## Contributing
 
-Found a bug? Open an issue. Want to add a feature? Open a PR. Want to argue about politics? Open the app and talk to Бай Жельо — that's literally what he's for.
+Found a bug? Open an issue. Want to add a feature? Open a PR. Want to argue about politics? Open the app and talk to Бай Жельо.
 
 ## License
 
-Do whatever you want with it. Бай Жельо wouldn't care about licenses. He'd say something like "абе, кой чете тия неща" and order another beer.
+Do whatever you want with it. Бай Жельо wouldn't care about licenses.
 
 ---
 
