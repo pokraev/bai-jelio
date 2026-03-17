@@ -116,6 +116,18 @@ bus.on('mic:muted', ({ muted }) => {
   if (onIcon) onIcon.style.display = muted ? 'none' : '';
   if (offIcon) offIcon.style.display = muted ? '' : 'none';
   if (btn) btn.classList.toggle('muted', muted);
+  // Disable/enable all controls except mute and disconnect
+  const ids = ['voiceBtn', 'iqBtn', 'langBtn', 'micGain'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.disabled = muted; el.style.opacity = muted ? '0.3' : ''; el.style.pointerEvents = muted ? 'none' : ''; }
+  });
+  // Disable topic buttons
+  document.querySelectorAll('.topic-btn').forEach(b => {
+    b.disabled = muted;
+    b.style.opacity = muted ? '0.3' : '';
+    b.style.pointerEvents = muted ? 'none' : '';
+  });
 });
 
 // Mic started → show green icon
