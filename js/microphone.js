@@ -87,6 +87,9 @@ export function setMicGain(val) {
 export async function startMic() {
   if (isMicActive) return;
   try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Microphone access requires HTTPS or localhost');
+    }
     // Reuse existing stream if still alive
     if (!micStream || micStream.getTracks().every(t => t.readyState === 'ended')) {
       micStream = await navigator.mediaDevices.getUserMedia({
