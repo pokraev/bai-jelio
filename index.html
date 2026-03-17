@@ -947,19 +947,11 @@ function cityCaptured(city) {
   sendTextToGemini('Добре, ' + city + ' значи! Кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става в ' + city + '. Бъди кратък.');
 }
 
-// Basic regex fallback for city name cleaning
-function regexCleanCity(raw) {
-  let city = raw.trim();
-  city = city.replace(/^(аз\s+съм\s+(от|в|във|на)\s+|ние\s+сме\s+(от|в|във)\s+|съм\s+(от|в|във)\s+|сме\s+(от|в|във)\s+|от\s+|във?\s*|во\s+|на\s+|о\s+|i'?\s*m\s+(in|from)\s+|we'?\s*re\s+in\s+|in\s+|from\s+|estoy\s+en\s+|en\s+)/i, '');
-  city = city.split(',')[0].trim();
-  city = city.replace(/\s+(сме|съм|сега|де|бе|ба|божели|we are|right now).*$/i, '');
-  return city.trim();
-}
-
-// Use LLM to extract city name, with regex fallback on failure/rate-limit
-async function cleanCityName(raw) {
+// Use LLM to extract city name. Retries on 429 with delay.
+async function cleanCityName(raw, retryCount) {
+  retryCount = retryCount || 0;
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) return regexCleanCity(raw);
+  if (!apiKey) return raw.trim();
   try {
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
@@ -978,18 +970,24 @@ async function cleanCityName(raw) {
         })
       }
     );
+    if (res.status === 429 && retryCount < 3) {
+      const delay = (retryCount + 1) * 2000;
+      console.warn('City LLM 429 — retrying in', delay, 'ms (attempt', retryCount + 1, ')');
+      await new Promise(r => setTimeout(r, delay));
+      return cleanCityName(raw, retryCount + 1);
+    }
     if (!res.ok) {
-      console.warn('City LLM returned', res.status, '— using regex fallback');
-      return regexCleanCity(raw);
+      console.warn('City LLM returned', res.status);
+      return raw.trim();
     }
     const data = await res.json();
     const city = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
     console.log('LLM city extraction:', raw, '→', city);
     if (city.toUpperCase() === 'NONE') return null;
-    return city || regexCleanCity(raw);
+    return city || raw.trim();
   } catch (err) {
     console.error('City extraction LLM error:', err);
-    return regexCleanCity(raw);
+    return raw.trim();
   }
 }
 
