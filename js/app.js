@@ -116,6 +116,16 @@ bus.on('mic:destroyed', () => {
   if (btn) btn.classList.remove('mic-active');
 });
 
+// ── Disconnect button: green when connected, red when disconnected ──
+bus.on('connection:ready', () => {
+  const btn = document.getElementById('disconnectBtn');
+  if (btn) { btn.classList.add('connected'); btn.classList.remove('disconnected'); }
+});
+bus.on('connection:disconnected', () => {
+  const btn = document.getElementById('disconnectBtn');
+  if (btn) { btn.classList.remove('connected'); btn.classList.add('disconnected'); }
+});
+
 // ── Speaking state (shared between connection and animation via render-state) ──
 
 bus.on('audio:playing-changed', ({ playing }) => {

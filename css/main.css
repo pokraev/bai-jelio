@@ -510,8 +510,11 @@ select {
   display: flex; align-items: center; justify-content: center;
 }
 .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
-.round-btn-danger { border-color: rgba(255,107,107,0.4); }
+.round-btn-danger { border-color: rgba(255,107,107,0.4); color: var(--danger); }
 .round-btn-danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
+#disconnectBtn.connected { border-color: var(--success); color: var(--success); }
+#disconnectBtn.connected:hover { background: rgba(78,203,113,0.1); }
+#disconnectBtn.disconnected { border-color: var(--danger); color: var(--danger); }
 #muteBtn.mic-active { border-color: var(--success); color: var(--success); }
 #muteBtn.muted { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
 .round-btn-connect { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); }
