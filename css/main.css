@@ -13,6 +13,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html { touch-action: manipulation; }
 
 body {
   background: var(--bg-deep);
@@ -56,7 +57,7 @@ h1 span { color: var(--text); font-weight: 400; font-size: 0.85em; }
   width: min(580px, calc(100vw - 32px));
   flex-shrink: 0;
   overflow: visible;
-  margin: 16px auto 8px;
+  margin: 16px auto 18px;
 }
 .stage {
   position: relative;
