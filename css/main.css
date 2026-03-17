@@ -512,6 +512,8 @@ select {
 .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
 .round-btn-danger { border-color: rgba(255,107,107,0.4); }
 .round-btn-danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
+#muteBtn.muted { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
+#muteBtn.mic-active { border-color: var(--success); color: var(--success); }
 .round-btn-connect { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); }
 .round-btn-connect:hover { color: var(--bg-deep); box-shadow: 0 4px 16px var(--accent-glow); }
 .round-btn-connect:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }

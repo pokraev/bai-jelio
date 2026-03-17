@@ -91,7 +91,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 bus.on('mic:started', () => startWaveformAnimation());
 bus.on('mic:stopped', () => resetWaveform());
 bus.on('mic:destroyed', () => resetWaveform());
-bus.on('mic:muted', ({ muted }) => { if (muted) resetWaveform(); else startWaveformAnimation(); });
+bus.on('mic:muted', ({ muted }) => {
+  if (muted) resetWaveform(); else startWaveformAnimation();
+  // Switch mic icon: red muted / green unmuted
+  const btn = document.getElementById('muteBtn');
+  const onIcon = document.getElementById('micOnIcon');
+  const offIcon = document.getElementById('micOffIcon');
+  if (onIcon) onIcon.style.display = muted ? 'none' : '';
+  if (offIcon) offIcon.style.display = muted ? '' : 'none';
+  if (btn) btn.classList.toggle('muted', muted);
+});
+
+// Mic started → show green icon
+bus.on('mic:started', () => {
+  const btn = document.getElementById('muteBtn');
+  if (btn) btn.classList.add('mic-active');
+});
+bus.on('mic:stopped', () => {
+  const btn = document.getElementById('muteBtn');
+  if (btn) btn.classList.remove('mic-active');
+});
+bus.on('mic:destroyed', () => {
+  const btn = document.getElementById('muteBtn');
+  if (btn) btn.classList.remove('mic-active');
+});
 
 // ── Speaking state (shared between connection and animation via render-state) ──
 
