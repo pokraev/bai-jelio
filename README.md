@@ -65,6 +65,19 @@ Tell the avatar where you are. It remembers and can answer questions about the p
 - Disconnect button: green when connected, red when disconnected
 - Mic button: green when active, red when muted (with crossed-out icon)
 
+### Install as App (PWA)
+Works on iPhone and Android — add to home screen for a fullscreen, app-like experience.
+
+**iPhone (Safari):**
+1. Open the app in **Safari** (not Chrome)
+2. Tap **Share** (square with arrow) → **Add to Home Screen**
+3. Icon adapts to your current light/dark theme at install time
+
+**Android (Chrome):**
+1. Open the app in Chrome
+2. Tap **⋮** menu → **Add to Home Screen** (or accept the install banner)
+3. Icon switches automatically when you toggle dark/light mode (Chrome 128+)
+
 ## Getting Started
 
 ### 1. Get a Gemini API Key (Free)
@@ -96,7 +109,13 @@ python3 -m http.server 8080
 bai-jelio/
 ├── index.html                 # HTML shell — just markup, no logic
 ├── avatar.jpg                 # Avatar image
+├── manifest.webmanifest       # PWA manifest (name, icons, display mode)
+├── sw.js                      # Service worker (network-first caching)
 ├── README.md
+│
+├── icons/
+│   ├── icon-light-{180,192,512}.png  # Light theme icons
+│   └── icon-dark-{180,192,512}.png   # Dark theme icons
 │
 ├── css/
 │   └── main.css               # All styles
