@@ -919,7 +919,6 @@ function cycleLang() {
 
 let nearbyCache = null;
 let waitingForCityVoice = false;
-let userCity = null;
 
 function selectNearby(btn) {
   document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
@@ -936,17 +935,25 @@ function selectNearby(btn) {
 
   // First time — avatar asks where they are
   waitingForCityVoice = true;
-  safeSwitchCommand('Кажи нещо смешно и различно всеки път, в стил: "Да бе лек... аз май малко се понапих и забравих къде сме. В кой град сме бе? Кажи ми, че после ще ида до тоалетната и като се върна ще ти разкажа кво става наоколо." Изчакай потребителя да каже град или район. Когато каже — потвърди кратко и смешно.');
+  safeSwitchCommand(
+    'Ти си малко пийнал и си забравил къде сте. Попитай потребителя в кой град сте — кажи нещо смешно, ' +
+    'импровизирай, например: "Абе лек, аз нещо се понапих и забравих къде сме... в кой град сме бе?" ' +
+    'Изчакай потребителя да отговори. Когато каже град или район — потвърди кратко и смешно, ' +
+    'после кажи че трябва да идеш до тоалетната защото бирите напират, и като се върнеш ще му разкажеш кво става наоколо.'
+  );
 }
 
 function startNearbyFlow(city) {
-  userCity = city;
-  console.log('Starting nearby flow for:', city);
+  console.log('Nearby flow — city:', city);
+  const today = new Date().toISOString().slice(0, 10);
+  nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
+    'Ти познаваш района. Разкажи какво интересно се случва в ' + city + ' днес или тази седмица — ' +
+    'събития, фестивали, концерти, изложби, спорт, време, новини. ' +
+    'Кажи нещо смешно за едно от събитията и попитай дали потребителят иска да говорите за него. ' +
+    'НЕ питай къде е — вие сте заедно.';
+  console.log('Nearby cache ready for:', city);
 
-  // Avatar announces toilet
-  safeSwitchCommand('Кажи бързо и смешно: "Добре, ' + city + ' значи! Дай до тоалетната, че бирите напират, и като се върна ще ти разкажа кво става." Бъди кратък.');
-
-  // After avatar speaks, show toilet and reconnect
+  // Show toilet countdown — give LLM time to build context on reconnect
   setTimeout(() => {
     const overlay = document.getElementById('toiletOverlay');
     const timerEl = document.getElementById('toiletTimer');
@@ -956,13 +963,7 @@ function startNearbyFlow(city) {
     isConnected = false;
     stopMic();
 
-    const today = new Date().toISOString().slice(0, 10);
-    nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
-      'Разкажи какво интересно се случва в ' + city + ' днес или тази седмица — събития, фестивали, концерти, изложби, спорт, време, новини. ' +
-      'Бъди конкретен и кратък. Кажи ТОЧНО 2 интересни неща и попитай кое иска да обсъдим първо. НЕ питай къде е потребителят — вие сте заедно.';
-    console.log('Nearby cache set for:', city);
-
-    let sec = 15;
+    let sec = 30;
     timerEl.textContent = sec;
     const countdown = setInterval(() => {
       sec--;
@@ -976,7 +977,7 @@ function startNearbyFlow(city) {
         connect();
       }
     }, 1000);
-  }, 3000);
+  }, 2000);
 }
 
 function selectTopic(btn, topic) {
@@ -1269,10 +1270,13 @@ async function connect() {
           const summary = getConversationSummary();
           sendTextToGemini('Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary);
         } else if (isNearbyConnect) {
-          // Returning from nearby toilet break with location data
+          // Returning from toilet — discuss nearby events
           isNearbyConnect = false;
           const summary = getConversationSummary();
-          sendTextToGemini('Току що се върна от тоалетната. Кажи нещо кратко и смешно, после премини директно към кво става наоколо. ' + nearbyCache + ' Завърши с въпрос. ' + summary);
+          sendTextToGemini(
+            'Ти си Бай Жельо и ТОКУ ЩО се върна от тоалетната. Кажи нещо кратко и смешно за тоалетната (импровизирай), ' +
+            'после ВЕДНАГА премини към кво става наоколо. ' + nearbyCache + ' ' + summary
+          );
         } else if (isToiletReturn) {
           // Toilet break was shown — do the funny return
           isToiletReturn = false;
@@ -1335,20 +1339,19 @@ async function connect() {
           transcriptCharQueue = [];
           trackUsage();
 
-          // If waiting for city from user voice, grab it and start toilet flow
+          // Waiting for user to say city — avatar already asked and will confirm + announce toilet
           if (waitingForCityVoice) {
             waitingForCityVoice = false;
-            console.log('History:', conversationHistory.map(e => e.role + ': ' + e.text.substring(0, 80)));
-            // Get city from user transcript or bot's confirmation
+            // Grab city from user or bot transcript
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
             const lastBot = [...conversationHistory].reverse().find(e => e.role === 'bot');
             const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() :
                          (lastBot ? lastBot.text.trim() : null);
+            console.log('City detected:', city, '| History:', conversationHistory.slice(-4).map(e => e.role + ': ' + e.text.substring(0, 60)));
             if (city) {
-              console.log('City from voice:', city);
               startNearbyFlow(city);
             } else {
-              console.warn('No city detected');
+              console.warn('No city detected in conversation');
             }
           }
 
