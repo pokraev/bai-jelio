@@ -74,7 +74,7 @@ export async function geminiRest(prompt, options) {
         let quotaScope = 'unknown'; // 'per-minute', 'per-day', or 'unknown'
         try {
           const errData = await res.json();
-          console.warn('[gemini-rest] provider_error_details:', JSON.stringify(errData, null, 2));
+          // Full error details available in errData if needed for debugging
           if (errData.error?.details) {
             for (const d of errData.error.details) {
               if (d.retryDelay) {
