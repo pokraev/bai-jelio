@@ -1115,7 +1115,7 @@ async function startNearbyFlow(rawCity) {
   const city = await cleanCityName(rawCity) || rawCity;
   console.log('Clean city:', rawCity, '→', city);
   setCookie('user_city', city, 30);
-  updateSubtitle(city);
+  // Subtitle updates AFTER toilet overlay closes (see countdown below)
 
   // Fetch real events during toilet break
   const today = new Date().toISOString().slice(0, 10);
@@ -1142,6 +1142,7 @@ async function startNearbyFlow(rawCity) {
     if (sec <= 0) {
       clearInterval(countdown);
       overlay.classList.remove('visible');
+      updateSubtitle(city);
       if (!nearbyCache) {
         nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Разкажи какво интересно се случва. Импровизирай.';
       }
