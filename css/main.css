@@ -122,10 +122,11 @@ label {
 }
 
 input[type="text"], input[type="password"], select {
-  flex: 1; background: var(--bg-card); border: 2px solid transparent;
+  flex: 1; background: var(--bg-deep); border: 1.5px solid rgba(240,165,0,0.4);
   border-radius: var(--radius); padding: 12px 14px;
   color: var(--text); font-family: 'Roboto Condensed', sans-serif;
   font-size: 0.9rem; transition: border-color 0.3s;
+  color-scheme: dark; -webkit-appearance: none; appearance: none;
 }
 input[type="text"]:focus, input[type="password"]:focus, select:focus { outline: none; border-color: var(--accent); }
 input::placeholder { color: var(--text-muted); opacity: 0.5; }
@@ -167,36 +168,11 @@ input::placeholder { color: var(--text-muted); opacity: 0.5; }
   border-radius: var(--radius);
   overflow: hidden;
 }
-.config-toggle {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px;
-  cursor: pointer; user-select: none;
-  transition: background 0.2s;
-}
-.config-toggle:hover { background: rgba(240,165,0,0.06); }
-.config-toggle .config-header {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'Roboto Condensed', sans-serif; font-weight: 600;
-  font-size: 0.9rem; color: var(--accent);
-}
-.config-toggle .config-header svg { opacity: 0.7; }
-.config-chevron {
-  transition: transform 0.3s ease;
-  color: var(--text-muted); opacity: 0.6;
-}
-.config-section.collapsed .config-chevron { transform: rotate(-90deg); }
 .config-body {
-  padding: 0 16px 16px;
+  padding: 14px 16px 12px;
   display: flex; flex-direction: column; gap: 10px;
-  max-height: 400px;
-  transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.25s ease;
-  opacity: 1;
 }
-.config-section.collapsed .config-body {
-  max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0;
-  overflow: hidden;
-}
-.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-group { display: flex; flex-direction: column; gap: 10px; }
 .field-group label { font-size: 0.72rem; margin: 0; }
 .field-hint {
   font-size: 0.68rem; color: var(--text-muted); opacity: 0.6;

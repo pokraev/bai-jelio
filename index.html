@@ -33,17 +33,11 @@
 
   <div class="controls">
     <div class="config-section" id="configSection">
-      <div class="config-toggle" onclick="this.parentElement.classList.toggle('collapsed')">
-        <div class="config-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          Gemini Live Configuration
-          <button class="help-btn" onclick="event.stopPropagation(); document.getElementById('helpModal').classList.add('visible');" title="Как да получа ключ?">?</button>
-        </div>
-        <svg class="config-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </div>
       <div class="config-body">
         <div class="field-group">
-          <label>Gemini API Key</label>
+          <label>Gemini API Key
+            <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('visible');" title="Как да получа ключ?">?</button>
+          </label>
           <div class="row">
             <input type="password" id="apiKey" placeholder="Въведете вашият Gemini API key тук">
             <button class="round-btn round-btn-connect" id="connectBtn" onclick="toggleConnection()" title="Connect">
@@ -51,7 +45,7 @@
             </button>
           </div>
         </div>
-        <div id="configStatus" class="field-hint">Not connected</div>
+        <div id="configStatus" class="field-hint"></div>
       </div>
     </div>
   </div>
