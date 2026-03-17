@@ -68,6 +68,7 @@ let isSearching = false;
 
 /** Accumulated bot output text for search detection */
 let pendingBotText = '';
+let pendingUserText = '';
 
 // ── Audio Player ────────────────────────────────────
 
@@ -471,10 +472,10 @@ function handleServerContent(content) {
     pendingBotText += outText;
   }
 
-  // Input transcription (user speech-to-text)
+  // Input transcription (user speech-to-text) — accumulate, log on turn complete
   const inText = content.inputTranscription?.text;
   if (inText) {
-    console.log('User transcript:', inText);
+    pendingUserText += inText;
     bus.emit('transcript:user', { text: inText });
     feedEnrichmentBuffer('user', inText);
   }
@@ -483,6 +484,15 @@ function handleServerContent(content) {
   if (content.turnComplete) {
     audioPlayer.complete();
     trackUsage();
+
+    // Log aggregated transcripts
+    if (pendingUserText) {
+      console.log('👤 User:', pendingUserText.trim());
+      pendingUserText = '';
+    }
+    if (pendingBotText) {
+      console.log('🍺 Bai Zhelyo:', pendingBotText.trim());
+    }
 
     // Detect search trigger from accumulated bot output
     if (pendingBotText && !isSearching) {
