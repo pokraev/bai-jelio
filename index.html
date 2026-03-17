@@ -906,6 +906,7 @@ function getSystemPrompt() {
     'Тема (80%): ' + topicDesc + ' Стой в тази тема. ' +
     'Памет (10%): връщай се към обсъждани неща. ' +
     'Лични интереси: обичаш крафт бира и хеви метъл, но НЕ ги споменавай по своя инициатива. Само ако потребителят ИЗРИЧНО попита за бира или музика. ' +
+    'ТЪРСЕНЕ: Когато потребителят те помоли да потърсиш нещо в интернет (напр. "потърси", "провери", "намери", "search", "google", "busca"), кажи ТОЧНО "Чакай да проверя" и след това кажи ТОЧНО думата "ТЪРСЯ:" последвана от това което трябва да потърсиш на английски. Пример: "Чакай да проверя... ТЪРСЯ: best craft beer festivals Europe 2026". Не измисляй отговор — изчакай резултатите. ' +
     'АДАПТАЦИЯ: Следи какво харесва потребителя. Ако поиска да спреш тема — ВЕДНАГА спри завинаги. Разговорът е за НЕГО. ' +
     'Ниво: ' + iq.depth + ' Стил: ' + iq.style + ' Дължина: ' + iq.length + ' ' +
     lang.greeting + ' ' + lang.rules;
@@ -931,6 +932,59 @@ function cycleLang() {
 let nearbyCache = null;
 let waitingForCityVoice = 0;
 let pendingCity = null; // city waiting for toilet announcement to finish
+let isSearching = false;
+
+// Web search: show overlay, close WS, search via Gemini, reconnect with results
+async function startWebSearch(query) {
+  const overlay = document.getElementById('searchOverlay');
+  overlay.classList.add('visible');
+
+  // Stop current audio and mic
+  audioPlayer.stop();
+  isSpeaking = false;
+  isConnected = false;
+  if (ws) { ws.close(); ws = null; }
+  stopMic();
+
+  // Do the grounded search via Gemini
+  const apiKey = document.getElementById('apiKey').value.trim();
+  let searchResult = 'Не намерих нищо конкретно.';
+  try {
+    const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
+    const responseLang = langMap[selectedLang] || 'Bulgarian';
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Search query: ' + query + '\nProvide a concise, factual summary of the search results. Respond in ' + responseLang + '. Keep it under 200 words.' }] }],
+          generationConfig: { temperature: 0.3 },
+          tools: [{ google_search: {} }]
+        })
+      }
+    );
+    const data = await res.json();
+    searchResult = data.candidates?.[0]?.content?.parts?.[0]?.text || searchResult;
+    console.log('Search result:', searchResult.substring(0, 200));
+  } catch (err) {
+    console.error('Search error:', err);
+  }
+
+  // Hide overlay and reconnect with search results
+  overlay.classList.remove('visible');
+  isSearching = false;
+  isSilentReconnect = false;
+  isToiletReturn = false;
+  isNearbyConnect = false;
+  // Store results for the reconnect prompt
+  searchCache = searchResult;
+  isSearchReconnect = true;
+  connect();
+}
+
+let searchCache = null;
+let isSearchReconnect = false;
 
 // City captured — go straight to toilet. The avatar already confirmed
 // the city in its natural response (no extra turn needed).
@@ -1459,7 +1513,16 @@ async function connect() {
 
         // Character opens the conversation
         const deferredKnowledge = getDeferredKnowledge();
-        if (isSilentReconnect) {
+        if (isSearchReconnect) {
+          isSearchReconnect = false;
+          const summary = getConversationSummary();
+          const results = searchCache || 'Не намерих нищо.';
+          searchCache = null;
+          sendTextToGemini(
+            'Току що потърси в телефона. Ето какво намери: ' + results + '\n' +
+            'Разкажи резултатите кратко и смешно, като Бай Жельо. Не чети дословно — преразкажи с думите си. ' + summary + deferredKnowledge
+          );
+        } else if (isSilentReconnect) {
           isSilentReconnect = false;
           const summary = getConversationSummary();
           sendTextToGemini('Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary + deferredKnowledge);
@@ -1527,6 +1590,14 @@ async function connect() {
         if (outText) {
           feedTranscriptToLipSync(outText);
           appendTranscript('bot', outText);
+          // Detect search trigger
+          const searchMatch = outText.match(/ТЪРСЯ:\s*(.+)/i);
+          if (searchMatch && !isSearching) {
+            const query = searchMatch[1].trim();
+            console.log('Search triggered:', query);
+            isSearching = true;
+            startWebSearch(query);
+          }
         }
         // User speech transcription
         const inText = content.inputTranscription?.text;
@@ -2979,6 +3050,13 @@ function setStatus(msg, active) {
     <div class="emoji">🚽🍺</div>
     <div class="msg">Бай Жельо отиде до тоалетната да направи място за още бира. Връща се след малко...</div>
     <div class="timer" id="toiletTimer">30</div>
+  </div>
+</div>
+<div class="toilet-overlay" id="searchOverlay">
+  <div class="toilet-box">
+    <div class="emoji">📱🔍</div>
+    <div class="msg">Бай Жельо си грабна телефона и почна да рови нещо...</div>
+    <div class="timer" id="searchStatus">Търси...</div>
   </div>
 </div>
 <div class="quota-bar" id="quotaBar">
