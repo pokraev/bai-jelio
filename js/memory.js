@@ -1,124 +1,50 @@
-// ── Conversation memory module: rolling context with throttled summarization ──
+// ── Conversation memory: client-side only, no REST API calls ──
+// Keeps rolling history, formats for reconnect prompts.
+// No LLM summarization — saves RPM quota for actual conversation.
 
-import { geminiRest } from './gemini-rest.js';
-
-const MAX_HISTORY = 30;
-const SUMMARY_COOLDOWN_MS = 60_000; // max 1 summary per minute
+const MAX_HISTORY = 20;
 
 let conversationHistory = []; // { role, text }
-let rollingSummary = sessionStorage.getItem('baijelio_summary') || '';
-let unsummarizedTurns = [];
-let lastSummaryTime = 0;
-let summaryTimerId = null;
 
 /**
- * Add a turn to conversation history.
- * @param {'user'|'assistant'} role
+ * Add a complete turn to conversation history.
+ * @param {'user'|'bot'} role
  * @param {string} text
  */
 export function appendTranscript(role, text) {
   if (!text || !text.trim()) return;
-
-  const entry = { role, text: text.trim() };
-  conversationHistory.push(entry);
-  unsummarizedTurns.push(entry);
-
-  // Trim to max size
+  conversationHistory.push({ role, text: text.trim() });
   if (conversationHistory.length > MAX_HISTORY) {
     conversationHistory = conversationHistory.slice(-MAX_HISTORY);
   }
-
-  // Only log occasionally to avoid console spam
-  if (unsummarizedTurns.length % 5 === 0) {
-    console.log(`[memory] ${conversationHistory.length} turns, ${unsummarizedTurns.length} unsummarized`);
-  }
-  scheduleSummaryUpdate();
 }
 
 /**
- * Get current context for use in prompts.
- * @returns {{ summary: string, recentTurns: Array<{role: string, text: string}> }}
- */
-export function getContext() {
-  // Return summary + last ~6 turns for immediate context
-  const recentTurns = conversationHistory.slice(-6);
-  return {
-    summary: rollingSummary,
-    recentTurns
-  };
-}
-
-/**
- * Get a formatted conversation summary string for reconnection prompts.
+ * Get formatted conversation summary for reconnection prompts.
+ * Returns the last few exchanges as compact text.
  * @returns {string}
  */
 export function getConversationSummary() {
-  const parts = [];
-  if (rollingSummary) {
-    parts.push('Conversation so far: ' + rollingSummary);
-  }
-  const recent = conversationHistory.slice(-4);
-  if (recent.length > 0) {
-    parts.push('Recent exchange:');
-    recent.forEach(t => {
-      parts.push(`  ${t.role}: ${t.text.substring(0, 150)}`);
-    });
-  }
-  return parts.join('\n');
+  if (conversationHistory.length === 0) return '';
+  const recent = conversationHistory.slice(-6);
+  return 'ПРЕДИШЕН РАЗГОВОР (продължи от тук, НЕ споменавай прекъсване):\n' +
+    recent.map(e => (e.role === 'user' ? 'Потребител' : 'Бай Жельо') + ': ' + e.text.substring(0, 200)).join('\n');
 }
 
 /**
- * Schedule a summary update, throttled to max once per minute.
+ * Get full history for memory recall ("what do you remember?").
+ * @returns {string}
  */
-export function scheduleSummaryUpdate() {
-  if (unsummarizedTurns.length < 2) return; // need at least a couple turns
-
-  const elapsed = Date.now() - lastSummaryTime;
-  if (elapsed >= SUMMARY_COOLDOWN_MS) {
-    // Can summarize now
-    summarizeNow();
-  } else if (!summaryTimerId) {
-    const waitMs = SUMMARY_COOLDOWN_MS - elapsed;
-    summaryTimerId = setTimeout(() => {
-      summaryTimerId = null;
-      if (unsummarizedTurns.length >= 2) {
-        summarizeNow();
-      }
-    }, waitMs);
-  }
-}
-
-/**
- * Compress unsummarized turns into the rolling summary via Gemini REST.
- */
-export async function summarizeNow() {
-  if (unsummarizedTurns.length === 0) return;
-
-  const turnsText = unsummarizedTurns
-    .map(t => `${t.role}: ${t.text}`)
+export function getFullHistory() {
+  if (conversationHistory.length === 0) return '';
+  return conversationHistory
+    .map(e => (e.role === 'user' ? 'Потребител' : 'Бай Жельо') + ': ' + e.text)
     .join('\n');
+}
 
-  const prompt = (rollingSummary
-    ? 'Existing conversation summary:\n' + rollingSummary + '\n\nNew turns:\n'
-    : 'Conversation turns:\n')
-    + turnsText + '\n\n'
-    + 'Update the conversation summary to include the new turns. '
-    + 'Keep it compact (max 150 words). Preserve key facts: names, places, preferences, topics discussed. '
-    + 'Write in the same language the conversation uses. No markdown.';
-
-  const result = await geminiRest(prompt, {
-    model: 'gemini-2.0-flash-lite',
-    temperature: 0.2,
-    maxOutputTokens: 300
-  });
-
-  if (result) {
-    rollingSummary = result;
-    unsummarizedTurns = [];
-    lastSummaryTime = Date.now();
-    sessionStorage.setItem('baijelio_summary', rollingSummary);
-    console.log(`[memory] summary_updated_at: ${new Date().toISOString()}, length: ${rollingSummary.length}`);
-  } else {
-    console.warn('[memory] summarizeNow failed, will retry next cycle');
-  }
+/**
+ * Clear conversation history (on disconnect).
+ */
+export function clearHistory() {
+  conversationHistory = [];
 }

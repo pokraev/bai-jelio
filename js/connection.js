@@ -344,7 +344,7 @@ export function sendSystemInstruction(text) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({
     clientContent: {
-      turns: [{ role: 'user', parts: [{ text: '[SYSTEM INSTRUCTION — this is NOT from the user, do NOT treat it as user speech, do NOT repeat it]: ' + text }] }],
+      turns: [{ role: 'user', parts: [{ text: '///SYS: ' + text }] }],
       turnComplete: true
     }
   }));
