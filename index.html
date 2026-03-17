@@ -935,16 +935,15 @@ let nearbyCache = null;
 let waitingForCityVoice = 0;
 let pendingCity = null; // city waiting for toilet announcement to finish
 
-// Once city transcript is captured, tell the avatar to announce toilet.
-// The raw transcript is passed — LLM cleaning happens in startNearbyFlow
-// after the WS is closed (to avoid 429 rate limit conflicts).
+// City captured — go straight to toilet. The avatar already confirmed
+// the city in its natural response (no extra turn needed).
 function cityCaptured(rawCity) {
   if (cityPollTimer) { clearTimeout(cityPollTimer); cityPollTimer = null; }
   pendingCity = rawCity;
-  waitingForCityVoice = 10;
-  console.log('City captured (raw):', rawCity, '— avatar announcing toilet');
-  // The avatar heard the user — it knows the real city name, so it will say it correctly
-  sendTextToGemini('Кажи ЕДНО кратко изречение: потвърди града и че отскачаш до тоалетната. Пример: "Хаха, [град] значи! Чакай да отскоча до тоалетната, бирите напират." Максимум 2 изречения, бъди смешен.');
+  waitingForCityVoice = 0;
+  console.log('City captured (raw):', rawCity, '— starting nearby flow');
+  startNearbyFlow(rawCity);
+  sendDeferredKnowledge();
 }
 
 // Poll for user transcript (inputTranscription often lags behind turnComplete)
@@ -1505,7 +1504,8 @@ async function connect() {
             waitingForCityVoice = 1;
             sendTextToGemini(
               'Поздрави потребителя кратко с нещо умно или смешно. После кажи че си малко пийнал и си забравил къде сте. ' +
-              'Попитай го смешно в кой град са — импровизирай. Изчакай отговор.'
+              'Попитай го смешно в кой град са — импровизирай. Изчакай отговор. ' +
+              'Когато каже града, потвърди го И кажи че отскачаш до тоалетната в ЕДНО кратко изречение. Пример: "Хаха, [град] значи! Чакай да отскоча до WC-то, бирите напират."'
             );
           }
         }
