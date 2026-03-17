@@ -66,6 +66,9 @@ let searchCache = null;
 /** Whether a search is currently in progress */
 let isSearching = false;
 
+/** Whether grounding quota is exhausted for this session */
+let groundingBlocked = false;
+
 /** Accumulated bot output text for search detection */
 let pendingBotText = '';
 let pendingUserText = '';
@@ -593,6 +596,16 @@ export function showToiletBreak() {
  * @param {string} query
  */
 export async function startWebSearch(query) {
+  // If grounding already blocked this session, don't even try
+  if (groundingBlocked) {
+    console.log('[search] grounding blocked for session, skipping');
+    searchCache = 'КАЖИ ТОЧНО ТОВА (не променяй): "Абе мой, нали ти казах че днес не мога да търся повече. Утре пак."';
+    isSearching = false;
+    reconnectReason = 'search';
+    connect();
+    return;
+  }
+
   const overlay = document.getElementById('searchOverlay');
   const statusEl = document.getElementById('searchStatus');
   overlay.classList.add('visible');
@@ -613,8 +626,9 @@ export async function startWebSearch(query) {
 
   if (result === '__429__' || result === null) {
     if (result === '__429__') {
+      groundingBlocked = true;
       searchCache = 'КАЖИ ТОЧНО ТОВА (не променяй): "Лек, с тоя безплатен API key, не мога много да търся. Трябва да се ъпгрейдна, щото Гугъл имат някакви лимити ама не съм ги гледал. Утре пак ще мога да търся."';
-      console.log('[search] quota exhausted');
+      console.log('[search] quota exhausted — grounding blocked for session');
     } else {
       searchCache = 'Не намерих нищо конкретно.';
       console.log('[search] no results');
