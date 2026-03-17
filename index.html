@@ -933,11 +933,11 @@ function selectNearby(btn) {
     return;
   }
 
-  // Have saved city but no cache yet — go to toilet
+  // Have saved city but no cache yet — announce toilet, wait for turnComplete
   const savedCity = getCookie('user_city');
   if (savedCity) {
+    waitingForCityVoice = 3;
     safeSwitchCommand('Кажи кратко и смешно че трябва да идеш до тоалетната, и като се върнеш ще разкажеш кво става в ' + savedCity + '.');
-    setTimeout(() => startNearbyFlow(savedCity), 4000);
     return;
   }
 
@@ -949,42 +949,91 @@ function selectNearby(btn) {
   );
 }
 
+async function fetchNearbyEvents(city) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return null;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    console.log('Fetching events for:', city, 'date:', today);
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'Location: ' + city + '. Date: ' + today + '. ' +
+            'List 5-8 interesting things happening in or near ' + city + ' today or this week: events, festivals, concerts, exhibitions, sports, weather, local news. ' +
+            'Each item: name, 1-line description, when, where. Be specific and factual. ' +
+            'Respond ONLY with JSON array: [{"name":"...","desc":"...","when":"...","where":"..."}]'
+          }] }],
+          generationConfig: { temperature: 0.3 }
+        })
+      }
+    );
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('Events raw response:', text);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const events = JSON.parse(jsonMatch[0]);
+      console.log('Events parsed:', events.map(e => '- ' + e.name + ' (' + e.when + ')').join('\n'));
+      return events;
+    }
+    return text;
+  } catch (err) {
+    console.error('Events fetch error:', err);
+    return null;
+  }
+}
+
 function startNearbyFlow(city) {
   console.log('Nearby flow — city:', city);
   setCookie('user_city', city, 30);
+
+  // Show toilet overlay — avatar already announced going to toilet
+  const overlay = document.getElementById('toiletOverlay');
+  const timerEl = document.getElementById('toiletTimer');
+  overlay.classList.add('visible');
+
+  if (ws) { ws.close(); ws = null; }
+  isConnected = false;
+  stopMic();
+
+  // Fetch real events during toilet break
   const today = new Date().toISOString().slice(0, 10);
-  nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
-    'Ти познаваш района. Разкажи какво интересно се случва в ' + city + ' днес или тази седмица — ' +
-    'събития, фестивали, концерти, изложби, спорт, време, новини. ' +
-    'Кажи нещо смешно за едно от събитията и попитай дали потребителят иска да говорите за него. ' +
-    'НЕ питай къде е — вие сте заедно.';
-  console.log('Nearby cache ready for:', city);
+  fetchNearbyEvents(city).then(events => {
+    if (events && Array.isArray(events)) {
+      nearbyCache = 'КОНТЕКСТ ЗА СЪБИТИЯ (НЕ питай къде е потребителят — вие сте заедно в ' + city + '): ' +
+        events.map(e => e.name + ' — ' + e.desc + ' (' + e.when + ', ' + e.where + ')').join('. ') + '. ' +
+        'Кажи нещо смешно за 2 от събитията и попитай кое иска да обсъдим.';
+    } else if (events) {
+      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. Ето какво намерих: ' + events +
+        ' Разкажи кратко и смешно. Попитай кое интересува потребителя.';
+    } else {
+      nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Днес е ' + today + '. ' +
+        'Разкажи какво интересно се случва в ' + city + '. Импровизирай с познанията си за района. Бъди конкретен.';
+    }
+    console.log('Nearby cache ready:', nearbyCache.substring(0, 200) + '...');
+  });
 
-  // Show toilet countdown — give LLM time to build context on reconnect
-  setTimeout(() => {
-    const overlay = document.getElementById('toiletOverlay');
-    const timerEl = document.getElementById('toiletTimer');
-    overlay.classList.add('visible');
-
-    if (ws) { ws.close(); ws = null; }
-    isConnected = false;
-    stopMic();
-
-    let sec = 30;
+  let sec = 30;
+  timerEl.textContent = sec;
+  const countdown = setInterval(() => {
+    sec--;
     timerEl.textContent = sec;
-    const countdown = setInterval(() => {
-      sec--;
-      timerEl.textContent = sec;
-      if (sec <= 0) {
-        clearInterval(countdown);
-        overlay.classList.remove('visible');
-        isToiletReturn = false;
-        isSilentReconnect = false;
-        isNearbyConnect = true;
-        connect();
+    if (sec <= 0) {
+      clearInterval(countdown);
+      overlay.classList.remove('visible');
+      if (!nearbyCache) {
+        nearbyCache = 'КОНТЕКСТ: Вие сте в ' + city + '. Разкажи какво интересно се случва. Импровизирай.';
       }
-    }, 1000);
-  }, 2000);
+      isToiletReturn = false;
+      isSilentReconnect = false;
+      isNearbyConnect = true;
+      connect();
+    }
+  }, 1000);
 }
 
 function selectTopic(btn, topic) {
@@ -1293,14 +1342,12 @@ async function connect() {
           // Check if we have saved location
           const savedCity = getCookie('user_city');
           if (savedCity) {
-            // We know the city — greet and go straight to toilet for events
-            waitingForCityVoice = 0;
+            // We know the city — greet and announce toilet
+            waitingForCityVoice = 3; // waiting for toilet announcement to finish
             sendTextToGemini(
               'Поздрави потребителя кратко и смешно. Кажи че знаеш че сте в ' + savedCity + '. ' +
               'После кажи че трябва да идеш до тоалетната, защото бирите напират, и като се върнеш ще му разкажеш кво става в ' + savedCity + '. Бъди кратък и смешен.'
             );
-            // Start toilet flow after avatar speaks
-            setTimeout(() => startNearbyFlow(savedCity), 6000);
           } else {
             // First time — greet + ask where they are
             waitingForCityVoice = 1;
@@ -1369,18 +1416,21 @@ async function connect() {
             // First turnComplete = avatar finished asking. Now wait for user answer + avatar confirmation.
             waitingForCityVoice = 2;
           } else if (waitingForCityVoice === 2) {
-            waitingForCityVoice = 0;
-            // Grab city from user or bot transcript
+            // Avatar confirmed city — now tell it to announce toilet
+            waitingForCityVoice = 3;
             const lastUser = [...conversationHistory].reverse().find(e => e.role === 'user');
-            const lastBot = [...conversationHistory].reverse().find(e => e.role === 'bot');
-            const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() :
-                         (lastBot ? lastBot.text.trim() : null);
-            console.log('City detected:', city, '| History:', conversationHistory.slice(-4).map(e => e.role + ': ' + e.text.substring(0, 60)));
+            const city = (lastUser && lastUser.text.trim().length > 1) ? lastUser.text.trim() : getCookie('user_city');
+            console.log('City confirmed:', city);
             if (city) {
-              startNearbyFlow(city);
-            } else {
-              console.warn('No city detected in conversation');
+              setCookie('user_city', city, 30);
+              sendTextToGemini('Добре, ' + city + ' значи! Кажи кратко и смешно че трябва да идеш до тоалетната, защото бирите напират. Като се върнеш ще разкажеш кво става в ' + city + '.');
             }
+          } else if (waitingForCityVoice === 3) {
+            // Avatar finished announcing toilet — NOW show toilet overlay
+            waitingForCityVoice = 0;
+            const city = getCookie('user_city');
+            console.log('Toilet announced, starting flow for:', city);
+            if (city) startNearbyFlow(city);
           }
 
           if (isMuted) {
