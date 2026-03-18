@@ -87,7 +87,7 @@ export async function parseIntent(userMessage, conversationContext) {
       'Does this message require current/live data from the internet (e.g., weather, events, news, scores, schedules, prices)?\n' +
       'Respond ONLY with JSON: {"needsLiveData": true/false, "searchQuery": "..." or null, "topic": "..." or null, "timeframe": "..." or null}\n' +
       'If needsLiveData is false, set searchQuery to null.',
-      { model: 'gemini-2.0-flash-lite', temperature: 0.1, maxOutputTokens: 150 }
+      { model: 'gemma-3-4b-it', temperature: 0.1, maxOutputTokens: 150 }
     );
 
     if (response) {

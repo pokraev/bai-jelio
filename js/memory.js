@@ -36,7 +36,7 @@ function persistHistory() {
  */
 export function appendTranscript(role, text) {
   if (!text || !text.trim()) return;
-  conversationHistory.push({ role, text: text.trim() });
+  conversationHistory.push({ role, text: text.trim(), ts: Date.now() });
   if (conversationHistory.length > MAX_HISTORY) {
     conversationHistory = conversationHistory.slice(-MAX_HISTORY);
   }
@@ -71,6 +71,31 @@ export function getFullHistory() {
 export function clearHistory() {
   conversationHistory = [];
   try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+}
+
+/**
+ * Delete conversation history by period and return the deleted turns.
+ * @param {'all'|'today'|'week'|'month'} period
+ * @returns {{ deleted: number, remaining: number }}
+ */
+export function clearHistoryByPeriod(period) {
+  if (period === 'all') {
+    const deleted = conversationHistory.length;
+    conversationHistory = [];
+    persistHistory();
+    return { deleted, remaining: 0 };
+  }
+  const now = Date.now();
+  const cutoffs = {
+    today: now - 24 * 60 * 60 * 1000,
+    week: now - 7 * 24 * 60 * 60 * 1000,
+    month: now - 30 * 24 * 60 * 60 * 1000
+  };
+  const cutoff = cutoffs[period] || 0;
+  const before = conversationHistory.length;
+  conversationHistory = conversationHistory.filter(e => !e.ts || e.ts < cutoff);
+  persistHistory();
+  return { deleted: before - conversationHistory.length, remaining: conversationHistory.length };
 }
 
 // ── Debug: expose to console via window.memory ──

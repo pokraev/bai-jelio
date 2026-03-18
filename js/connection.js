@@ -451,11 +451,17 @@ function handleSetupComplete(apiKey) {
     reconnectReason = null;
     const results = searchCache || 'Не намерих нищо.';
     searchCache = null;
-    sendSystemInstruction(
-      getReconnectPrompt('search', {
-        summary, searchResult: results, deferredKnowledge
-      })
-    );
+    // Open results modal first, then narrate after a short delay
+    if (window._lastSearchItems && window._lastSearchItems.length > 0 && typeof openSearchResults === 'function') {
+      openSearchResults();
+    }
+    setTimeout(() => {
+      sendSystemInstruction(
+        getReconnectPrompt('search', {
+          summary, searchResult: results, deferredKnowledge
+        })
+      );
+    }, 1500);
   } else if (reconnectReason === 'silent') {
     reconnectReason = null;
     sendSystemInstruction(
@@ -531,14 +537,15 @@ function handleServerContent(content) {
 
     // Log aggregated transcripts and store for transcript modal
     if (!window._rawTranscripts) window._rawTranscripts = [];
+    var lastUserText = pendingUserText ? pendingUserText.trim() : '';
     if (pendingUserText) {
-      console.log('👤 User:', pendingUserText.trim());
-      window._rawTranscripts.push({ role: 'user', text: pendingUserText.trim() });
+      console.log('👤 User:', lastUserText);
+      window._rawTranscripts.push({ role: 'user', text: lastUserText, ts: Date.now() });
       pendingUserText = '';
     }
     if (pendingBotText) {
       console.log('🍺 Бай Жельо:', pendingBotText.trim());
-      window._rawTranscripts.push({ role: 'bot', text: pendingBotText.trim() });
+      window._rawTranscripts.push({ role: 'bot', text: pendingBotText.trim(), ts: Date.now() });
     }
 
     // Detect search trigger from accumulated bot output
@@ -547,10 +554,25 @@ function handleServerContent(content) {
       if (searchMatch) {
         const query = searchMatch[1].trim();
         console.log('Search triggered:', query);
+        // Show searching image + orbit dot immediately
+        const stg = document.getElementById('stage');
+        if (stg) stg.classList.add('searching');
+        if (typeof startSearchOrbit === 'function') startSearchOrbit();
         pendingBotText = '';
         isSearching = true;
         bus.emit('search:triggered', { query });
         return; // skip other turnComplete handling
+      }
+      // Detect "show results" trigger from bot
+      if (/ПОКАЖИ_РЕЗУЛТАТИ/i.test(pendingBotText)) {
+        pendingBotText = pendingBotText.replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
+        if (typeof openSearchResults === 'function') openSearchResults();
+      }
+    }
+    // Detect "show results" from user speech (покажи резултати, дай линкове, show results, etc.)
+    if (lastUserText && /покажи.*(резултат|линк|източник)|дай.*(линк|резултат)|show.*result|muéstra.*resultado/i.test(lastUserText)) {
+      if (window._lastSearchText && typeof openSearchResults === 'function') {
+        openSearchResults();
       }
     }
     pendingBotText = '';
@@ -648,10 +670,10 @@ export async function startWebSearch(query) {
     return;
   }
 
-  const overlay = document.getElementById('searchOverlay');
-  const statusEl = document.getElementById('searchStatus');
-  overlay.classList.add('visible');
-  statusEl.textContent = 'Търси...';
+  // Crossfade to searching image (dot already started from trigger detection)
+  const stage = document.getElementById('stage');
+  if (stage) stage.classList.add('searching');
+  if (typeof startSearchOrbit === 'function') startSearchOrbit();
 
   audioPlayer.stop();
   bus.emit('audio:playing-changed', { playing: false });
@@ -660,11 +682,20 @@ export async function startWebSearch(query) {
   setWebSocket(null);
   stopMic();
 
-  const { searchAndNarrate } = await import('./search.js');
-  const result = await searchAndNarrate(query);
-
-  overlay.classList.remove('visible');
-  isSearching = false;
+  let result;
+  try {
+    const { searchAndNarrate } = await import('./search.js');
+    result = await searchAndNarrate(query);
+  } catch (e) {
+    console.error('[search] error:', e);
+    result = null;
+  } finally {
+    // Always revert avatar and stop orbit
+    const stageEl = document.getElementById('stage');
+    if (stageEl) stageEl.classList.remove('searching');
+    if (typeof stopSearchOrbit === 'function') stopSearchOrbit();
+    isSearching = false;
+  }
 
   if (result === '__429__' || result === null) {
     if (result === '__429__') {

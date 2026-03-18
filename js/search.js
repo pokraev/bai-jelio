@@ -26,33 +26,58 @@ export async function searchAndNarrate(query, opts) {
   const responseLang = langMap[lang] || 'Bulgarian';
 
   // Step 1: Try model knowledge (no grounding, no quota cost)
+  // Wait briefly for Live API RPM window to clear (shared project-level quota)
+  // Brief wait for RPM window after Live API disconnect
+  await new Promise(r => setTimeout(r, 2000));
+
   console.log('[search] trying model knowledge first...');
-  const knowledgeResult = await geminiRest(
+  let knowledgeResult = await geminiRest(
     'The user asked: "' + query + '"\n\n' +
     'Answer from your knowledge. If you are confident about current/recent facts, include them.\n' +
     'If you are NOT confident about current data (e.g. today\'s events, live scores, breaking news), ' +
     'start your response with exactly: NEED_LIVE_DATA\n\n' +
     SEARCH_PROMPT_SUFFIX +
     'Respond in ' + responseLang + '. Max 200 words. No markdown.',
-    { model: 'gemini-2.5-flash' }
+    { model: 'gemma-3-4b-it' }
   );
 
   if (knowledgeResult === '__429__') return '__429__';
   if (knowledgeResult && !knowledgeResult.startsWith('NEED_LIVE_DATA')) {
     console.log('[search] model knowledge sufficient:', knowledgeResult.substring(0, 200));
+    window._lastSearchText = knowledgeResult;
+    window._lastSearchQuery = query;
     return knowledgeResult;
   }
 
   // Step 2: Model says it needs live data — use grounded search
   console.log('[search] model needs live data, using google_search grounding...');
   trackGrounding();
-  const groundedResult = await geminiRest(
+
+  const groundingPrompt =
     'The user asked: "' + query + '"\n\n' +
     'Search for CURRENT information.\n' +
     SEARCH_PROMPT_SUFFIX +
-    'Respond in ' + responseLang + '. Max 200 words. No markdown.',
+    'IMPORTANT: Respond with TWO sections separated by ---ITEMS--- marker.\n' +
+    'Section 1: A natural spoken summary in ' + responseLang + '. Max 150 words. No markdown.\n' +
+    'Section 2: After ---ITEMS---, list each result as one line: TITLE | SHORT_DESCRIPTION (max 15 words, in ' + responseLang + ')\n' +
+    'STRICT: NO duplicate results. Each item must be unique — different event/topic. If multiple sources mention the same thing, merge into ONE item.\n' +
+    'Example:\n' +
+    'Here are today\'s events in Valencia...\n' +
+    '---ITEMS---\n' +
+    'Jazz Festival at Palau de la Música | Live jazz concert starting at 8pm, free entry\n' +
+    'Fallas Exhibition | Traditional Valencian art exhibition at City Hall square\n';
+
+  let groundedResult = await geminiRest(groundingPrompt,
     { model: 'gemini-2.5-flash', tools: [{ google_search: {} }] }
   );
+
+  if (groundedResult === '__429__') {
+    console.log('[search] grounding RPM limited, retrying in 12s...');
+    await new Promise(r => setTimeout(r, 12000));
+    groundedResult = await geminiRest(groundingPrompt,
+      { model: 'gemini-2.5-flash', tools: [{ google_search: {} }] }
+    );
+  }
 
   if (groundedResult === '__429__') return '__429__';
   if (!groundedResult) {
@@ -60,6 +85,30 @@ export async function searchAndNarrate(query, opts) {
     return null;
   }
 
-  console.log('[search] grounded result:', groundedResult.substring(0, 200));
-  return groundedResult;
+  console.log('[search] grounded result:', groundedResult.substring(0, 300));
+  window._lastSearchQuery = query;
+
+  // Parse structured response
+  var parts = groundedResult.split('---ITEMS---');
+  var spokenText = (parts[0] || '').trim();
+  var itemsText = (parts[1] || '').trim();
+  var items = [];
+  if (itemsText) {
+    var lines = itemsText.split('\n').filter(function(l) { return l.trim(); });
+    for (var i = 0; i < lines.length; i++) {
+      var pipe = lines[i].indexOf('|');
+      if (pipe !== -1) {
+        items.push({
+          title: lines[i].substring(0, pipe).trim(),
+          desc: lines[i].substring(pipe + 1).trim()
+        });
+      } else {
+        items.push({ title: lines[i].trim(), desc: '' });
+      }
+    }
+  }
+  window._lastSearchText = spokenText;
+  window._lastSearchItems = items;
+
+  return spokenText;
 }

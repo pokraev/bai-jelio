@@ -45,9 +45,11 @@
     </div>
   </div>
 
-  <div class="stage-wrap">
+  <div class="stage-wrap" id="stageWrap">
+    <div class="search-orbit-dot" id="searchOrbitDot"></div>
     <div class="stage" id="stage">
-      <img src="avatar.jpg">
+      <img src="avatar.jpg" id="avatarImg">
+      <img src="images/searching.jpg" id="searchImg" class="search-img">
       <canvas id="mouthCanvas"></canvas>
     </div>
     <div class="stage-actions" id="stageActions" style="display:none">
@@ -147,7 +149,6 @@
   <span class="quota-pill" id="quotaDay"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
   <span class="quota-pill" id="quotaGrounding"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
   <a href="#" class="quota-pill" id="settingsBtn" onclick="openSettings();return false;" data-i18n="pill_settings">Настройки</a>
-  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);localStorage.removeItem('conversation_history');location.reload();return false;" data-i18n="pill_reset">Ресет</a>
   <a href="#" class="quota-pill" id="disconnectBtn" onclick="disconnect();return false;" data-i18n="pill_exit">Изход</a>
 </div>
 
@@ -164,23 +165,25 @@
       </button>
     </div>
     <div class="settings-body">
-      <div class="settings-row">
-        <label data-i18n="settings_lang">Език</label>
-        <div class="custom-select" id="settingsLang" data-value="bg">
-          <div class="custom-select-btn"><span>Български</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-          <div class="custom-select-menu">
-            <div class="custom-select-item active" data-val="bg" data-i18n="lang_bg">Български</div>
-            <div class="custom-select-item" data-val="en" data-i18n="lang_en">English</div>
-            <div class="custom-select-item" data-val="es" data-i18n="lang_es">Español</div>
-            <div class="custom-select-item" data-val="hi" data-i18n="lang_hi">हिन्दी</div>
+      <div class="settings-row-pair">
+        <div class="settings-row">
+          <label data-i18n="settings_lang">Език</label>
+          <div class="custom-select" id="settingsLang" data-value="bg">
+            <div class="custom-select-btn"><span>Български</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="custom-select-menu">
+              <div class="custom-select-item active" data-val="bg" data-i18n="lang_bg">Български</div>
+              <div class="custom-select-item" data-val="en" data-i18n="lang_en">English</div>
+              <div class="custom-select-item" data-val="es" data-i18n="lang_es">Español</div>
+              <div class="custom-select-item" data-val="hi" data-i18n="lang_hi">हिन्दी</div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="settings-row">
-        <label data-i18n="settings_voice">Глас</label>
-        <div class="custom-select" id="settingsVoice" data-value="Enceladus">
-          <div class="custom-select-btn"><span>Enceladus (Breathy)</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-          <div class="custom-select-menu" id="settingsVoiceMenu"></div>
+        <div class="settings-row">
+          <label data-i18n="settings_voice">Глас</label>
+          <div class="custom-select" id="settingsVoice" data-value="Enceladus">
+            <div class="custom-select-btn"><span>Enceladus (Breathy)</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="custom-select-menu" id="settingsVoiceMenu"></div>
+          </div>
         </div>
       </div>
       <div class="settings-row-pair">
@@ -206,14 +209,31 @@
           </div>
         </div>
       </div>
-      <div class="settings-row">
-        <label data-i18n="settings_memory">Памет</label>
-        <div class="custom-select" id="settingsMemory" data-value="500">
-          <div class="custom-select-btn"><span>500</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-          <div class="custom-select-menu">
-            <div class="custom-select-item" data-val="100" data-i18n="memory_100">100 реплики</div>
-            <div class="custom-select-item active" data-val="500" data-i18n="memory_500">500 реплики</div>
-            <div class="custom-select-item" data-val="2000" data-i18n="memory_2000">2000 реплики</div>
+      <div class="settings-row-pair">
+        <div class="settings-row">
+          <label data-i18n="settings_memory">Памет</label>
+          <div class="custom-select" id="settingsMemory" data-value="500">
+            <div class="custom-select-btn"><span>500</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="custom-select-menu">
+              <div class="custom-select-item" data-val="100" data-i18n="memory_100">100 реплики</div>
+              <div class="custom-select-item active" data-val="500" data-i18n="memory_500">500 реплики</div>
+              <div class="custom-select-item" data-val="2000" data-i18n="memory_2000">2000 реплики</div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-row settings-row-clear">
+          <label data-i18n="clear_label">Изтриване</label>
+          <div class="clear-row">
+            <div class="custom-select" id="settingsClearMemory" data-value="all">
+              <div class="custom-select-btn"><span data-i18n="clear_all">Всичко</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+              <div class="custom-select-menu">
+                <div class="custom-select-item active" data-val="all" data-i18n="clear_all">Всичко</div>
+                <div class="custom-select-item" data-val="today" data-i18n="clear_today">Днес</div>
+                <div class="custom-select-item" data-val="week" data-i18n="clear_week">Тази седмица</div>
+                <div class="custom-select-item" data-val="month" data-i18n="clear_month">Този месец</div>
+              </div>
+            </div>
+            <button class="clear-memory-btn" id="clearMemoryBtn" onclick="confirmClearMemory()" title="Delete">🗑</button>
           </div>
         </div>
       </div>
@@ -230,7 +250,23 @@
       </div>
     </div>
     <div class="settings-footer">
+      <div class="settings-footer-actions">
+        <button class="btn btn-danger-outline" onclick="clearApiKey()" data-i18n="clear_api_key">Изтрий API ключ</button>
+        <button class="btn btn-outline" onclick="clearCache()" data-i18n="clear_cache">Изчисти кеш</button>
+      </div>
       <button class="btn btn-save" onclick="saveSettings()" data-i18n="settings_save">Запази</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear Memory Confirmation Modal -->
+<div class="modal" id="clearMemoryModal" onclick="if(event.target===this)closeClearMemoryModal()">
+  <div class="modal-card confirm-card">
+    <div class="confirm-icon">🗑</div>
+    <div class="confirm-msg" id="clearMemoryMsg"></div>
+    <div class="confirm-actions">
+      <button class="btn confirm-cancel" onclick="closeClearMemoryModal()" data-i18n="clear_cancel">Отказ</button>
+      <button class="btn confirm-delete" onclick="doExecuteClearMemory()" data-i18n="clear_confirm">Изтрий</button>
     </div>
   </div>
 </div>
@@ -238,16 +274,66 @@
 <!-- Transcript Modal -->
 <div class="modal" id="transcriptModal" onclick="if(event.target===this)closeTranscriptModal()">
   <div class="modal-card transcript-modal-card">
-    <div class="modal-header">
-      <div class="modal-title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
-        <span data-i18n="transcript_title">Транскрипт</span>
+    <div class="transcript-toolbar">
+      <div class="transcript-tabs">
+        <button class="transcript-tab active" id="tabSummary" onclick="switchTranscriptTab('summary')">
+          <span data-i18n="transcript_summary">Резюме</span>
+        </button>
+        <button class="transcript-tab" id="tabTranscript" onclick="switchTranscriptTab('transcript')">
+          <span data-i18n="transcript_title">Транскрипт</span>
+        </button>
       </div>
-      <button class="modal-close" onclick="closeTranscriptModal()">
+      <div class="transcript-controls">
+        <div class="transcript-calendar-wrap">
+          <button class="cal-toggle" id="calToggleBtn" onclick="toggleTranscriptCalendar()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span id="calToggleLabel" data-i18n="transcript_all_dates">Всички дни</span>
+          </button>
+          <div class="transcript-calendar" id="transcriptCalendar">
+            <div class="cal-header">
+              <button class="cal-arrow" id="calPrev" onclick="calNavigate(-1)">‹</button>
+              <span class="cal-month" id="calMonth"></span>
+              <button class="cal-arrow" id="calNext" onclick="calNavigate(1)">›</button>
+            </div>
+            <div class="cal-weekdays" id="calWeekdays"></div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+        </div>
+        <div class="custom-select transcript-select" id="transcriptHour" data-value="">
+          <div class="custom-select-btn"><span data-i18n="transcript_all_hours">Всички часове</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="custom-select-menu" id="transcriptHourMenu"></div>
+        </div>
+      </div>
+      <button class="modal-close transcript-close" onclick="closeTranscriptModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
       </button>
     </div>
+    <div class="transcript-search-bar">
+      <div class="transcript-search-wrap">
+        <svg class="transcript-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="transcriptSearch" class="transcript-search" placeholder="Търси..." data-i18n-placeholder="transcript_search_placeholder" autocomplete="off">
+        <div class="transcript-search-dropdown" id="transcriptSearchDropdown"></div>
+      </div>
+    </div>
     <div class="transcript-chat" id="transcriptChat"></div>
+    <div class="transcript-disclaimer" data-i18n="transcript_disclaimer">⚠ Експериментална функция — възможни са грешки в транскрипцията и резюмето.</div>
+  </div>
+</div>
+
+<!-- Search Results Modal -->
+<div class="modal" id="searchResultsModal" onclick="if(event.target===this)closeSearchResults()">
+  <div class="modal-card search-results-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <span id="searchResultsTitle" data-i18n="search_results_title">Резултати от търсенето</span>
+      </div>
+      <button class="modal-close" onclick="closeSearchResults()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="search-results-query" id="searchResultsQuery"></div>
+    <div class="search-results-list" id="searchResultsList"></div>
   </div>
 </div>
 
@@ -463,6 +549,126 @@ function iphoneTutorialStep(n) {
   var activeEl = document.querySelector('#iphoneSteps .iphone-step.active');
   if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+// ── Search orbit dot animation ──
+var _orbitRaf = null;
+
+function startSearchOrbit() {
+  var dot = document.getElementById('searchOrbitDot');
+  var stage = document.getElementById('stage');
+  if (!dot || !stage) return;
+  dot.classList.add('active');
+  var startTime = performance.now();
+  var duration = 2500; // ms per revolution
+
+  function tick(now) {
+    var elapsed = now - startTime;
+    var angle = ((elapsed % duration) / duration) * Math.PI * 2;
+    var rect = stage.getBoundingClientRect();
+    var wrapRect = stage.parentElement.getBoundingClientRect();
+    var cx = rect.left - wrapRect.left + rect.width / 2;
+    var cy = rect.top - wrapRect.top + rect.height / 2;
+    var rx = rect.width / 2 + 6;
+    var ry = rect.height / 2 + 6;
+    var x = cx + rx * Math.cos(angle) - 5;
+    var y = cy + ry * Math.sin(angle) - 5;
+    dot.style.left = x + 'px';
+    dot.style.top = y + 'px';
+    _orbitRaf = requestAnimationFrame(tick);
+  }
+  _orbitRaf = requestAnimationFrame(tick);
+}
+
+function stopSearchOrbit() {
+  if (_orbitRaf) { cancelAnimationFrame(_orbitRaf); _orbitRaf = null; }
+  var dot = document.getElementById('searchOrbitDot');
+  if (dot) dot.classList.remove('active');
+}
+
+// ── Search Results Modal ──
+function truncateWords(str, max) {
+  var words = str.split(/\s+/);
+  if (words.length <= max) return str;
+  return words.slice(0, max).join(' ') + '…';
+}
+
+function openSearchResults() {
+  var modal = document.getElementById('searchResultsModal');
+  var list = document.getElementById('searchResultsList');
+  var queryEl = document.getElementById('searchResultsQuery');
+  list.innerHTML = '';
+
+  var query = window._lastSearchQuery || '';
+  var rawItems = window._lastSearchItems || [];
+  var sources = window._lastSearchSources || [];
+
+  // Deduplicate items by title
+  var seen = {};
+  var items = [];
+  for (var i = 0; i < rawItems.length; i++) {
+    var key = rawItems[i].title.toLowerCase().trim();
+    if (!seen[key]) { seen[key] = true; items.push(rawItems[i]); }
+  }
+
+  queryEl.textContent = query ? '"' + query + '"' : '';
+
+  if (items.length === 0 && sources.length === 0) {
+    list.innerHTML = '<div class="transcript-empty">' +
+      (typeof t === 'function' ? t('search_no_results') : 'Няма резултати') + '</div>';
+    modal.classList.add('visible');
+    return;
+  }
+
+  // Pair items with sources (sources have URLs)
+  for (var i = 0; i < Math.max(items.length, sources.length); i++) {
+    var item = items[i] || {};
+    var src = sources[i] || null;
+    var title = item.title || (src ? src.title : '');
+    var desc = item.desc || '';
+    if (!title) continue;
+
+    if (src && src.uri) {
+      var a = document.createElement('a');
+      a.className = 'search-result-item';
+      a.href = src.uri;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.innerHTML =
+        '<div class="search-result-title">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>' +
+          escapeHtml(title) +
+        '</div>' +
+        (desc ? '<div class="search-result-desc">' + escapeHtml(desc) + '</div>' : '');
+      list.appendChild(a);
+    } else {
+      var div = document.createElement('div');
+      div.className = 'search-result-item';
+      div.style.cursor = 'default';
+      div.innerHTML =
+        '<div class="search-result-title">' + escapeHtml(title) + '</div>' +
+        (desc ? '<div class="search-result-desc">' + escapeHtml(desc) + '</div>' : '');
+      list.appendChild(div);
+    }
+  }
+
+  // Mute mic while results are open
+  window._searchResultsMuted = false;
+  if (typeof getIsMuted === 'function' && !getIsMuted()) {
+    toggleMute();
+    window._searchResultsMuted = true;
+  }
+
+  modal.classList.add('visible');
+}
+
+function closeSearchResults() {
+  document.getElementById('searchResultsModal').classList.remove('visible');
+  // Unmute if we muted on open
+  if (typeof getIsMuted === 'function' && getIsMuted() && window._searchResultsMuted) {
+    toggleMute();
+    window._searchResultsMuted = false;
+  }
+}
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
     if (typeof getCookie === 'function' && getCookie('iphone_tutorial_hide') !== '1') {
@@ -496,8 +702,10 @@ document.addEventListener('click', function(e) {
     sel.classList.remove('open');
     return;
   }
-  // Click outside — close all
+  // Click outside — close all (including calendar)
   document.querySelectorAll('.custom-select.open').forEach(function(s) { s.classList.remove('open'); });
+  var cal = document.getElementById('transcriptCalendar');
+  if (cal && !e.target.closest('.transcript-calendar-wrap')) cal.classList.remove('open');
 });
 
 var transcriptAbort = null;
@@ -514,25 +722,630 @@ function closeTranscriptModal() {
 var TYPE_SPEED_MS = 38;
 var PREFETCH_PCT = 0.9; // start prefetching next turn at 90% typed
 
-async function openTranscriptModal() {
-  var modal = document.getElementById('transcriptModal');
+// ── Transcript cache (1-day TTL) ──
+var TRANSCRIPT_CACHE_KEY = 'transcript_cache';
+var CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
+
+function getTranscriptCache() {
+  try {
+    var raw = localStorage.getItem(TRANSCRIPT_CACHE_KEY);
+    if (!raw) return {};
+    var cache = JSON.parse(raw);
+    // Prune expired entries
+    var now = Date.now();
+    var changed = false;
+    for (var key in cache) {
+      if (now - cache[key].ts > CACHE_TTL_MS) { delete cache[key]; changed = true; }
+    }
+    if (changed) localStorage.setItem(TRANSCRIPT_CACHE_KEY, JSON.stringify(cache));
+    return cache;
+  } catch (_) { return {}; }
+}
+
+function setTranscriptCache(key, value) {
+  try {
+    var cache = getTranscriptCache();
+    cache[key] = { ts: Date.now(), data: value };
+    localStorage.setItem(TRANSCRIPT_CACHE_KEY, JSON.stringify(cache));
+  } catch (_) {}
+}
+
+function getCachedEntry(key) {
+  var cache = getTranscriptCache();
+  if (cache[key] && Date.now() - cache[key].ts < CACHE_TTL_MS) return cache[key].data;
+  return null;
+}
+
+// ── Active tab state ──
+var _transcriptActiveTab = 'summary';
+var _apiSuspended = false; // true while summary is generating — blocks cleanTranscript calls
+
+// ── Transcript helpers ──
+function getFullTranscriptHistory() {
+  var hist = window._rawTranscripts && window._rawTranscripts.length > 0
+    ? window._rawTranscripts
+    : (window.memory ? window.memory.history : []);
+  // Backfill missing timestamps: assign evenly spaced times ending at now
+  if (hist.length > 0 && !hist[0].ts) {
+    var now = Date.now();
+    var gap = 10000; // 10s between turns
+    var start = now - hist.length * gap;
+    for (var i = 0; i < hist.length; i++) {
+      if (!hist[i].ts) hist[i].ts = start + i * gap;
+    }
+  }
+  return hist;
+}
+
+function transcriptDatesMap(history) {
+  // Returns { 'YYYY-MM-DD': [indices] } for turns that have timestamps
+  var map = {};
+  for (var i = 0; i < history.length; i++) {
+    if (!history[i].ts) continue;
+    var d = new Date(history[i].ts);
+    var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (!map[key]) map[key] = [];
+    map[key].push(i);
+  }
+  return map;
+}
+
+function transcriptHoursForDate(history, dateStr) {
+  var hours = {};
+  for (var i = 0; i < history.length; i++) {
+    if (!history[i].ts) continue;
+    var d = new Date(history[i].ts);
+    var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (key === dateStr) {
+      var h = d.getHours();
+      if (!hours[h]) hours[h] = [];
+      hours[h].push(i);
+    }
+  }
+  return hours;
+}
+
+function filterTranscriptHistory(history, dateStr, hourVal) {
+  if (!dateStr) return history;
+  var filtered = [];
+  for (var i = 0; i < history.length; i++) {
+    if (!history[i].ts) continue;
+    var d = new Date(history[i].ts);
+    var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (key !== dateStr) continue;
+    if (hourVal !== '' && d.getHours() !== parseInt(hourVal, 10)) continue;
+    filtered.push(history[i]);
+  }
+  return filtered;
+}
+
+function formatDateLabel(dateStr) {
+  var parts = dateStr.split('-');
+  return parts[2] + '.' + parts[1] + '.' + parts[0];
+}
+
+function toDateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function setTranscriptSelect(id, value, label) {
+  var sel = document.getElementById(id);
+  if (!sel) return;
+  sel.dataset.value = value;
+  var span = sel.querySelector('.custom-select-btn span');
+  if (span) span.textContent = label;
+  sel.querySelectorAll('.custom-select-item').forEach(function(item) {
+    item.classList.toggle('active', item.dataset.val === value);
+  });
+}
+
+// ── Calendar state ──
+var _calHistory = [];
+var _calDatesSet = {};
+var _calViewMonth = null; // Date object for displayed month
+var _calSelectedDate = ''; // 'YYYY-MM-DD' or ''
+
+function toggleTranscriptCalendar() {
+  var cal = document.getElementById('transcriptCalendar');
+  cal.classList.toggle('open');
+}
+
+function calNavigate(delta) {
+  _calViewMonth.setMonth(_calViewMonth.getMonth() + delta);
+  renderCalendarGrid();
+}
+
+function calSelectDate(dateStr) {
+  _calSelectedDate = dateStr;
+  document.getElementById('transcriptCalendar').classList.remove('open');
+
+  var allDatesLabel = typeof t === 'function' ? t('transcript_all_dates') : 'Всички дни';
+  var label = dateStr ? formatDateLabel(dateStr) : allDatesLabel;
+  document.getElementById('calToggleLabel').textContent = label;
+  // Fake transcriptDate data-value for compatibility
+
+  if (dateStr) {
+    populateHoursForDate(dateStr);
+  } else {
+    resetHoursDropdown();
+  }
+  var hourVal = document.getElementById('transcriptHour').dataset.value;
+  renderFilteredTranscript(_calHistory, dateStr, hourVal);
+  renderCalendarGrid();
+}
+
+function renderCalendarGrid() {
+  var grid = document.getElementById('calGrid');
+  var weekdaysEl = document.getElementById('calWeekdays');
+  var monthEl = document.getElementById('calMonth');
+  var year = _calViewMonth.getFullYear();
+  var month = _calViewMonth.getMonth();
+
+  // Month/year label
+  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
+  var monthNames = {
+    bg: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
+    en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+    hi: ['जनवरी','फ़रवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर']
+  };
+  var dayNames = {
+    bg: ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],
+    en: ['Mo','Tu','We','Th','Fr','Sa','Su'],
+    es: ['Lu','Ma','Mi','Ju','Vi','Sá','Do'],
+    hi: ['सो','मं','बु','गु','शु','श','र']
+  };
+  var names = monthNames[lang] || monthNames.bg;
+  var days = dayNames[lang] || dayNames.bg;
+  monthEl.textContent = names[month] + ' ' + year;
+
+  // Weekday headers
+  weekdaysEl.innerHTML = '';
+  for (var w = 0; w < 7; w++) {
+    var wd = document.createElement('div');
+    wd.className = 'cal-weekday';
+    wd.textContent = days[w];
+    weekdaysEl.appendChild(wd);
+  }
+
+  // Build grid
+  grid.innerHTML = '';
+  var firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  var startOffset = (firstDay + 6) % 7; // Mon=0
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var todayStr = toDateKey(new Date());
+
+  // Empty cells before first day
+  for (var e = 0; e < startOffset; e++) {
+    var empty = document.createElement('div');
+    empty.className = 'cal-day other-month';
+    grid.appendChild(empty);
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var cell = document.createElement('div');
+    cell.className = 'cal-day';
+    cell.textContent = d;
+    var key = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+
+    if (key === todayStr) cell.classList.add('today');
+    if (key === _calSelectedDate) cell.classList.add('selected');
+
+    if (_calDatesSet[key]) {
+      cell.classList.add('has-data');
+      (function(k) {
+        cell.onclick = function() { calSelectDate(k); };
+      })(key);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function populateHoursForDate(dateStr) {
+  var hourSel = document.getElementById('transcriptHour');
+  var hourMenu = document.getElementById('transcriptHourMenu');
+  var allHoursLabel = typeof t === 'function' ? t('transcript_all_hours') : 'Всички часове';
+  hourMenu.innerHTML = '';
+
+  var allH = document.createElement('div');
+  allH.className = 'custom-select-item active';
+  allH.dataset.val = '';
+  allH.textContent = allHoursLabel;
+  allH.onclick = function() {
+    setTranscriptSelect('transcriptHour', '', allHoursLabel);
+    hourSel.classList.remove('open');
+    renderFilteredTranscript(_calHistory, _calSelectedDate, '');
+  };
+  hourMenu.appendChild(allH);
+
+  var hoursWithData = transcriptHoursForDate(_calHistory, dateStr);
+  var sortedHours = Object.keys(hoursWithData).map(Number).sort(function(a, b) { return a - b; });
+  for (var i = 0; i < sortedHours.length; i++) {
+    (function(h) {
+      var item = document.createElement('div');
+      item.className = 'custom-select-item';
+      item.dataset.val = String(h);
+      var label = String(h).padStart(2, '0') + ':00 – ' + String(h + 1).padStart(2, '0') + ':00';
+      item.textContent = label;
+      item.onclick = function() {
+        setTranscriptSelect('transcriptHour', String(h), label);
+        hourSel.classList.remove('open');
+        renderFilteredTranscript(_calHistory, _calSelectedDate, String(h));
+      };
+      hourMenu.appendChild(item);
+    })(sortedHours[i]);
+  }
+  setTranscriptSelect('transcriptHour', '', allHoursLabel);
+}
+
+function resetHoursDropdown() {
+  var hourSel = document.getElementById('transcriptHour');
+  var hourMenu = document.getElementById('transcriptHourMenu');
+  var allHoursLabel = typeof t === 'function' ? t('transcript_all_hours') : 'Всички часове';
+  hourMenu.innerHTML = '';
+  var allH = document.createElement('div');
+  allH.className = 'custom-select-item active';
+  allH.dataset.val = '';
+  allH.textContent = allHoursLabel;
+  allH.onclick = function() {
+    setTranscriptSelect('transcriptHour', '', allHoursLabel);
+    hourSel.classList.remove('open');
+    renderFilteredTranscript(_calHistory, _calSelectedDate, '');
+  };
+  hourMenu.appendChild(allH);
+  setTranscriptSelect('transcriptHour', '', allHoursLabel);
+}
+
+function setupTranscriptControls(history) {
+  _calHistory = history;
+  var searchInput = document.getElementById('transcriptSearch');
+  var dropdown = document.getElementById('transcriptSearchDropdown');
+
+  searchInput.value = '';
+  dropdown.classList.remove('open');
+  dropdown.innerHTML = '';
+  document.getElementById('transcriptCalendar').classList.remove('open');
+
+  // Build dates set
+  _calDatesSet = {};
+  var datesMap = transcriptDatesMap(history);
+  var dateKeys = Object.keys(datesMap).sort();
+  for (var i = 0; i < dateKeys.length; i++) _calDatesSet[dateKeys[i]] = true;
+
+  // Default to today or most recent date
+  var todayStr = toDateKey(new Date());
+  var allDatesLabel = typeof t === 'function' ? t('transcript_all_dates') : 'Всички дни';
+
+  if (_calDatesSet[todayStr]) {
+    _calSelectedDate = todayStr;
+    _calViewMonth = new Date();
+    document.getElementById('calToggleLabel').textContent = formatDateLabel(todayStr);
+    populateHoursForDate(todayStr);
+  } else if (dateKeys.length > 0) {
+    var lastDate = dateKeys[dateKeys.length - 1];
+    _calSelectedDate = lastDate;
+    var parts = lastDate.split('-');
+    _calViewMonth = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+    document.getElementById('calToggleLabel').textContent = formatDateLabel(lastDate);
+    populateHoursForDate(lastDate);
+  } else {
+    _calSelectedDate = '';
+    _calViewMonth = new Date();
+    document.getElementById('calToggleLabel').textContent = allDatesLabel;
+    resetHoursDropdown();
+  }
+
+  renderCalendarGrid();
+
+  // Search with lookahead
+  var searchDebounce = null;
+  searchInput.oninput = function() {
+    clearTimeout(searchDebounce);
+    var q = searchInput.value.trim().toLowerCase();
+    if (q.length < 2) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+    searchDebounce = setTimeout(function() {
+      var results = [];
+      for (var i = 0; i < history.length; i++) {
+        if (history[i].text.toLowerCase().indexOf(q) !== -1) {
+          results.push({ index: i, turn: history[i] });
+          if (results.length >= 20) break;
+        }
+      }
+      dropdown.innerHTML = '';
+      if (results.length === 0) {
+        dropdown.innerHTML = '<div class="transcript-search-item" style="color:var(--text-muted);cursor:default">' +
+          (typeof t === 'function' ? t('transcript_no_results') : 'Няма резултати') + '</div>';
+      } else {
+        for (var r = 0; r < results.length; r++) {
+          (function(res) {
+            var item = document.createElement('div');
+            item.className = 'transcript-search-item';
+            var roleLabel = res.turn.role === 'user' ? '👤' : '🍺';
+            var txt = res.turn.text;
+            // Highlight match
+            var idx = txt.toLowerCase().indexOf(q);
+            var before = txt.substring(Math.max(0, idx - 30), idx);
+            var match = txt.substring(idx, idx + q.length);
+            var after = txt.substring(idx + q.length, idx + q.length + 40);
+            if (idx > 30) before = '...' + before;
+            if (idx + q.length + 40 < txt.length) after = after + '...';
+            var timeStr = '';
+            if (res.turn.ts) {
+              var d = new Date(res.turn.ts);
+              timeStr = '<span class="search-time">' + d.toLocaleDateString() + ' ' +
+                String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</span>';
+            }
+            item.innerHTML = '<span class="search-role">' + roleLabel + '</span>' +
+              escapeHtml(before) + '<span class="search-match">' + escapeHtml(match) + '</span>' + escapeHtml(after) +
+              timeStr;
+            item.onclick = function() {
+              dropdown.classList.remove('open');
+              searchInput.value = '';
+              // Find which date/hour this result is in and render from that point
+              renderTranscriptFromIndex(history, res.index);
+            };
+            dropdown.appendChild(item);
+          })(results[r]);
+        }
+      }
+      dropdown.classList.add('open');
+    }, 200);
+  };
+
+  // Close dropdown on outside click
+  searchInput.onblur = function() {
+    setTimeout(function() { dropdown.classList.remove('open'); }, 200);
+  };
+  searchInput.onfocus = function() {
+    if (dropdown.children.length > 0 && searchInput.value.trim().length >= 2) dropdown.classList.add('open');
+  };
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+var MAX_RENDER_TURNS = 10;
+
+function renderFilteredTranscript(history, dateStr, hourVal) {
+  var filtered = filterTranscriptHistory(history, dateStr, hourVal);
+  if (_transcriptActiveTab === 'summary') {
+    renderSummary(filtered, dateStr, hourVal);
+  } else {
+    // Show only the last N turns
+    var slice = filtered.length > MAX_RENDER_TURNS ? filtered.slice(-MAX_RENDER_TURNS) : filtered;
+    renderTranscriptTurns(slice);
+  }
+}
+
+function renderTranscriptFromIndex(history, startIndex) {
+  _transcriptActiveTab = 'transcript';
+  document.getElementById('tabTranscript').classList.add('active');
+  document.getElementById('tabSummary').classList.remove('active');
+  // Include previous turn for context, cap at MAX_RENDER_TURNS
+  var from = Math.max(0, startIndex - 1);
+  var slice = history.slice(from, from + MAX_RENDER_TURNS);
+  renderTranscriptTurns(slice, startIndex > 0 ? 1 : 0);
+}
+
+function switchTranscriptTab(tab) {
+  _transcriptActiveTab = tab;
+  document.getElementById('tabTranscript').classList.toggle('active', tab === 'transcript');
+  document.getElementById('tabSummary').classList.toggle('active', tab === 'summary');
+  var history = getFullTranscriptHistory();
+  var dateStr = _calSelectedDate;
+  var hourVal = document.getElementById('transcriptHour').dataset.value;
+  renderFilteredTranscript(history, dateStr, hourVal);
+}
+
+async function renderSummary(turns, dateStr, hourVal) {
   var chat = document.getElementById('transcriptChat');
-  modal.classList.add('visible');
+  var modal = document.getElementById('transcriptModal');
   chat.innerHTML = '';
   if (transcriptAbort) transcriptAbort.abort();
   transcriptAbort = new AbortController();
-  // Mute mic while transcript is open (also pauses background processing via mute handler)
-  window._transcriptMuted = false;
-  if (typeof getIsMuted === 'function' && !getIsMuted()) {
-    toggleMute();
-    window._transcriptMuted = true;
-  }
   var signal = transcriptAbort.signal;
 
-  var history = window._rawTranscripts && window._rawTranscripts.length > 0
-    ? window._rawTranscripts
-    : (window.memory ? window.memory.history : []);
-  if (history.length === 0) {
+  if (turns.length === 0) {
+    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'Няма транскрипт') + '</div>';
+    return;
+  }
+
+  // Show typing indicator
+  var typingEl = document.createElement('div');
+  typingEl.className = 'chat-typing';
+  typingEl.innerHTML = '<span class="typing-label">' +
+    (typeof t === 'function' ? t('transcript_summarizing') : 'Генериране на резюме') +
+    '</span><span class="typing-dots"></span>';
+  chat.appendChild(typingEl);
+
+  var apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) {
+    typingEl.remove();
+    chat.innerHTML = '<div class="transcript-empty">API key required</div>';
+    return;
+  }
+
+  // Suspend all other API calls while summarizing
+  _apiSuspended = true;
+  if (transcriptAbort) transcriptAbort.abort();
+  transcriptAbort = new AbortController();
+  signal = transcriptAbort.signal;
+
+  // Build conversation text for summary — limit to last 100 turns to avoid token overflow
+  var summaryTurns = turns.length > 100 ? turns.slice(-100) : turns;
+  var botNames = { bg: 'Бай Жельо', en: 'Bai Zhelyo', es: 'Bai Zhelyo', hi: 'बाई झेल्यो' };
+  var userNames = { bg: 'Аз', en: 'Me', es: 'Yo', hi: 'मैं' };
+  var botName = botNames[lang] || botNames.bg;
+  var userName = userNames[lang] || userNames.bg;
+  var convText = summaryTurns.map(function(turn) {
+    // Strip search triggers and system commands from text
+    var cleanText = turn.text.replace(/ТЪРСЯ:\s*.*/gi, '').replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
+    if (!cleanText) return null;
+    return (turn.role === 'user' ? userName : botName) + ': ' + cleanText;
+  }).filter(Boolean).join('\n');
+
+  // Truncate if too long (keep under ~12k chars for flash-lite)
+  if (convText.length > 12000) convText = convText.substring(convText.length - 12000);
+
+  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
+  var langNames = { bg: 'Bulgarian', en: 'English', es: 'Spanish', hi: 'Hindi' };
+  var langName = langNames[lang] || 'Bulgarian';
+
+  var sectionHeadings = {
+    bg: { topics: 'Теми', keyPoints: 'Ключови моменти', agreements: 'Съгласия', disagreements: 'Разногласия', decisions: 'Решения' },
+    en: { topics: 'Topics', keyPoints: 'Key Points', agreements: 'Agreements', disagreements: 'Disagreements', decisions: 'Decisions' },
+    es: { topics: 'Temas', keyPoints: 'Puntos clave', agreements: 'Acuerdos', disagreements: 'Desacuerdos', decisions: 'Decisiones' },
+    hi: { topics: 'विषय', keyPoints: 'मुख्य बिंदु', agreements: 'सहमति', disagreements: 'असहमति', decisions: 'निर्णय' }
+  };
+  var h = sectionHeadings[lang] || sectionHeadings.bg;
+
+  var models = ['gemma-3-4b-it', 'gemma-3-1b-it'];
+  var reqBody = JSON.stringify({
+    contents: [{ parts: [{ text:
+      'IMPORTANT: You MUST write your ENTIRE response in ' + langName + '. Every word must be in ' + langName + '.\n\n' +
+      'Summarize this conversation. Use these sections with **bold headings**:\n' +
+      '**' + h.topics + '** — main subjects discussed (bullet points)\n' +
+      '**' + h.keyPoints + '** — important facts, ideas, or arguments (bullet points)\n' +
+      '**' + h.agreements + '** — things both sides agreed on (bullet points, skip if none)\n' +
+      '**' + h.disagreements + '** — things they disagreed on (bullet points, skip if none)\n' +
+      '**' + h.decisions + '** — any conclusions, plans, or commitments made (bullet points, skip if none)\n' +
+      'STRICT RULE: Only include information explicitly stated in the conversation text below. Do NOT invent, assume, or hallucinate anything not directly written in the transcript. If user messages are missing (only bot messages visible), summarize ONLY what the bot said — do NOT guess what the user said.\n' +
+      'The summary is written from MY perspective (the user). Use first person singular for "' + userName + '" (I asked, I wanted — NOT "user asks"). Use first person plural when both participants agree/share something (we agreed, we both think — NOT "they both think"). Conjugate all verbs accordingly in ' + langName + '.\n' +
+      'Keep it under 400 words. Skip empty sections. Write ONLY the summary in ' + langName + ', no preamble.\n\n' +
+      'CONVERSATION:\n' + convText
+    }] }],
+    generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 2000 }
+  });
+  var labelEl = typingEl.querySelector('.typing-label');
+  var baseLabel = typeof t === 'function' ? t('transcript_summarizing') : 'Generating summary';
+  var MAX_RETRIES = 3;
+  try {
+    var res, data;
+    for (var attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Try each model
+      for (var mi = 0; mi < models.length; mi++) {
+        if (signal.aborted) { _apiSuspended = false; typingEl.remove(); return; }
+        labelEl.textContent = baseLabel + (attempt > 0 ? ' (' + (attempt + 1) + '/' + MAX_RETRIES + ')' : '');
+        res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/' + models[mi] + ':generateContent?key=' + encodeURIComponent(apiKey),
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: reqBody, signal: signal }
+        );
+        if (res.ok) break;
+      }
+      if (res.ok) break;
+
+      // All models failed — parse wait time and countdown
+      data = await res.json();
+      if (res.status !== 429 || attempt + 1 >= MAX_RETRIES) break; // give up on non-429 or last attempt
+
+      var retryMatch = JSON.stringify(data).match(/retry in ([\d.]+)s/i);
+      var waitSec = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1])), 90) : 30;
+      var remaining = waitSec;
+      labelEl.textContent = baseLabel + ' (' + remaining + 's)';
+      await new Promise(function(resolve) {
+        var iv = setInterval(function() {
+          if (signal.aborted) { clearInterval(iv); resolve(); return; }
+          remaining--;
+          if (remaining <= 0) { clearInterval(iv); resolve(); return; }
+          labelEl.textContent = baseLabel + ' (' + remaining + 's)';
+        }, 1000);
+      });
+      if (signal.aborted) { _apiSuspended = false; typingEl.remove(); return; }
+    }
+
+    if (signal.aborted) { _apiSuspended = false; typingEl.remove(); return; }
+
+    if (!res.ok) {
+      if (!data) data = await res.json();
+      _apiSuspended = false;
+      typingEl.remove();
+      var errMsg = (data && data.error && data.error.message) ? data.error.message : 'HTTP ' + res.status;
+      chat.innerHTML = '<div class="transcript-empty">Error: ' + escapeHtml(errMsg) + '</div>';
+      return;
+    }
+    data = await res.json();
+
+    var summary = data.candidates && data.candidates[0] && data.candidates[0].content &&
+      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+      data.candidates[0].content.parts[0].text;
+
+    _apiSuspended = false;
+    typingEl.remove();
+    if (!summary) {
+      chat.innerHTML = '<div class="transcript-empty">No summary generated</div>';
+      return;
+    }
+
+    summary = summary.trim();
+    showSummaryBubble(chat, summary);
+  } catch (e) {
+    _apiSuspended = false;
+    typingEl.remove();
+    if (e.name === 'AbortError') return;
+    chat.innerHTML = '<div class="transcript-empty">Error: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function formatSummaryHtml(text) {
+  // Parse lines: headings (** **), bullet points (* or -), plain text
+  var lines = text.split('\n');
+  var html = '';
+  var inList = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) { if (inList) { html += '</ul>'; inList = false; } html += '<br>'; continue; }
+    // Bold heading: **text**
+    if (/^\*\*(.+)\*\*$/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<div class="summary-heading">' + escapeHtml(line.replace(/\*\*/g, '')) + '</div>';
+    }
+    // Bullet point: * text or - text
+    else if (/^[\*\-•]\s+/.test(line)) {
+      if (!inList) { html += '<ul class="summary-list">'; inList = true; }
+      var content = escapeHtml(line.replace(/^[\*\-•]\s+/, ''));
+      // Inline bold **word**
+      content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += '<li>' + content + '</li>';
+    }
+    // Plain text
+    else {
+      if (inList) { html += '</ul>'; inList = false; }
+      var content = escapeHtml(line);
+      content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += '<p class="summary-text">' + content + '</p>';
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+function showSummaryBubble(chat, text) {
+  chat.innerHTML = '';
+  var container = document.createElement('div');
+  container.className = 'summary-container';
+  container.innerHTML =
+    '<div class="summary-header">' +
+      '<span class="summary-icon">📋</span>' +
+      '<span class="summary-title">' + (typeof t === 'function' ? t('transcript_summary') : 'Резюме') +
+        (_calSelectedDate ? ' — ' + formatDateLabel(_calSelectedDate) : '') + '</span>' +
+    '</div>' +
+    '<div class="summary-body">' + formatSummaryHtml(text) + '</div>';
+  chat.appendChild(container);
+  autoScrollChat(chat);
+}
+
+async function renderTranscriptTurns(turns, highlightFirst) {
+  var modal = document.getElementById('transcriptModal');
+  var chat = document.getElementById('transcriptChat');
+  chat.innerHTML = '';
+  if (transcriptAbort) transcriptAbort.abort();
+  transcriptAbort = new AbortController();
+  var signal = transcriptAbort.signal;
+
+  if (turns.length === 0) {
     chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'Няма транскрипт') + '</div>';
     return;
   }
@@ -541,21 +1354,33 @@ async function openTranscriptModal() {
   var langRules = {
     bg: 'Bulgarian. Apply all Bulgarian grammar rules: gender agreements (род), verb conjugation, definite articles (членуване), commas before "че", "който", "когато", "защото". The AI agent is called "Бай Жельо" (also "Бат Жельо", "бай Жельо", "бат Жельо") — keep this name correct.',
     en: 'English. Apply standard English grammar, punctuation, and spelling rules. The AI agent is called "Bai Zhelyo" — keep this name correct.',
-    es: 'Spanish. Apply all Spanish grammar rules: gender/number agreements, accent marks, punctuation (¿¡). The AI agent is called "Bai Zhelyo" — keep this name correct.'
+    es: 'Spanish. Apply all Spanish grammar rules: gender/number agreements, accent marks, punctuation (¿¡). The AI agent is called "Bai Zhelyo" — keep this name correct.',
+    hi: 'Hindi. Apply standard Hindi grammar and Devanagari script rules. The AI agent is called "बाई झेल्यो" (Bai Zhelyo) — keep this name correct.'
   };
   var langRule = langRules[lang] || langRules.bg;
 
-  // Prefetch first turn immediately
-  var nextClean = cleanTranscript(history[0].text, langRule, signal);
+  // Date/time label (WhatsApp-style)
+  if (turns[0].ts) {
+    var d = new Date(turns[0].ts);
+    var dateLabel = formatDateLabel(toDateKey(d));
+    var hourSel = document.getElementById('transcriptHour');
+    var hourVal = hourSel ? hourSel.dataset.value : '';
+    var timeLabel = hourVal !== '' ? String(parseInt(hourVal)).padStart(2, '0') + ':00' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    var tag = document.createElement('div');
+    tag.className = 'chat-date-label';
+    tag.textContent = dateLabel + ', ' + timeLabel;
+    chat.appendChild(tag);
+  }
 
-  for (var i = 0; i < history.length; i++) {
+  var nextClean = cleanTranscript(turns[0].text, langRule, signal);
+
+  for (var i = 0; i < turns.length; i++) {
     if (signal.aborted || !modal.classList.contains('visible')) return;
 
-    var turn = history[i];
+    var turn = turns[i];
     var icon = turn.role === 'user' ? '👤' : '🍺';
     var cls = turn.role === 'user' ? 'user' : 'bot';
 
-    // Show typing indicator while waiting for LLM
     var typingLabel = turn.role === 'user'
       ? (typeof t === 'function' ? t('transcript_user_typing') : 'Вие пишете')
       : (typeof t === 'function' ? t('transcript_bot_typing') : 'Бай Жельо пише');
@@ -565,7 +1390,6 @@ async function openTranscriptModal() {
     chat.appendChild(typingEl);
     autoScrollChat(chat);
 
-    // Wait for this turn's cleaned text
     var cleaned;
     try {
       cleaned = nextClean ? await nextClean : await cleanTranscript(turn.text, langRule, signal);
@@ -575,45 +1399,92 @@ async function openTranscriptModal() {
     }
     if (!cleaned) cleaned = turn.text;
 
-    // Remove typing indicator, show bubble
     typingEl.remove();
     var bubble = document.createElement('div');
     bubble.className = 'chat-bubble ' + cls;
-    bubble.innerHTML = '<span class="bubble-icon">' + icon + '</span> <span class="bubble-text"></span>';
+    // Add timestamp badge if available
+    var timeBadge = '';
+    if (turn.ts) {
+      var d = new Date(turn.ts);
+      timeBadge = '<span class="bubble-time">' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</span>';
+    }
+    bubble.innerHTML = '<span class="bubble-icon">' + icon + '</span> <span class="bubble-text"></span>' + timeBadge;
+    if (highlightFirst !== undefined && i === highlightFirst) bubble.classList.add('highlight');
     chat.appendChild(bubble);
     autoScrollChat(chat);
 
-    // Type it out, prefetch next at 90%
     var prefetchStarted = false;
     nextClean = null;
     var textEl = bubble.querySelector('.bubble-text');
     for (var c = 0; c < cleaned.length; c++) {
       if (signal.aborted) return;
       textEl.textContent += cleaned[c];
-      if (!prefetchStarted && i + 1 < history.length && c >= Math.floor(cleaned.length * PREFETCH_PCT)) {
-        nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
+      if (!prefetchStarted && i + 1 < turns.length && c >= Math.floor(cleaned.length * PREFETCH_PCT)) {
+        nextClean = cleanTranscript(turns[i + 1].text, langRule, signal);
         prefetchStarted = true;
       }
-      if (c % 4 === 0) autoScrollChat(chat);
+      if (c % 20 === 0) autoScrollChat(chat);
       await new Promise(function(r) { setTimeout(r, TYPE_SPEED_MS); });
     }
     bubble.classList.add('done');
 
-    // If we didn't prefetch yet (very short text), wait then prefetch
-    if (!prefetchStarted && i + 1 < history.length) {
+    if (!prefetchStarted && i + 1 < turns.length) {
       await new Promise(function(r) { setTimeout(r, 2000); });
       if (signal.aborted) return;
-      nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
+      nextClean = cleanTranscript(turns[i + 1].text, langRule, signal);
     }
   }
 }
 
+async function openTranscriptModal() {
+  var modal = document.getElementById('transcriptModal');
+  var chat = document.getElementById('transcriptChat');
+  modal.classList.add('visible');
+  chat.innerHTML = '';
+  if (transcriptAbort) transcriptAbort.abort();
+  transcriptAbort = new AbortController();
+  window._transcriptMuted = false;
+  if (typeof getIsMuted === 'function' && !getIsMuted()) {
+    toggleMute();
+    window._transcriptMuted = true;
+  }
+
+  // Reset to summary tab (default)
+  _transcriptActiveTab = 'summary';
+  document.getElementById('tabSummary').classList.add('active');
+  document.getElementById('tabTranscript').classList.remove('active');
+
+  var history = getFullTranscriptHistory();
+  setupTranscriptControls(history);
+
+  if (history.length === 0) {
+    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'Няма транскрипт') + '</div>';
+    return;
+  }
+
+  var dateStr = _calSelectedDate;
+  var hourVal = document.getElementById('transcriptHour').dataset.value;
+  var filtered = dateStr ? filterTranscriptHistory(history, dateStr, hourVal) : history;
+  if (filtered.length === 0) {
+    _calSelectedDate = '';
+    document.getElementById('calToggleLabel').textContent = typeof t === 'function' ? t('transcript_all_dates') : 'Всички дни';
+    filtered = history;
+  }
+  await renderSummary(filtered, dateStr, hourVal);
+}
+
 async function cleanTranscript(text, langRule, signal) {
+  if (_apiSuspended) return text;
   var apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey || text.length < 3) return text;
+  // Check cache first
+  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
+  var cacheKey = 'clean_' + lang + '_' + text.length + '_' + text.substring(0, 60).replace(/\s/g, '_');
+  var cached = getCachedEntry(cacheKey);
+  if (cached) return cached;
   try {
     var res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+      'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-4b-it:generateContent?key=' + encodeURIComponent(apiKey),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -642,7 +1513,9 @@ async function cleanTranscript(text, langRule, signal) {
     var result = data.candidates && data.candidates[0] && data.candidates[0].content &&
       data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
       data.candidates[0].content.parts[0].text;
-    return result ? stripForeignChars(result.trim()) : text;
+    var cleaned = result ? stripForeignChars(result.trim()) : text;
+    if (cleaned && cleaned !== text) setTranscriptCache(cacheKey, cleaned);
+    return cleaned;
   } catch (e) {
     if (e.name === 'AbortError') throw e;
     return text;

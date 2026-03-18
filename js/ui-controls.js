@@ -15,7 +15,7 @@ import {
   getCookie, setCookie,
 } from './config.js';
 import { getIQProfile, getLangPrompt } from './prompts.js';
-import { setMaxHistory } from './memory.js';
+import { setMaxHistory, clearHistoryByPeriod } from './memory.js';
 
 // ── Wake Lock ───────────────────────────────────────
 
@@ -124,6 +124,130 @@ export function closeSettings() {
     window.toggleMute();
     _settingsMuted = false;
   }
+}
+
+/**
+ * Clear memory by selected period, then re-summarize remaining history via Gemini.
+ */
+/**
+ * Show confirmation dialog before clearing memory.
+ */
+export function confirmClearMemory() {
+  const period = getCustomSelect('settingsClearMemory');
+  if (!period) return;
+  const labels = {
+    all: typeof window.t === 'function' ? window.t('clear_all') : 'Всичко',
+    today: typeof window.t === 'function' ? window.t('clear_today') : 'Днес',
+    week: typeof window.t === 'function' ? window.t('clear_week') : 'Тази седмица',
+    month: typeof window.t === 'function' ? window.t('clear_month') : 'Този месец'
+  };
+  const label = labels[period] || period;
+  const msg = (typeof window.t === 'function' ? window.t('clear_confirm_msg') : 'Сигурни ли сте, че искате да изтриете паметта за: ') + label + '?';
+  document.getElementById('clearMemoryMsg').textContent = msg;
+  document.getElementById('clearMemoryModal').classList.add('visible');
+}
+
+export function closeClearMemoryModal() {
+  document.getElementById('clearMemoryModal').classList.remove('visible');
+}
+
+export async function doExecuteClearMemory() {
+  closeClearMemoryModal();
+  const period = getCustomSelect('settingsClearMemory');
+  if (!period) return;
+  const btn = document.getElementById('clearMemoryBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const result = clearHistoryByPeriod(period);
+
+  // Also clear _rawTranscripts for matching period
+  if (window._rawTranscripts) {
+    if (period === 'all') {
+      window._rawTranscripts = [];
+    } else {
+      const now = Date.now();
+      const cutoffs = { today: now - 86400000, week: now - 604800000, month: now - 2592000000 };
+      const cutoff = cutoffs[period] || 0;
+      window._rawTranscripts = window._rawTranscripts.filter(e => !e.ts || e.ts < cutoff);
+    }
+  }
+
+  // Clear transcript cache
+  try { localStorage.removeItem('transcript_cache'); } catch (_) {}
+
+  // Re-summarize remaining history if any turns left
+  if (result.remaining > 0) {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (apiKey && window.memory && window.memory.history.length > 0) {
+      const lang = getSelectedLang();
+      const langNames = { bg: 'Bulgarian', en: 'English', es: 'Spanish', hi: 'Hindi' };
+      const langName = langNames[lang] || 'Bulgarian';
+      const hist = window.memory.history;
+      const convText = hist.slice(-50).map(e =>
+        (e.role === 'user' ? 'User' : 'Bot') + ': ' + e.text
+      ).join('\n');
+      try {
+        const res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text:
+                'Summarize this conversation in 2-3 sentences in ' + langName +
+                '. This will be used as context for continuing the conversation. ' +
+                'Focus on the most recent topics and any important facts mentioned.\n\n' + convText
+              }] }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 300 }
+            })
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const summary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (summary) {
+            localStorage.setItem('memory_summary', summary);
+          }
+        }
+      } catch (_) {}
+    }
+  } else {
+    localStorage.removeItem('memory_summary');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🗑';
+
+  // Flash confirmation
+  btn.style.background = 'rgba(78,203,113,0.3)';
+  setTimeout(() => { btn.style.background = ''; }, 1500);
+}
+
+/**
+ * Clear API key and reload.
+ */
+export function clearApiKey() {
+  setCookie('gemini_api_key', '', -1);
+  location.reload();
+}
+
+/**
+ * Clear all caches (transcript cache, conversation history, raw transcripts).
+ */
+export function clearCache() {
+  try { localStorage.removeItem('transcript_cache'); } catch (_) {}
+  try { localStorage.removeItem('conversation_history'); } catch (_) {}
+  try { localStorage.removeItem('memory_summary'); } catch (_) {}
+  if (window._rawTranscripts) window._rawTranscripts = [];
+  if (window._lastSearchText) window._lastSearchText = null;
+  if (window._lastSearchItems) window._lastSearchItems = [];
+  if (window._lastSearchSources) window._lastSearchSources = [];
+  // Flash the button
+  const btn = event.target;
+  btn.style.borderColor = 'var(--success)';
+  btn.style.color = 'var(--success)';
+  setTimeout(() => { btn.style.borderColor = ''; btn.style.color = ''; }, 1500);
 }
 
 /**

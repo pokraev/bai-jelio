@@ -40,7 +40,7 @@ export async function geminiRest(prompt, options) {
   pruneWindow();
   console.log(`[gemini-rest] RPM usage: ${callTimestamps.length}/${RPM_LIMIT} in last 60s`);
 
-  const model = (options && options.model) || 'gemini-2.0-flash-lite';
+  const model = (options && options.model) || 'gemma-3-4b-it';
   const tools = (options && options.tools) || undefined;
 
   try {
@@ -74,6 +74,7 @@ export async function geminiRest(prompt, options) {
         let quotaScope = 'unknown'; // 'per-minute', 'per-day', or 'unknown'
         try {
           const errData = await res.json();
+          console.warn('[gemini-rest] 429 body:', JSON.stringify(errData.error || errData).substring(0, 500));
           if (errData.error?.details) {
             for (const d of errData.error.details) {
               if (d.retryDelay) {
@@ -108,7 +109,25 @@ export async function geminiRest(prompt, options) {
       return null;
     }
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('\n') || null;
+    const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('\n') || null;
+
+    // Extract grounding sources if present
+    const gm = data.candidates?.[0]?.groundingMetadata;
+    if (gm && text) {
+      const sources = [];
+      const chunks = gm.groundingChunks || [];
+      for (const chunk of chunks) {
+        if (chunk.web) {
+          sources.push({ title: chunk.web.title || '', uri: chunk.web.uri || '' });
+        }
+      }
+      if (sources.length > 0) {
+        window._lastSearchSources = sources;
+        console.log('[gemini-rest] grounding sources:', sources.length);
+      }
+    }
+
+    return text;
   } catch (err) {
     console.error('geminiRest error:', err);
     return null;

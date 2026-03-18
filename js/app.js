@@ -11,6 +11,8 @@ import { setVadSensitivity, setVadHold, getVadSettings } from './vad.js';
 import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected } from './connection.js';
 import {
   selectTopic, openSettings, closeSettings, saveSettings,
+  confirmClearMemory, closeClearMemoryModal, doExecuteClearMemory,
+  clearApiKey, clearCache,
   setStatus, requestWakeLock, releaseWakeLock,
 } from './ui-controls.js';
 import { initQuota } from './quota.js';
@@ -27,6 +29,11 @@ window.selectTopic = selectTopic;
 window.openSettings = openSettings;
 window.closeSettings = closeSettings;
 window.saveSettings = saveSettings;
+window.confirmClearMemory = confirmClearMemory;
+window.closeClearMemoryModal = closeClearMemoryModal;
+window.doExecuteClearMemory = doExecuteClearMemory;
+window.clearApiKey = clearApiKey;
+window.clearCache = clearCache;
 window.toggleMute = toggleMute;
 window.getIsMuted = getIsMuted;
 window.setVadSensitivity = setVadSensitivity;
