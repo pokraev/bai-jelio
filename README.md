@@ -65,13 +65,20 @@ Tell the avatar where you are. It remembers and can answer questions about the p
 - Disconnect button: green when connected, red when disconnected
 - Mic button: green when active, red when muted (with crossed-out icon)
 
+### Quota Bar
+Fixed bottom bar with pill-styled indicators:
+- **Chat quota** (speech bubble icon) — remaining / 1500 daily API requests
+- **Grounding quota** (magnifier icon) — remaining / 100 daily Google Search grounding calls
+- **Reset** — clears API key cookie and reloads
+- **iPhone** — opens the PWA installation tutorial
+
+Counters persist in localStorage across page reloads. When the API returns a 429 (quota exhausted), the grounding counter syncs to 0 immediately. Both counters reset automatically at midnight.
+
 ### Install as App (PWA)
 Works on iPhone and Android — add to home screen for a fullscreen, app-like experience.
 
 **iPhone (Safari):**
-1. Open the app in **Safari** (not Chrome)
-2. Tap **Share** (square with arrow) → **Add to Home Screen**
-3. Icon adapts to your current light/dark theme at install time
+A built-in interactive tutorial walks you through the steps with screenshots. It opens automatically on first visit (can be dismissed or permanently hidden via "Don't show again" checkbox, Skip, or Finish buttons). You can also open it anytime from the **iPhone** pill button at the bottom of the screen.
 
 **Android (Chrome):**
 1. Open the app in Chrome
@@ -116,6 +123,9 @@ bai-jelio/
 ├── icons/
 │   ├── icon-light-{180,192,512}.png  # Light theme icons
 │   └── icon-dark-{180,192,512}.png   # Dark theme icons
+│
+├── images/
+│   └── iphone-step{1-5}.png          # iPhone PWA install tutorial screenshots
 │
 ├── css/
 │   └── main.css               # All styles
@@ -234,7 +244,9 @@ All read-only — no side effects on the running app.
 | What | Where | Duration | Purpose |
 |------|-------|----------|---------|
 | API Key | Cookie | 90 days | Auto-connect on return |
-| Daily request count | localStorage | 1 day | Quota tracking |
+| Daily request count | localStorage | 1 day | Chat quota tracking |
+| Daily grounding count | localStorage | 1 day | Grounding quota tracking |
+| Tutorial preference | Cookie | 365 days | "Don't show again" for iPhone tutorial |
 | Conversation history | JS memory | Session | Reconnect context |
 | Everything else | Nowhere | — | No server, pure client-side |
 
@@ -242,7 +254,7 @@ All read-only — no side effects on the running app.
 
 ### API Quota (Free Tier)
 - **Live Audio**: ~1500 requests/day shared across all models
-- **Google Search grounding**: Very limited per-minute quota, easily exhausted
+- **Google Search grounding**: ~100 per day, tracked in quota bar
 - **REST API**: 15 RPM shared with Live API — REST calls compete for quota
 - After 429 on grounding: blocked for session, avatar says "утре пак"
 
