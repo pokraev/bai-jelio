@@ -191,16 +191,22 @@ export function destroyMic() {
  */
 export function toggleMute() {
   isMuted = !isMuted;
-  // Disable/enable the actual media tracks
-  if (micStream) {
-    micStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
-  }
   if (isMuted) {
     mutedAfterTurn = false;
     pauseVad();
+    // Stop mic tracks entirely so iOS hides the mic indicator
+    if (micStream) {
+      micStream.getAudioTracks().forEach(t => t.stop());
+      micStream = null;
+    }
+    if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+    if (micGainNode) { micGainNode.disconnect(); micGainNode = null; }
+    if (micSource) { micSource.disconnect(); micSource = null; }
+    isMicActive = false;
   } else {
     mutedAfterTurn = false;
-    resumeVad();
+    // Restart mic from scratch
+    startMic();
   }
 
   bus.emit('mic:muted', { muted: isMuted });
