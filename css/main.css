@@ -653,15 +653,226 @@ select {
 .modal-btn-skip { background: transparent; border: 1.5px solid var(--text-muted) !important; color: var(--text-muted); }
 .modal-btn-skip:hover { border-color: var(--text) !important; color: var(--text); }
 
+/* iPhone Tutorial Modal */
+.iphone-modal-card {
+  width: 40vw !important;
+  max-height: 90vh !important;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  padding: 12px 10px;
+  gap: 8px;
+}
+.iphone-steps {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  min-height: 0;
+}
+.iphone-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.3s, background 0.3s;
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+.iphone-step.active {
+  opacity: 1;
+  background: rgba(240,165,0,0.06);
+}
+.iphone-step:hover { opacity: 0.7; }
+.iphone-step.active:hover { opacity: 1; }
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: stretch;
+  padding-top: 2px;
+}
+.step-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(136,153,170,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s;
+  flex-shrink: 0;
+}
+.iphone-step.active .step-dot {
+  border-color: var(--accent);
+}
+.dot-inner {
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: width 0.25s, height 0.25s;
+}
+.iphone-step.active .dot-inner {
+  width: 9px;
+  height: 9px;
+}
+.step-line {
+  width: 2px;
+  flex: 1 1 auto;
+  min-height: 12px;
+  background: rgba(136,153,170,0.15);
+  margin-top: 4px;
+}
+.iphone-step:last-child .step-line { display: none; }
+.step-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: visible;
+}
+.step-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+.iphone-step.active .step-text {
+  color: var(--text);
+}
+.step-img {
+  display: block;
+  width: 65%;
+  height: auto;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.iphone-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+.iphone-round {
+  width: 40px;
+  height: 40px;
+}
+.iphone-round-next {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.iphone-round-next:hover {
+  background: rgba(240,165,0,0.1);
+  color: var(--accent);
+}
+.iphone-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.iphone-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  user-select: none;
+  opacity: 0.7;
+}
+.iphone-checkbox:hover { opacity: 1; }
+.iphone-checkbox input {
+  display: none;
+}
+.checkbox-mark {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(136,153,170,0.35);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.iphone-checkbox input:checked + .checkbox-mark {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.iphone-checkbox input:checked + .checkbox-mark::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 8px;
+  border: solid var(--bg-deep);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+@media (max-width: 768px) {
+  .iphone-modal-card {
+    width: 94vw !important;
+    max-height: 90vh;
+  }
+}
+
 .quota-bar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  display: flex; justify-content: center; gap: 18px;
-  padding: 6px 0;
+  display: flex; justify-content: center; align-items: center; gap: 10px;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
   font-family: 'Roboto Condensed', sans-serif;
-  font-size: 0.6rem; letter-spacing: 0.3px;
-  color: var(--text-muted); opacity: 0.35;
+  font-size: 0.7rem; letter-spacing: 0.3px;
+  color: var(--text-muted); opacity: 0.5;
   transition: opacity 0.3s;
   pointer-events: none; z-index: 10;
 }
-.quota-bar:hover { opacity: 0.7; }
-.quota-bar span { white-space: nowrap; }
+.quota-bar:hover { opacity: 0.85; }
+.quota-bar span {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(136,153,170,0.25);
+  background: rgba(26,38,51,0.7);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: default;
+}
+.quota-bar span svg { flex-shrink: 0; }
+.quota-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(136,153,170,0.25);
+  background: rgba(26,38,51,0.7);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-family: 'Roboto Condensed', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.quota-pill:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(240,165,0,0.08);
+}

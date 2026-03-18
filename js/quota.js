@@ -13,6 +13,9 @@
 /** Maximum interactions per day (soft limit, UI-only) */
 const QUOTA_DAY_LIMIT = 1500;
 
+/** Maximum grounding searches per day (free-tier limit) */
+const GROUNDING_DAY_LIMIT = 100;
+
 // ── Helpers ──────────────────────────────────────────
 
 /**
@@ -31,6 +34,14 @@ function getUsedToday() {
   return parseInt(localStorage.getItem(getQuotaDayKey()) || '0', 10);
 }
 
+function getGroundingDayKey() {
+  return 'grounding_' + new Date().toISOString().slice(0, 10);
+}
+
+function getGroundingUsedToday() {
+  return parseInt(localStorage.getItem(getGroundingDayKey()) || '0', 10);
+}
+
 // ── Public API ───────────────────────────────────────
 
 /**
@@ -44,6 +55,29 @@ export function trackUsage() {
   updateQuotaUI();
 }
 
+export function trackGrounding() {
+  const key = getGroundingDayKey();
+  const used = parseInt(localStorage.getItem(key) || '0', 10) + 1;
+  localStorage.setItem(key, String(used));
+  updateQuotaUI();
+}
+
+/**
+ * Called when grounding returns 429 — sync counter to the limit.
+ */
+export function groundingExhausted() {
+  localStorage.setItem(getGroundingDayKey(), String(GROUNDING_DAY_LIMIT));
+  updateQuotaUI();
+}
+
+/**
+ * Called when request quota returns 429 — sync counter to the limit.
+ */
+export function requestsExhausted() {
+  localStorage.setItem(getQuotaDayKey(), String(QUOTA_DAY_LIMIT));
+  updateQuotaUI();
+}
+
 /**
  * Update the quota bar text to show remaining interactions.
  * Safe to call at any time — silently no-ops if the DOM element is missing.
@@ -51,8 +85,20 @@ export function trackUsage() {
 export function updateQuotaUI() {
   const el = document.getElementById('quotaDay');
   if (!el) return;
-  const left = Math.max(0, QUOTA_DAY_LIMIT - getUsedToday());
-  el.textContent = left + ' remaining today';
+  const remaining = Math.max(0, QUOTA_DAY_LIMIT - getUsedToday());
+  const svg = el.querySelector('svg');
+  el.textContent = '';
+  if (svg) el.appendChild(svg);
+  el.appendChild(document.createTextNode(' ' + remaining + ' / ' + QUOTA_DAY_LIMIT));
+
+  const gEl = document.getElementById('quotaGrounding');
+  if (gEl) {
+    const gRemaining = Math.max(0, GROUNDING_DAY_LIMIT - getGroundingUsedToday());
+    const gSvg = gEl.querySelector('svg');
+    gEl.textContent = '';
+    if (gSvg) gEl.appendChild(gSvg);
+    gEl.appendChild(document.createTextNode(' ' + gRemaining + ' / ' + GROUNDING_DAY_LIMIT));
+  }
 }
 
 /**

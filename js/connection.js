@@ -36,7 +36,7 @@ import {
   getSystemPrompt, getDeferredKnowledge, getReconnectPrompt,
 } from './prompts.js';
 import { getConversationSummary } from './memory.js';
-import { trackUsage, updateQuotaUI } from './quota.js';
+import { trackUsage, updateQuotaUI, groundingExhausted } from './quota.js';
 import { requestWakeLock, releaseWakeLock, setStatus } from './ui-controls.js';
 import { setAudioPlayer } from './render-state.js';
 
@@ -658,6 +658,7 @@ export async function startWebSearch(query) {
   if (result === '__429__' || result === null) {
     if (result === '__429__') {
       groundingBlocked = true;
+      groundingExhausted();
       searchCache = 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък НЕ използвай ТЪРСЯ: за нищо. Нямаш достъп до търсене до утре. Ако потребителят поиска да търсиш, кажи директно: "Абе мой, днес не мога да търся повече, утре пак." НЕ казвай "Чакай да видя", НЕ казвай ТЪРСЯ:, просто обясни че не можеш. А сега КАЖИ ТОЧНО ТОВА: "Лек, с тоя безплатен API key, не мога много да търся. Трябва да се ъпгрейдна, щото Гугъл имат някакви лимити ама не съм ги гледал. Утре пак ще мога да търся."';
       console.log('[search] quota exhausted — grounding blocked for session');
     } else {

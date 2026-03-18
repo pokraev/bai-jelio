@@ -7,6 +7,7 @@
 // This preserves the scarce free-tier grounding quota.
 
 import { geminiRest } from './gemini-rest.js';
+import { trackGrounding } from './quota.js';
 
 const SEARCH_PROMPT_SUFFIX =
   'Prioritize: festivals, concerts, exhibitions, cultural events, live shows, sports events, food events. These are more interesting than generic news.\n' +
@@ -44,6 +45,7 @@ export async function searchAndNarrate(query, opts) {
 
   // Step 2: Model says it needs live data — use grounded search
   console.log('[search] model needs live data, using google_search grounding...');
+  trackGrounding();
   const groundedResult = await geminiRest(
     'The user asked: "' + query + '"\n\n' +
     'Search for CURRENT information.\n' +
