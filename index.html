@@ -297,8 +297,8 @@ function closeTranscriptModal() {
     window._transcriptMuted = false;
   }
 }
-var TYPE_SPEED_MS = 18;
-var PREFETCH_PCT = 0.8; // start prefetching next turn at 80% typed
+var TYPE_SPEED_MS = 30;
+var PREFETCH_PCT = 0.9; // start prefetching next turn at 90% typed
 
 async function openTranscriptModal() {
   var modal = document.getElementById('transcriptModal');
@@ -372,8 +372,10 @@ async function openTranscriptModal() {
     }
     bubble.classList.remove('loading');
 
-    // If we didn't prefetch yet (very short text), do it now
+    // If we didn't prefetch yet (very short text), wait then prefetch
     if (!prefetchStarted && i + 1 < history.length) {
+      await new Promise(function(r) { setTimeout(r, 2000); });
+      if (signal.aborted) return;
       nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
     }
   }
