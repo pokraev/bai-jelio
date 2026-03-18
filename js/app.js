@@ -144,6 +144,11 @@ bus.on('mic:muted', ({ muted }) => {
     b.style.opacity = muted ? '0.3' : '';
     b.style.pointerEvents = muted ? 'none' : '';
   });
+  // Disable quota bar pills (sober/drunk, reset, iPhone)
+  document.querySelectorAll('.quota-pill').forEach(p => {
+    p.style.opacity = muted ? '0.15' : '';
+    p.style.pointerEvents = muted ? 'none' : 'auto';
+  });
 });
 
 // Mic started → show green icon
