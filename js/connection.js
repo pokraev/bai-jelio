@@ -728,9 +728,16 @@ bus.on('ui:voice-changed', () => {
 });
 
 // UI: language changed — send switch command
-bus.on('ui:lang-changed', ({ switchMsg }) => {
-  if (_isConnected && ws && ws.readyState === WebSocket.OPEN) {
-    safeSwitchCommand(switchMsg);
+bus.on('ui:lang-changed', () => {
+  if (_isConnected) {
+    reconnectReason = 'silent';
+    audioPlayer.stop();
+    bus.emit('audio:playing-changed', { playing: false });
+    if (ws) { ws.close(); ws = null; }
+    setWebSocket(null);
+    _isConnected = false;
+    stopMic();
+    connect();
   }
 });
 
