@@ -651,23 +651,11 @@ function openSearchResults() {
     }
   }
 
-  // Mute mic while results are open
-  window._searchResultsMuted = false;
-  if (typeof getIsMuted === 'function' && !getIsMuted()) {
-    toggleMute();
-    window._searchResultsMuted = true;
-  }
-
   modal.classList.add('visible');
 }
 
 function closeSearchResults() {
   document.getElementById('searchResultsModal').classList.remove('visible');
-  // Unmute if we muted on open
-  if (typeof getIsMuted === 'function' && getIsMuted() && window._searchResultsMuted) {
-    toggleMute();
-    window._searchResultsMuted = false;
-  }
 }
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
