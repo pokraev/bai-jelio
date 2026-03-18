@@ -100,17 +100,14 @@ export async function searchAndNarrate(query, opts) {
   var itemsText = (parts[1] || '').trim();
   var items = [];
   if (itemsText) {
-    var lines = itemsText.split('\n').filter(function(l) { return l.trim(); });
-    for (var i = 0; i < lines.length; i++) {
+    var lines = itemsText.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+    for (var i = 0; i < lines.length && items.length < 5; i++) {
       var pipe = lines[i].indexOf('|');
-      if (pipe !== -1) {
-        items.push({
-          title: lines[i].substring(0, pipe).trim(),
-          desc: lines[i].substring(pipe + 1).trim()
-        });
-      } else {
-        items.push({ title: lines[i].trim(), desc: '' });
-      }
+      var title = pipe !== -1 ? lines[i].substring(0, pipe).trim() : lines[i].trim();
+      var desc = pipe !== -1 ? lines[i].substring(pipe + 1).trim() : '';
+      // Skip lines that look like formatting artifacts
+      if (!title || title.startsWith('---') || title.startsWith('**')) continue;
+      items.push({ title: title, desc: desc });
     }
   }
   window._lastSearchText = spokenText;

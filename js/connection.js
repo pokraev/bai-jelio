@@ -179,10 +179,8 @@ function getEnrichmentContext() {
 }
 
 async function summarizeHistory() {
-  // Uses the inline conversationHistory (from appendTranscript in the original)
-  // This is now handled by the memory module's summarizeNow()
-  const { summarizeNow } = await import('./memory.js');
-  await summarizeNow();
+  // No-op: memory module handles history persistence directly via appendTranscript.
+  // LLM summarization is done on-demand in the transcript modal, not on a timer.
 }
 
 // ── Public API ──────────────────────────────────────
@@ -197,14 +195,15 @@ export function getAudioPlayer() { return audioPlayer; }
  * Connect to Gemini Live WebSocket.
  */
 export async function connect() {
-  const apiKey = document.getElementById('apiKey').value.trim();
+  const apiKeyEl = document.getElementById('apiKey');
+  const apiKey = apiKeyEl ? apiKeyEl.value.trim() : '';
   if (!apiKey) {
     setStatus('Please enter your Gemini API key', false);
     return;
   }
 
   const connectBtn = document.getElementById('connectBtn');
-  connectBtn.disabled = true;
+  if (connectBtn) connectBtn.disabled = true;
   setStatus('Connecting...', true);
 
   try {
@@ -275,7 +274,8 @@ export async function connect() {
     const isFatal = msg.includes('api key') || msg.includes('invalid') || msg.includes('denied');
     if (isFatal) {
       setStatus('Failed to connect: ' + err.message, false);
-      document.getElementById('connectBtn').disabled = false;
+      const cb = document.getElementById('connectBtn');
+      if (cb) cb.disabled = false;
     } else {
       showToiletBreak();
     }
@@ -307,10 +307,10 @@ export function disconnect() {
   pendingBotText = '';
 
   const connectBtn = document.getElementById('connectBtn');
-  connectBtn.classList.remove('connected');
-  connectBtn.disabled = false;
-  document.getElementById('stageActions').style.display = 'none';
-    const savedKey = getCookie('gemini_api_key');
+  if (connectBtn) { connectBtn.classList.remove('connected'); connectBtn.disabled = false; }
+  const stageAct = document.getElementById('stageActions');
+  if (stageAct) stageAct.style.display = 'none';
+  const savedKey = getCookie('gemini_api_key');
   const cheersBtn = document.getElementById('cheersBtn');
   if (savedKey) {
     document.getElementById('configSection').style.display = 'none';
@@ -428,10 +428,11 @@ function handleSetupComplete(apiKey) {
 
   // Update UI
   const connectBtn = document.getElementById('connectBtn');
-  connectBtn.classList.add('connected');
-  connectBtn.disabled = true;
-  document.getElementById('stageActions').style.display = 'flex';
-    document.getElementById('configSection').style.display = 'none';
+  if (connectBtn) { connectBtn.classList.add('connected'); connectBtn.disabled = true; }
+  const stageAct = document.getElementById('stageActions');
+  if (stageAct) stageAct.style.display = 'flex';
+  const configSec = document.getElementById('configSection');
+  if (configSec) configSec.style.display = 'none';
   const cheersBtn = document.getElementById('cheersBtn');
   if (cheersBtn) cheersBtn.style.display = 'none';
   document.getElementById('configStatus').textContent = 'Connected to Gemini Live';

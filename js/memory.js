@@ -26,7 +26,11 @@ try {
 } catch (_) {}
 
 function persistHistory() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversationHistory)); } catch (_) {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversationHistory));
+  } catch (e) {
+    console.warn('[memory] localStorage write failed:', e.message);
+  }
 }
 
 /**

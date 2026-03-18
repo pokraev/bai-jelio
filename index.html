@@ -1197,8 +1197,8 @@ async function renderSummary(turns, dateStr, hourVal) {
       'Summarize this conversation. Use these sections with **bold headings**:\n' +
       '**' + h.topics + '** — main subjects discussed (bullet points)\n' +
       '**' + h.keyPoints + '** — important facts, ideas, or arguments (bullet points)\n' +
-      '**' + h.agreements + '** — things both sides EXPLICITLY agreed on in the text (bullet points, skip if none)\n' +
-      '**' + h.disagreements + '** — ONLY where one person explicitly contradicted or disagreed with the other. Must be a clear "no", "I disagree", or opposing statement. Do NOT list differences in opinion as disagreements unless one person directly challenged the other. Skip if none.\n' +
+      '**' + h.agreements + '** — shared views or points where both participants clearly agree. Look for: confirmations ("Абсолютно!", "Да!", "Точно!", "Right!", "Exactly!"), supportive responses, both expressing the same opinion, or the user stating something and the bot affirming it (or vice versa). (bullet points, skip if none)\n' +
+      '**' + h.disagreements + '** — points where one person clearly opposed or contradicted the other. Look for: "не", "not", "I disagree", or directly opposing statements. Do NOT list different topics as disagreements. Skip if none.\n' +
       '**' + h.decisions + '** — any conclusions, plans, or commitments explicitly made (bullet points, skip if none)\n' +
       'STRICT RULE: Only include information EXPLICITLY stated in the conversation text below. Do NOT invent, assume, infer, or hallucinate anything. If something was not directly said, do NOT include it. If user messages are missing (only bot messages visible), summarize ONLY what the bot said — do NOT guess what the user said.\n' +
       'The summary is written from MY perspective (the user). Use first person singular for "' + userName + '" (I asked, I wanted — NOT "user asks"). Use first person plural when both participants agree/share something (we agreed, we both think — NOT "they both think"). Conjugate all verbs accordingly in ' + langName + '.\n' +

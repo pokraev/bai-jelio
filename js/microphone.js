@@ -203,8 +203,6 @@ export async function toggleMute() {
 
 export function getIsMicActive()     { return isMicActive; }
 export function getIsMuted()         { return isMuted; }
-export function getMutedAfterTurn()  { return false; } // deprecated, kept for compat
-export function setMutedAfterTurn()  {} // no-op
 export function getMicStream()       { return micStream; }
 export function getMicContext()       { return micContext; }
 export function getMicGainNode()     { return micGainNode; }

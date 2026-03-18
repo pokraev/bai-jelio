@@ -145,12 +145,6 @@ bus.on('mic:muted', ({ muted }) => {
   if (onIcon) onIcon.style.display = muted ? 'none' : '';
   if (offIcon) offIcon.style.display = muted ? '' : 'none';
   if (btn) btn.classList.toggle('muted', muted);
-  // Disable/enable settings button and mic gain
-  const ids = [];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.disabled = muted; el.style.opacity = muted ? '0.3' : ''; el.style.pointerEvents = muted ? 'none' : ''; }
-  });
   // Grey overlay on avatar + muted visuals on title/subtitle
   const stage = document.getElementById('stage');
   if (stage) stage.classList.toggle('muted-overlay', muted);

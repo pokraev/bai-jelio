@@ -34,7 +34,8 @@ export function canCallRest() {
  * @returns {Promise<string|null>}
  */
 export async function geminiRest(prompt, options) {
-  const apiKey = document.getElementById('apiKey').value.trim();
+  const apiKeyEl = document.getElementById('apiKey');
+  const apiKey = apiKeyEl ? apiKeyEl.value.trim() : '';
   if (!apiKey) return null;
 
   pruneWindow();
