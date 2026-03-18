@@ -3,11 +3,11 @@
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
-import { getCookie, setCookie, setSoberMode } from './config.js';
+import { getCookie, setCookie, setSoberMode, getSelectedLang } from './config.js';
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import { startMic, stopMic, toggleMute, setMicGain, setWebSocket } from './microphone.js';
-import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected, toggleSoberMode, updateSoberButton } from './connection.js';
+import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected, toggleSoberMode, updateSoberButton, stopEnrichmentPipeline, startEnrichmentPipeline, stopSummarizer, startSummarizer } from './connection.js';
 import {
   selectTopic, toggleIQMenu, selectIQ,
   toggleVoiceMenu, selectVoice, initVoiceMenu, cycleLang,
@@ -38,6 +38,9 @@ window.disconnect = disconnect;
 window.setCookie = setCookie;
 window.getCookie = getCookie;
 window.toggleSoberMode = toggleSoberMode;
+window.getSelectedLang = getSelectedLang;
+window.pauseBackgroundProcessing = function() { stopEnrichmentPipeline(); stopSummarizer(); };
+window.resumeBackgroundProcessing = function() { startEnrichmentPipeline(); startSummarizer(); };
 
 // Debug: read-only prompt inspection from console
 window._debugPrompts = { getDeferredKnowledge, getSystemPrompt };
@@ -144,11 +147,13 @@ bus.on('mic:muted', ({ muted }) => {
     b.style.opacity = muted ? '0.3' : '';
     b.style.pointerEvents = muted ? 'none' : '';
   });
-  // Disable quota bar pills (sober/drunk, reset, iPhone)
+  // Disable quota bar pills and transcript button
   document.querySelectorAll('.quota-pill').forEach(p => {
     p.style.opacity = muted ? '0.15' : '';
     p.style.pointerEvents = muted ? 'none' : 'auto';
   });
+  const tBtn = document.getElementById('transcriptBtn');
+  if (tBtn) { tBtn.style.opacity = muted ? '0.15' : ''; tBtn.style.pointerEvents = muted ? 'none' : ''; }
 });
 
 // Mic started → show green icon

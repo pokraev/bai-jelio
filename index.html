@@ -166,6 +166,9 @@
   </div>
 </div>
 <div class="quota-bar" id="quotaBar">
+  <button class="round-btn transcript-btn" id="transcriptBtn" onclick="openTranscriptModal()" title="Транскрипт">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
+  </button>
   <a href="#" class="quota-pill" id="soberBtn" onclick="toggleSoberMode();return false;"></a>
   <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;">Reset</a>
   <a href="#" class="quota-pill" onclick="document.getElementById('iphoneModal').classList.add('visible');iphoneTutorialStep(0);return false;">
@@ -174,6 +177,22 @@
   </a>
   <span id="quotaDay"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
   <span id="quotaGrounding"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+</div>
+
+<!-- Transcript Modal -->
+<div class="modal" id="transcriptModal" onclick="if(event.target===this)closeTranscriptModal()">
+  <div class="modal-card transcript-modal-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
+        Транскрипт
+      </div>
+      <button class="modal-close" onclick="closeTranscriptModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="transcript-chat" id="transcriptChat"></div>
+  </div>
 </div>
 
 <!-- iPhone Tutorial Modal -->
@@ -264,6 +283,139 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 500);
 });
+</script>
+
+<script>
+var transcriptAbort = null;
+
+function closeTranscriptModal() {
+  document.getElementById('transcriptModal').classList.remove('visible');
+  if (transcriptAbort) { transcriptAbort.abort(); transcriptAbort = null; }
+  if (typeof resumeBackgroundProcessing === 'function') resumeBackgroundProcessing();
+}
+var TYPE_SPEED_MS = 18;
+var PREFETCH_PCT = 0.8; // start prefetching next turn at 80% typed
+
+async function openTranscriptModal() {
+  var modal = document.getElementById('transcriptModal');
+  var chat = document.getElementById('transcriptChat');
+  modal.classList.add('visible');
+  chat.innerHTML = '';
+  if (transcriptAbort) transcriptAbort.abort();
+  transcriptAbort = new AbortController();
+  if (typeof pauseBackgroundProcessing === 'function') pauseBackgroundProcessing();
+  var signal = transcriptAbort.signal;
+
+  var history = window.memory ? window.memory.history : [];
+  if (history.length === 0) {
+    chat.innerHTML = '<div class="transcript-empty">Няма транскрипт</div>';
+    return;
+  }
+
+  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
+  var langRules = {
+    bg: 'Bulgarian. Apply all Bulgarian grammar rules: gender agreements (род), verb conjugation, definite articles (членуване), commas before "че", "който", "когато", "защото". The AI agent is called "Бай Жельо" (also "Бат Жельо", "бай Жельо", "бат Жельо") — keep this name correct.',
+    en: 'English. Apply standard English grammar, punctuation, and spelling rules. The AI agent is called "Bai Zhelyo" — keep this name correct.',
+    es: 'Spanish. Apply all Spanish grammar rules: gender/number agreements, accent marks, punctuation (¿¡). The AI agent is called "Bai Zhelyo" — keep this name correct.'
+  };
+  var langRule = langRules[lang] || langRules.bg;
+
+  // Prefetch first turn immediately
+  var nextClean = cleanTranscript(history[0].text, langRule, signal);
+
+  for (var i = 0; i < history.length; i++) {
+    if (signal.aborted || !modal.classList.contains('visible')) return;
+
+    var turn = history[i];
+    var icon = turn.role === 'user' ? '👤' : '🍺';
+    var cls = turn.role === 'user' ? 'user' : 'bot';
+
+    // Wait for this turn's cleaned text
+    var cleaned;
+    try {
+      cleaned = await nextClean;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      cleaned = turn.text;
+    }
+
+    // Create bubble (empty, no raw text shown)
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ' + cls + ' loading';
+    bubble.innerHTML = '<span class="bubble-icon">' + icon + '</span> <span class="bubble-text"></span>';
+    chat.appendChild(bubble);
+    bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Type it out, prefetch next at 80%
+    var prefetchStarted = false;
+    nextClean = null;
+    var textEl = bubble.querySelector('.bubble-text');
+    for (var c = 0; c < cleaned.length; c++) {
+      if (signal.aborted) return;
+      textEl.textContent += cleaned[c];
+      // Prefetch next turn at 80%
+      if (!prefetchStarted && i + 1 < history.length && c >= Math.floor(cleaned.length * PREFETCH_PCT)) {
+        nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
+        prefetchStarted = true;
+      }
+      if (c % 4 === 0) bubble.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      await new Promise(function(r) { setTimeout(r, TYPE_SPEED_MS); });
+    }
+    bubble.classList.remove('loading');
+
+    // If we didn't prefetch yet (very short text), do it now
+    if (!prefetchStarted && i + 1 < history.length) {
+      nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
+    }
+  }
+}
+
+async function cleanTranscript(text, langRule, signal) {
+  var apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey || text.length < 3) return text;
+  try {
+    var res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'Language: ' + langRule + '\n\n' +
+            'This is a SPEECH-TO-TEXT transcript with many recognition errors. Fix ALL of the following:\n' +
+            '1. PHONETIC ERRORS: The STT often mishears words. Guess the correct word from context. Examples: "Ти Ти Ти ли си" → "Чел ли си", "чело" → "чела" (gender), "бачител" → "бащител/бащата/учител" depending on context.\n' +
+            '2. REPEATED/STUTTERED WORDS: Remove accidental repetitions from STT.\n' +
+            '3. GRAMMAR: Fix gender agreements, verb forms, definite articles (членуване), commas, capitalization.\n' +
+            '4. PROPER NOUNS: Fix misspelled names of people, books, places, bands (e.g. "Каарамазови" → "Карамазови", "Достоевски", "Iron Maiden").\n' +
+            '5. CAPITALIZE first letter of each sentence.\n' +
+            'Keep the same meaning, tone, slang and colloquial style. Do NOT translate. Do NOT add quotes. Return ONLY the corrected text.\n\n' + text
+          }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 500 }
+        }),
+        signal: signal
+      }
+    );
+    if (res.status === 429) {
+      await new Promise(function(r) { setTimeout(r, 5000); });
+      return text;
+    }
+    if (!res.ok) return text;
+    var data = await res.json();
+    var result = data.candidates && data.candidates[0] && data.candidates[0].content &&
+      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+      data.candidates[0].content.parts[0].text;
+    return result ? result.trim() : text;
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    return text;
+  }
+}
+
+function escapeHtml(t) {
+  var d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
 </script>
 
 <script type="module" src="js/app.js"></script>

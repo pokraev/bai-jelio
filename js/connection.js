@@ -91,24 +91,24 @@ let enrichmentTimer = null;
 let analyzeTimer = null;
 let summarizeTimer = null;
 
-function startEnrichmentPipeline() {
+export function startEnrichmentPipeline() {
   if (analyzeTimer) clearInterval(analyzeTimer);
   analyzeTimer = setInterval(() => analyzeConversation(), 5 * 60 * 1000);
   if (enrichmentTimer) clearInterval(enrichmentTimer);
   enrichmentTimer = setInterval(() => processEnrichmentQueue(), 2 * 60 * 1000);
 }
 
-function stopEnrichmentPipeline() {
+export function stopEnrichmentPipeline() {
   if (analyzeTimer) { clearInterval(analyzeTimer); analyzeTimer = null; }
   if (enrichmentTimer) { clearInterval(enrichmentTimer); enrichmentTimer = null; }
 }
 
-function startSummarizer() {
+export function startSummarizer() {
   if (summarizeTimer) clearInterval(summarizeTimer);
   summarizeTimer = setInterval(() => summarizeHistory(), 15 * 60 * 1000);
 }
 
-function stopSummarizer() {
+export function stopSummarizer() {
   if (summarizeTimer) { clearInterval(summarizeTimer); summarizeTimer = null; }
 }
 
