@@ -25,6 +25,12 @@ export async function searchAndNarrate(query, opts) {
   const langMap = { bg: 'Bulgarian', en: 'English', es: 'Spanish' };
   const responseLang = langMap[lang] || 'Bulgarian';
 
+  // Clear previous search results
+  window._lastSearchText = null;
+  window._lastSearchQuery = query;
+  window._lastSearchItems = [];
+  window._lastSearchSources = [];
+
   // Step 1: Try model knowledge (no grounding, no quota cost)
   // Wait briefly for Live API RPM window to clear (shared project-level quota)
   // Brief wait for RPM window after Live API disconnect
