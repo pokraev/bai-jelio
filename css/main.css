@@ -600,6 +600,14 @@ select {
   gap: 16px;
   padding: 4px 0;
 }
+.settings-row-pair {
+  display: flex;
+  gap: 12px;
+}
+.settings-row-pair > .settings-row {
+  flex: 1;
+  min-width: 0;
+}
 .settings-row {
   display: flex;
   flex-direction: column;

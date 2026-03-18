@@ -1,8 +1,8 @@
 // ──────────────────────────────────────────────────────
-// waveform.js — Mic input waveform visualizer
+// waveform.js — Mic input waveform visualizer (VAD-gated)
 // ──────────────────────────────────────────────────────
 
-import { getIsMicActive, getIsMuted, getMicContext, getMicGainNode, getMicSource } from './microphone.js';
+import { getIsMicActive, getIsMuted, getMicContext, getMicGainNode } from './microphone.js';
 import { isSpeaking } from './vad.js';
 
 const NUM_BARS = 12;
@@ -28,19 +28,29 @@ export function initWaveform() {
 
 /** Start animating the waveform bars from mic input. */
 export function startWaveformAnimation() {
-  const micContext = getMicContext();
-  if (micContext && !micAnalyser) {
-    micAnalyser = micContext.createAnalyser();
+  // Clean up any previous analyser
+  if (micAnalyser) {
+    try { micAnalyser.disconnect(); } catch (_) {}
+    micAnalyser = null;
+    micFreqData = null;
+  }
+
+  // Connect to current audio graph
+  const ctx = getMicContext();
+  const gain = getMicGainNode();
+  if (ctx && gain) {
+    micAnalyser = ctx.createAnalyser();
     micAnalyser.fftSize = 64;
     micAnalyser.smoothingTimeConstant = 0.6;
     micFreqData = new Uint8Array(micAnalyser.frequencyBinCount);
-    const gain = getMicGainNode();
-    const source = getMicSource();
-    if (gain) gain.connect(micAnalyser);
-    else if (source) source.connect(micAnalyser);
+    gain.connect(micAnalyser);
   }
+
   const wf = document.getElementById('waveform');
   if (wf) wf.classList.remove('idle');
+
+  // Cancel any existing animation before starting new one
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
 
   function animateWave() {
     if (!getIsMicActive() || getIsMuted()) { resetWaveform(); return; }
@@ -62,7 +72,10 @@ export function startWaveformAnimation() {
 /** Stop animation and reset bars to idle. */
 export function resetWaveform() {
   if (animId) { cancelAnimationFrame(animId); animId = null; }
-  micAnalyser = null;
+  if (micAnalyser) {
+    try { micAnalyser.disconnect(); } catch (_) {}
+    micAnalyser = null;
+  }
   micFreqData = null;
   const wf = document.getElementById('waveform');
   if (!wf) return;

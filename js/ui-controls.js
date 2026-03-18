@@ -15,6 +15,7 @@ import {
   getCookie, setCookie,
 } from './config.js';
 import { getIQProfile, getLangPrompt } from './prompts.js';
+import { setMaxHistory } from './memory.js';
 
 // ── Wake Lock ───────────────────────────────────────
 
@@ -97,6 +98,12 @@ export function openSettings() {
   setCustomSelect('settingsIQ', getSelectedIQ());
   setCustomSelect('settingsLang', getSelectedLang());
   setCustomSelect('settingsMode', getSoberMode() ? 'sober' : 'drunk');
+  var memMax = localStorage.getItem('memory_turns') || '500';
+  var memUsed = window.memory ? window.memory.count : 0;
+  setCustomSelect('settingsMemory', memMax);
+  // Show usage in the button label
+  var memBtn = document.querySelector('#settingsMemory .custom-select-btn span');
+  if (memBtn) memBtn.textContent = memUsed + ' / ' + memMax + ' turns';
 
   modal.classList.add('visible');
 
@@ -127,6 +134,10 @@ export function saveSettings() {
   const newIQ = getCustomSelect('settingsIQ');
   const newLang = getCustomSelect('settingsLang');
   const newMode = getCustomSelect('settingsMode');
+  const newMemory = parseInt(getCustomSelect('settingsMemory') || '20', 10);
+
+  // Apply memory setting
+  setMaxHistory(newMemory);
 
   const voiceChanged = newVoice !== getSelectedVoice();
   const iqChanged = newIQ !== getSelectedIQ();

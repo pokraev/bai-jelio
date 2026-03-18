@@ -30,7 +30,7 @@ import {
 import { GeminiAudioPlayer } from './audio-player.js';
 import {
   startMic, stopMic, destroyMic, setWebSocket,
-  getIsMuted, getMutedAfterTurn, setMutedAfterTurn,
+  getIsMuted,
   getMicStream,
 } from './microphone.js';
 import {
@@ -232,6 +232,8 @@ export async function connect() {
         }
       };
       ws.send(JSON.stringify(setupMsg));
+      const promptLen = getSystemPrompt().length;
+      console.log('[context] system prompt: ' + promptLen + ' chars (~' + Math.round(promptLen / 4) + ' tokens)');
       trackUsage();
       updateQuotaUI();
     };
@@ -350,6 +352,7 @@ export function sendTextToGemini(text) {
  */
 export function sendSystemInstruction(text) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  console.log('[context] instruction: ' + text.length + ' chars (~' + Math.round(text.length / 4) + ' tokens)');
   ws.send(JSON.stringify({
     clientContent: {
       turns: [{ role: 'user', parts: [{ text: '///SYS: ' + text }] }],
@@ -551,11 +554,6 @@ function handleServerContent(content) {
       }
     }
     pendingBotText = '';
-
-    // If muted, pause after this turn — block further model output until unmuted
-    if (getIsMuted()) {
-      setMutedAfterTurn(true);
-    }
 
     bus.emit('turn:complete');
   }

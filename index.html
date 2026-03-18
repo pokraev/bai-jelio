@@ -183,24 +183,37 @@
           <div class="custom-select-menu" id="settingsVoiceMenu"></div>
         </div>
       </div>
-      <div class="settings-row">
-        <label data-i18n="settings_iq">Интелигентност</label>
-        <div class="custom-select" id="settingsIQ" data-value="intelligent">
-          <div class="custom-select-btn"><span>Интелигентен</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-          <div class="custom-select-menu">
-            <div class="custom-select-item" data-val="genius" data-i18n="iq_giga">Гига</div>
-            <div class="custom-select-item active" data-val="intelligent" data-i18n="iq_mega">Мега</div>
-            <div class="custom-select-item" data-val="average" data-i18n="iq_turbo">Турбо</div>
+      <div class="settings-row-pair">
+        <div class="settings-row">
+          <label data-i18n="settings_iq">Интелигентност</label>
+          <div class="custom-select" id="settingsIQ" data-value="intelligent">
+            <div class="custom-select-btn"><span>Мега</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="custom-select-menu">
+              <div class="custom-select-item" data-val="genius" data-i18n="iq_giga">Гига</div>
+              <div class="custom-select-item active" data-val="intelligent" data-i18n="iq_mega">Мега</div>
+              <div class="custom-select-item" data-val="average" data-i18n="iq_turbo">Турбо</div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label data-i18n="settings_mode">Режим</label>
+          <div class="custom-select" id="settingsMode" data-value="drunk">
+            <div class="custom-select-btn"><span>Готиния</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="custom-select-menu">
+              <div class="custom-select-item active" data-val="drunk" data-i18n="mode_drunk">Готиния</div>
+              <div class="custom-select-item" data-val="sober" data-i18n="mode_sober">Трезвен</div>
+            </div>
           </div>
         </div>
       </div>
       <div class="settings-row">
-        <label data-i18n="settings_mode">Режим</label>
-        <div class="custom-select" id="settingsMode" data-value="drunk">
-          <div class="custom-select-btn"><span>Готиния</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <label data-i18n="settings_memory">Памет</label>
+        <div class="custom-select" id="settingsMemory" data-value="500">
+          <div class="custom-select-btn"><span>500</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
           <div class="custom-select-menu">
-            <div class="custom-select-item active" data-val="drunk" data-i18n="mode_drunk">Готиния</div>
-            <div class="custom-select-item" data-val="sober" data-i18n="mode_sober">Трезвен</div>
+            <div class="custom-select-item" data-val="100" data-i18n="memory_100">100 реплики</div>
+            <div class="custom-select-item active" data-val="500" data-i18n="memory_500">500 реплики</div>
+            <div class="custom-select-item" data-val="2000" data-i18n="memory_2000">2000 реплики</div>
           </div>
         </div>
       </div>

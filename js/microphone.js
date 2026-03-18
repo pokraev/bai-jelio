@@ -1,18 +1,15 @@
 // ──────────────────────────────────────────────────────
-// microphone.js — Mic capture, mute, gain/sensitivity
+// microphone.js — Mic capture, mute, VAD integration
 // ──────────────────────────────────────────────────────
 // Captures audio from the user's microphone at 16 kHz mono,
 // converts it to PCM Int16, and sends base64-encoded chunks
 // to the Gemini Live WebSocket.
 //
-// Uses ScriptProcessorNode (deprecated but works on file://)
-// because AudioWorklet requires an HTTP origin.
-//
 // Emits events via the shared event bus:
-//   'mic:started'  — mic capture began
-//   'mic:stopped'  — mic capture paused (stream kept alive)
-//   'mic:destroyed' — mic fully released
-//   'mic:muted'    — { muted: boolean }
+//   'mic:started'   — mic capture began (audio graph ready)
+//   'mic:stopped'   — mic capture paused (stream kept alive)
+//   'mic:destroyed'  — mic fully released
+//   'mic:muted'     — { muted: boolean } (fired AFTER state is fully settled)
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
@@ -35,47 +32,53 @@ let scriptProcessor = null;
 /** @type {GainNode|null} */
 let micGainNode = null;
 
-/** Current gain value — fixed at 1.0 (VAD handles sensitivity now) */
-let micGainValue = 1;
-
 /** Whether mic capture is actively running */
 let isMicActive = false;
 
 /** Pre-speech ring buffer — stores recent frames to avoid clipping first syllable */
-const PRE_SPEECH_FRAMES = 3; // ~768ms at 4096 samples / 16kHz
+const PRE_SPEECH_FRAMES = 3;
 let preBuffer = [];
 let wasSpeaking = false;
 
 /** Whether the user has muted the mic */
 let isMuted = false;
 
-/**
- * Set to true after a turn completes while muted.
- * Prevents the model from generating new output until unmuted.
- */
-let mutedAfterTurn = false;
-
-// ── External dependencies ────────────────────────────
-// These are injected at init time so the module stays self-contained.
+/** Prevents double-toggling while async mute/unmute is in progress */
+let muteInProgress = false;
 
 /** @type {WebSocket|null} — reference to the live Gemini WS */
 let _ws = null;
 
-/**
- * Provide the current WebSocket reference.
- * Call this whenever the WS is (re)created so the mic knows where to send data.
- * @param {WebSocket|null} ws
- */
-export function setWebSocket(ws) {
-  _ws = ws;
+export function setWebSocket(ws) { _ws = ws; }
+
+// ── Internal: tear down audio graph ─────────────────
+
+function teardownAudioGraph() {
+  if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+  if (micGainNode) { micGainNode.disconnect(); micGainNode = null; }
+  if (micSource) { micSource.disconnect(); micSource = null; }
+  isMicActive = false;
+}
+
+function stopTracks() {
+  if (micStream) {
+    micStream.getAudioTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+}
+
+function closeContext() {
+  if (micContext) {
+    try { micContext.close(); } catch (_) {}
+    micContext = null;
+  }
 }
 
 // ── Start / Stop / Destroy ──────────────────────────
 
 /**
  * Start capturing audio from the microphone.
- * Reuses an existing stream when possible to avoid re-prompting
- * the user for permission.
+ * Creates fresh stream, context, and audio graph.
  */
 export async function startMic() {
   if (isMicActive) return;
@@ -83,52 +86,47 @@ export async function startMic() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Microphone access requires HTTPS or localhost');
     }
-    // Reuse existing stream if still alive
+
+    // Always get a fresh stream
     if (!micStream || micStream.getTracks().every(t => t.readyState === 'ended')) {
       micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 16000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
       });
     }
-    // Re-enable tracks in case they were disabled
     micStream.getAudioTracks().forEach(t => { t.enabled = true; });
 
+    // Fresh AudioContext
     if (!micContext || micContext.state === 'closed') {
       micContext = new AudioContext({ sampleRate: 16000 });
     }
+    if (micContext.state === 'suspended') {
+      await micContext.resume();
+    }
+
+    // Build audio graph
     micSource = micContext.createMediaStreamSource(micStream);
     micGainNode = micContext.createGain();
-    micGainNode.gain.value = micGainValue;
+    micGainNode.gain.value = 1;
 
-    // ScriptProcessorNode: 4096 samples buffer, 1 input, 1 output
     scriptProcessor = micContext.createScriptProcessor(4096, 1, 1);
     scriptProcessor.onaudioprocess = (e) => {
       if (!_ws || _ws.readyState !== WebSocket.OPEN || !isMicActive || isMuted) return;
       const float32 = e.inputBuffer.getChannelData(0);
-      // Convert Float32 -> Int16
       const int16 = new Int16Array(float32.length);
       for (let i = 0; i < float32.length; i++) {
         int16[i] = Math.max(-32768, Math.min(32767, float32[i] * 32768));
       }
 
       const speaking = isSpeaking();
-
       if (!isVadReady()) {
-        // VAD not available — send everything (fallback)
         sendAudioChunk(int16);
       } else if (speaking) {
-        // Speech detected — flush pre-buffer first, then send current frame
         if (!wasSpeaking) {
           for (const buffered of preBuffer) sendAudioChunk(buffered);
           preBuffer = [];
         }
         sendAudioChunk(int16);
       } else {
-        // Silence — store in ring buffer for lookback
         preBuffer.push(new Int16Array(int16));
         if (preBuffer.length > PRE_SPEECH_FRAMES) preBuffer.shift();
       }
@@ -142,7 +140,6 @@ export async function startMic() {
     preBuffer = [];
     wasSpeaking = false;
 
-    // Initialize Silero VAD with the shared mic stream
     initVad(micStream);
 
     bus.emit('mic:started');
@@ -153,128 +150,78 @@ export async function startMic() {
 }
 
 /**
- * Stop capturing audio but keep the stream and context alive.
- * This avoids re-prompting the user for mic permission on reconnect.
+ * Stop capturing but keep stream/context alive (for reconnects).
  */
 export function stopMic() {
   if (!isMicActive) return;
-  isMicActive = false;
-
-  if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
-  if (micGainNode) { micGainNode.disconnect(); micGainNode = null; }
-  if (micSource) { micSource.disconnect(); micSource = null; }
-  // Keep micStream and micContext alive
-
+  teardownAudioGraph();
   bus.emit('mic:stopped');
 }
 
 /**
- * Fully release the mic — stop all tracks and close the AudioContext.
- * Use on page unload or when the user explicitly disconnects.
+ * Fully release mic — stop tracks, close context, destroy VAD.
  */
 export function destroyMic() {
   stopMic();
   destroyVad();
-  if (micContext) { micContext.close(); micContext = null; }
-  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-
+  stopTracks();
+  closeContext();
   bus.emit('mic:destroyed');
 }
 
 // ── Mute / Unmute ───────────────────────────────────
 
 /**
- * Toggle the microphone mute state.
- * When muted, audio tracks are disabled (not stopped),
- * and the ScriptProcessor skips sending data.
- * @returns {{ muted: boolean, mutedAfterTurn: boolean }}
+ * Toggle mute. Async — fully tears down on mute, fully restarts on unmute.
+ * Events fire only after state is settled.
  */
-export function toggleMute() {
+export async function toggleMute() {
+  if (muteInProgress) return;
+  muteInProgress = true;
+
   isMuted = !isMuted;
+
   if (isMuted) {
-    mutedAfterTurn = false;
+    // Full teardown: stop graph, stop tracks, close context
     pauseVad();
-    // Stop mic tracks entirely so iOS hides the mic indicator
-    if (micStream) {
-      micStream.getAudioTracks().forEach(t => t.stop());
-      micStream = null;
-    }
-    if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
-    if (micGainNode) { micGainNode.disconnect(); micGainNode = null; }
-    if (micSource) { micSource.disconnect(); micSource = null; }
-    isMicActive = false;
+    teardownAudioGraph();
+    stopTracks();
+    closeContext();
+    bus.emit('mic:muted', { muted: true });
   } else {
-    mutedAfterTurn = false;
-    // Restart mic from scratch
-    startMic();
+    // Full restart: new stream, new context, new graph
+    await startMic();
+    resumeVad();
+    bus.emit('mic:muted', { muted: false });
   }
 
-  bus.emit('mic:muted', { muted: isMuted });
-
-  return { muted: isMuted, mutedAfterTurn };
+  muteInProgress = false;
+  return { muted: isMuted };
 }
 
 // ── Accessors ───────────────────────────────────────
 
-/** Whether the mic is currently capturing */
 export function getIsMicActive()     { return isMicActive; }
-
-/** Whether the mic is muted */
 export function getIsMuted()         { return isMuted; }
-
-/** Whether muted *and* a turn has completed (paused state) */
-export function getMutedAfterTurn()  { return mutedAfterTurn; }
-export function setMutedAfterTurn(v) { mutedAfterTurn = v; }
-
-/**
- * Get the raw MediaStream (needed by safeSwitchCommand to
- * temporarily disable/re-enable tracks).
- * @returns {MediaStream|null}
- */
+export function getMutedAfterTurn()  { return false; } // deprecated, kept for compat
+export function setMutedAfterTurn()  {} // no-op
 export function getMicStream()       { return micStream; }
-
-/**
- * Get the mic AudioContext (needed for waveform analyser setup).
- * @returns {AudioContext|null}
- */
 export function getMicContext()       { return micContext; }
-
-/**
- * Get the mic GainNode (needed for waveform analyser connection).
- * @returns {GainNode|null}
- */
 export function getMicGainNode()     { return micGainNode; }
-
-/**
- * Get the mic source node (needed for waveform analyser fallback).
- * @returns {MediaStreamAudioSourceNode|null}
- */
 export function getMicSource()       { return micSource; }
 
 // ── Internal helpers ────────────────────────────────
 
-/**
- * Send an Int16Array audio chunk over the WebSocket.
- * @param {Int16Array} int16
- */
 function sendAudioChunk(int16) {
   if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
   const base64Audio = arrayBufferToBase64(int16.buffer);
   _ws.send(JSON.stringify({
     realtimeInput: {
-      mediaChunks: [{
-        mimeType: 'audio/pcm;rate=16000',
-        data: base64Audio,
-      }],
+      mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: base64Audio }],
     },
   }));
 }
 
-/**
- * Convert an ArrayBuffer to a base64-encoded string.
- * @param {ArrayBuffer} buffer
- * @returns {string}
- */
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';

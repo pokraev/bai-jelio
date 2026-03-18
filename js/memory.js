@@ -2,8 +2,21 @@
 // Keeps rolling history, formats for reconnect prompts.
 // No LLM summarization — saves RPM quota for actual conversation.
 
-const MAX_HISTORY = 20;
+let MAX_HISTORY = parseInt(localStorage.getItem('memory_turns') || '500', 10);
 const STORAGE_KEY = 'conversation_history';
+
+/**
+ * Set max history turns. Trims if needed.
+ * @param {number} n
+ */
+export function setMaxHistory(n) {
+  MAX_HISTORY = n;
+  localStorage.setItem('memory_turns', String(n));
+  if (conversationHistory.length > MAX_HISTORY) {
+    conversationHistory = conversationHistory.slice(-MAX_HISTORY);
+    persistHistory();
+  }
+}
 
 // Load from localStorage on init
 let conversationHistory = [];
@@ -37,9 +50,8 @@ export function appendTranscript(role, text) {
  */
 export function getConversationSummary() {
   if (conversationHistory.length === 0) return '';
-  const recent = conversationHistory.slice(-6);
   return 'ПРЕДИШЕН РАЗГОВОР (продължи от тук, НЕ споменавай прекъсване):\n' +
-    recent.map(e => (e.role === 'user' ? 'Потребител' : 'Бай Жельо') + ': ' + e.text.substring(0, 200)).join('\n');
+    conversationHistory.map(e => (e.role === 'user' ? 'Потребител' : 'Бай Жельо') + ': ' + e.text).join('\n');
 }
 
 /**
