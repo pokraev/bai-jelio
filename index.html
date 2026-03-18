@@ -407,10 +407,14 @@ async function cleanTranscript(text, langRule, signal) {
       }
     );
     if (res.status === 429) {
+      console.warn('[transcript] 429 Too Many Requests — waiting 5s before retry');
       await new Promise(function(r) { setTimeout(r, 5000); });
       return text;
     }
-    if (!res.ok) return text;
+    if (!res.ok) {
+      console.warn('[transcript]', res.status, res.statusText);
+      return text;
+    }
     var data = await res.json();
     var result = data.candidates && data.candidates[0] && data.candidates[0].content &&
       data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&

@@ -61,7 +61,7 @@ export async function geminiRest(prompt, options) {
     console.log(`[gemini-rest] call recorded, RPM now: ${callTimestamps.length}/${RPM_LIMIT}`);
 
     if (!res.ok) {
-      console.warn('geminiRest', model, res.status);
+      console.warn('[gemini-rest] ' + model + ' ' + res.status + ' ' + res.statusText);
       if (res.status === 429) {
         let retrySeconds = null;
         // Check Retry-After header
