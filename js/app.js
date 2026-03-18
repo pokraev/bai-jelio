@@ -3,11 +3,11 @@
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
-import { getCookie, setCookie } from './config.js';
+import { getCookie, setCookie, setSoberMode } from './config.js';
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import { startMic, stopMic, toggleMute, setMicGain, setWebSocket } from './microphone.js';
-import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected } from './connection.js';
+import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected, toggleSoberMode, updateSoberButton } from './connection.js';
 import {
   selectTopic, toggleIQMenu, selectIQ,
   toggleVoiceMenu, selectVoice, initVoiceMenu, cycleLang,
@@ -37,6 +37,7 @@ window.toggleConnection = toggleConnection;
 window.disconnect = disconnect;
 window.setCookie = setCookie;
 window.getCookie = getCookie;
+window.toggleSoberMode = toggleSoberMode;
 
 // Debug: read-only prompt inspection from console
 window._debugPrompts = { getDeferredKnowledge, getSystemPrompt };
@@ -70,9 +71,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     '_debugPrompts.getDeferredKnowledge()': { description: 'Beer + metal knowledge block' },
   });
 
-  // Init voice menu dropdown and waveform bars
+  // Restore sober mode from cookie
+  if (getCookie('sober_mode') === '1') {
+    setSoberMode(true);
+  }
+
+  // Init voice menu dropdown, waveform bars, sober button
   initVoiceMenu();
   initWaveform();
+  updateSoberButton();
 
   // Init quota tracking UI
   initQuota();

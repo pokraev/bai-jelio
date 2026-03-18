@@ -4,7 +4,7 @@
 
 import {
   TOPIC_KNOWLEDGE, IQ_LEVELS, IQ_NAMES, LANGS, LANG_LABELS,
-  getSelectedTopic, getSelectedIQ, getSelectedLang,
+  getSelectedTopic, getSelectedIQ, getSelectedLang, getSoberMode,
 } from './config.js';
 
 // ── Cached prompt templates ─────────────────────────
@@ -50,7 +50,7 @@ export async function loadPrompts() {
   if (promptCache) return;
 
   const files = [
-    'system-base',
+    'system-base', 'sober-system-base',
     'topic-philosophy', 'topic-psychology', 'topic-sociology',
     'topic-science', 'topic-politics', 'topic-music',
     'topic-literature', 'topic-life',
@@ -109,7 +109,9 @@ export function getSystemPrompt(topic, iq, lang) {
     return buildFallbackPrompt(t, i, l);
   }
 
-  const base = promptCache['system-base'] || '';
+  const base = getSoberMode()
+    ? (promptCache['sober-system-base'] || promptCache['system-base'] || '')
+    : (promptCache['system-base'] || '');
   const topicDesc = promptCache['topic-' + t] || TOPIC_KNOWLEDGE[t] || TOPIC_KNOWLEDGE.philosophy;
   const iqProfile = IQ_PROFILES[i] || IQ_PROFILES.intelligent || {};
   const langPrompt = LANG_PROMPTS[l] || LANG_PROMPTS.bg || {};

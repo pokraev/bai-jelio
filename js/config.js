@@ -102,6 +102,7 @@ let _selectedTopic = 'life';
 let _selectedIQ    = 'intelligent';
 let _selectedLang  = 'bg';
 let _selectedVoice = 'Enceladus';
+let _soberMode = false;
 
 export function getSelectedTopic()          { return _selectedTopic; }
 export function setSelectedTopic(v)         { _selectedTopic = v; }
@@ -114,6 +115,9 @@ export function setSelectedLang(v)          { _selectedLang = v; }
 
 export function getSelectedVoice()          { return _selectedVoice; }
 export function setSelectedVoice(v)         { _selectedVoice = v; }
+
+export function getSoberMode()              { return _soberMode; }
+export function setSoberMode(v)             { _soberMode = v; }
 
 // ──────────────────────────────────────────────────────
 // Utility

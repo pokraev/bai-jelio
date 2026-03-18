@@ -831,8 +831,9 @@ select {
 
 .quota-bar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  display: flex; justify-content: center; align-items: center; gap: 10px;
-  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  display: flex; justify-content: center; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
   font-family: 'Roboto Condensed', sans-serif;
   font-size: 0.7rem; letter-spacing: 0.3px;
   color: var(--text-muted); opacity: 0.5;
