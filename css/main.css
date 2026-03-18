@@ -608,6 +608,12 @@ select {
   width: 14px; height: 14px; border-radius: 50%; border: none;
   background: var(--accent); cursor: pointer;
 }
+.vad-viz {
+  border-radius: 8px;
+  border: 1px solid rgba(240,165,0,0.25);
+  background: rgba(15,25,35,0.6);
+  touch-action: none;
+}
 .mic-gain-inline {
   -webkit-appearance: none; appearance: none;
   width: 40px !important; height: 3px;

@@ -308,7 +308,7 @@ export function disconnect() {
   connectBtn.classList.remove('connected');
   connectBtn.disabled = false;
   document.getElementById('stageActions').style.display = 'none';
-  document.getElementById('vadSensitivity').style.display = 'none';
+  document.getElementById('vadViz').style.display = 'none';
   const savedKey = getCookie('gemini_api_key');
   const cheersBtn = document.getElementById('cheersBtn');
   if (savedKey) {
@@ -429,7 +429,7 @@ function handleSetupComplete(apiKey) {
   connectBtn.classList.add('connected');
   connectBtn.disabled = true;
   document.getElementById('stageActions').style.display = 'flex';
-  document.getElementById('vadSensitivity').style.display = '';
+  document.getElementById('vadViz').style.display = '';
   document.getElementById('configSection').style.display = 'none';
   const cheersBtn = document.getElementById('cheersBtn');
   if (cheersBtn) cheersBtn.style.display = 'none';

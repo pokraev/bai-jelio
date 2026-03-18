@@ -124,7 +124,7 @@ bus.on('mic:muted', ({ muted }) => {
   if (offIcon) offIcon.style.display = muted ? '' : 'none';
   if (btn) btn.classList.toggle('muted', muted);
   // Disable/enable settings button and mic gain
-  const ids = ['vadSensitivity'];
+  const ids = ['vadViz'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.disabled = muted; el.style.opacity = muted ? '0.3' : ''; el.style.pointerEvents = muted ? 'none' : ''; }

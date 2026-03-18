@@ -57,7 +57,7 @@
           <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
         </button>
         <div class="waveform idle" id="waveform"></div>
-        <input type="range" id="vadSensitivity" min="0" max="1" step="0.01" value="0.5" oninput="setVadSensitivity(this.value)" title="VAD sensitivity" style="width:40px; display:none" class="mic-gain-inline">
+        <canvas id="vadViz" width="80" height="36" title="VAD sensitivity" style="display:none; cursor:ew-resize;" class="vad-viz"></canvas>
         <button class="round-btn round-btn-danger" id="disconnectBtn" onclick="disconnect()" title="Disconnect">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
         </button>
@@ -293,6 +293,98 @@
 </div>
 
 <script>
+// ── VAD Sensitivity Visualizer ──
+(function() {
+  var canvas, ctx, sensitivity = 0.5, dragging = false;
+  var sinPoints = [];
+
+  // Pre-compute static sinusoid
+  for (var x = 0; x < 80; x++) {
+    var t = x / 80 * Math.PI * 4;
+    sinPoints.push(Math.sin(t) * 0.7 + Math.sin(t * 2.3) * 0.3);
+  }
+
+  function draw() {
+    if (!canvas) { canvas = document.getElementById('vadViz'); if (!canvas) return; ctx = canvas.getContext('2d'); }
+    var w = canvas.width, h = canvas.height, mid = h / 2;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw sinusoid
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(240,165,0,0.25)';
+    ctx.lineWidth = 1.5;
+    for (var x = 0; x < w; x++) {
+      var y = mid + sinPoints[x] * (h * 0.4);
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Threshold lines — two vertical lines that move apart/together
+    // sensitivity 0 = lines at edges (most sensitive), 1 = lines at center (least sensitive)
+    var gap = (1 - sensitivity) * 0.45; // 0..0.45 from center
+    var leftX = Math.round(w / 2 - gap * w);
+    var rightX = Math.round(w / 2 + gap * w);
+
+    // Fill the "active" zone between the lines
+    ctx.fillStyle = 'rgba(78,203,113,0.08)';
+    ctx.fillRect(leftX, 0, rightX - leftX, h);
+
+    // Redraw sinusoid in active zone with bright color
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(leftX, 0, rightX - leftX, h);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(78,203,113,0.6)';
+    ctx.lineWidth = 1.5;
+    for (var x = 0; x < w; x++) {
+      var y = mid + sinPoints[x] * (h * 0.4);
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw threshold lines
+    ctx.strokeStyle = 'rgba(240,165,0,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(leftX, 2); ctx.lineTo(leftX, h - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rightX, 2); ctx.lineTo(rightX, h - 2); ctx.stroke();
+
+    // Small arrows on the lines
+    ctx.fillStyle = 'rgba(240,165,0,0.7)';
+    // Left arrow pointing left
+    ctx.beginPath(); ctx.moveTo(leftX - 3, mid); ctx.lineTo(leftX + 2, mid - 4); ctx.lineTo(leftX + 2, mid + 4); ctx.fill();
+    // Right arrow pointing right
+    ctx.beginPath(); ctx.moveTo(rightX + 3, mid); ctx.lineTo(rightX - 2, mid - 4); ctx.lineTo(rightX - 2, mid + 4); ctx.fill();
+  }
+
+  function onPointer(e) {
+    if (!canvas) return;
+    var rect = canvas.getBoundingClientRect();
+    var x = (e.clientX || (e.touches && e.touches[0].clientX) || 0) - rect.left;
+    // Map x position to sensitivity: center = max sensitivity (0), edges = min (1)
+    var fromCenter = Math.abs(x - rect.width / 2) / (rect.width / 2);
+    sensitivity = Math.max(0, Math.min(1, 1 - fromCenter));
+    if (typeof setVadSensitivity === 'function') setVadSensitivity(1 - sensitivity);
+    draw();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    canvas = document.getElementById('vadViz');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
+    draw();
+
+    canvas.addEventListener('pointerdown', function(e) { dragging = true; canvas.setPointerCapture(e.pointerId); onPointer(e); });
+    canvas.addEventListener('pointermove', function(e) { if (dragging) onPointer(e); });
+    canvas.addEventListener('pointerup', function() { dragging = false; });
+    canvas.addEventListener('pointercancel', function() { dragging = false; });
+  });
+
+  window._drawVadViz = draw;
+})();
+
 var currentIphoneStep = 0;
 function iphoneTutorialStep(n) {
   currentIphoneStep = Math.max(0, Math.min(n, 4));
