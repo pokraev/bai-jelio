@@ -350,19 +350,18 @@ async function openTranscriptModal() {
 
     // Create bubble (empty, no raw text shown)
     var bubble = document.createElement('div');
-    bubble.className = 'chat-bubble ' + cls + ' loading';
+    bubble.className = 'chat-bubble ' + cls;
     bubble.innerHTML = '<span class="bubble-icon">' + icon + '</span> <span class="bubble-text"></span>';
     chat.appendChild(bubble);
     bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    // Type it out, prefetch next at 80%
+    // Type it out, prefetch next at 90%
     var prefetchStarted = false;
     nextClean = null;
     var textEl = bubble.querySelector('.bubble-text');
     for (var c = 0; c < cleaned.length; c++) {
       if (signal.aborted) return;
       textEl.textContent += cleaned[c];
-      // Prefetch next turn at 80%
       if (!prefetchStarted && i + 1 < history.length && c >= Math.floor(cleaned.length * PREFETCH_PCT)) {
         nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
         prefetchStarted = true;
@@ -370,7 +369,7 @@ async function openTranscriptModal() {
       if (c % 4 === 0) bubble.scrollIntoView({ behavior: 'auto', block: 'nearest' });
       await new Promise(function(r) { setTimeout(r, TYPE_SPEED_MS); });
     }
-    bubble.classList.remove('loading');
+    bubble.classList.add('done');
 
     // If we didn't prefetch yet (very short text), wait then prefetch
     if (!prefetchStarted && i + 1 < history.length) {

@@ -653,6 +653,83 @@ select {
 .modal-btn-skip { background: transparent; border: 1.5px solid var(--text-muted) !important; color: var(--text-muted); }
 .modal-btn-skip:hover { border-color: var(--text) !important; color: var(--text); }
 
+/* Transcript Button */
+.transcript-btn {
+  width: 32px;
+  height: 32px;
+  pointer-events: auto;
+  border-color: rgba(136,153,170,0.25);
+  flex-shrink: 0;
+}
+.transcript-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Transcript Modal */
+.transcript-modal-card {
+  width: 50vw !important;
+  max-height: 85vh !important;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+.transcript-chat {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 4px;
+  min-height: 100px;
+}
+.chat-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  position: relative;
+}
+.chat-bubble.user {
+  align-self: flex-end;
+  background: rgba(78,203,113,0.12);
+  border: 1px solid rgba(78,203,113,0.2);
+  color: var(--text);
+  border-bottom-right-radius: 4px;
+}
+.chat-bubble.bot {
+  align-self: flex-start;
+  background: rgba(240,165,0,0.08);
+  border: 1px solid rgba(240,165,0,0.15);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+.chat-bubble .bubble-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.chat-bubble.done {
+  animation: bubble-pulse 0.3s ease;
+}
+@keyframes bubble-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+.transcript-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 40px 0;
+  opacity: 0.5;
+}
+@media (max-width: 768px) {
+  .transcript-modal-card {
+    width: 94vw !important;
+  }
+}
+
 /* iPhone Tutorial Modal */
 .iphone-modal-card {
   width: 40vw !important;
