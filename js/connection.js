@@ -120,7 +120,7 @@ function feedEnrichmentBuffer(role, text) {
 
 async function analyzeConversation() {
   if (!conversationBuffer || conversationBuffer.length < 100) return;
-  if (!_isConnected) return;
+  if (!_isConnected || getIsMuted()) return;
   try {
     const { geminiRest } = await import('./gemini-rest.js');
     const text = await geminiRest(
@@ -150,7 +150,7 @@ async function analyzeConversation() {
 
 async function processEnrichmentQueue() {
   if (enrichmentQueue.length === 0) return;
-  if (!_isConnected) return;
+  if (!_isConnected || getIsMuted()) return;
   const query = enrichmentQueue.shift();
   try {
     const { searchAndNarrate } = await import('./search.js');
