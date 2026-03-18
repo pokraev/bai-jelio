@@ -11,6 +11,7 @@ A real-time voice conversation app powered by Google Gemini's Live Audio API. Yo
 - Animated avatar with canvas-based lip-sync and blinking eyes
 - Natural Bulgarian speech patterns with appropriate filler words and slang
 - Ends each response with an open-ended question to keep conversation flowing
+- **Silero VAD** (Voice Activity Detection) — only sends audio when speech is detected, filtering out background noise. Pre-speech buffer (~768ms) prevents clipping the first syllable. Waveform visualizer reacts only to speech. Graceful fallback if VAD fails to load.
 
 ### Topics
 8 conversation topics: **Life** (default), Philosophy, Psychology, Sociology, Science, Politics, Music, Literature. Switching topics immediately interrupts the avatar and transitions to the new topic.
@@ -144,7 +145,8 @@ bai-jelio/
 │   ├── prompts.js             # Loads .txt templates, assembles system prompts
 │   ├── quota.js               # Daily usage tracking (localStorage)
 │   ├── ui-controls.js         # Topic/IQ/voice/language selectors, debounce
-│   ├── waveform.js            # Mic input waveform visualizer
+│   ├── vad.js                 # Silero VAD wrapper (speech detection via ONNX)
+│   ├── waveform.js            # Mic input waveform visualizer (VAD-gated)
 │   ├── render-state.js        # Shared mutable state for canvas rendering
 │   ├── avatar-renderer.js     # Canvas mouth/face drawing (~500 lines)
 │   ├── lip-sync.js            # Viseme mapping, transcript + FFT lip-sync
@@ -301,6 +303,7 @@ git push origin main
 - **Voice**: 5 presets via Gemini Live API
 - **Animation**: Canvas 2D lip-sync + blink state machine
 - **Audio**: ScriptProcessorNode (mic), Web Audio API (playback)
+- **VAD**: Silero VAD v5 via @ricky0123/vad-web (ONNX, loaded from CDN)
 - **Search**: Gemini REST API with optional Google Search grounding
 - **State**: Event bus + cookies + localStorage
 

@@ -3,9 +3,9 @@
 // ──────────────────────────────────────────────────────
 
 import { getIsMicActive, getIsMuted, getMicContext, getMicGainNode, getMicSource } from './microphone.js';
+import { isSpeaking } from './vad.js';
 
 const NUM_BARS = 12;
-const SPEECH_THRESHOLD = 40;
 
 let inited = false;
 let micAnalyser = null;
@@ -46,14 +46,11 @@ export function startWaveformAnimation() {
     if (!getIsMicActive() || getIsMuted()) { resetWaveform(); return; }
     if (micAnalyser && micFreqData) {
       micAnalyser.getByteFrequencyData(micFreqData);
-      let avg = 0;
-      for (let i = 0; i < micFreqData.length; i++) avg += micFreqData[i];
-      avg /= micFreqData.length;
-      const isSpeech = avg > SPEECH_THRESHOLD;
+      const speech = isSpeaking();
       const bars = document.getElementById('waveform').children;
       for (let i = 0; i < bars.length; i++) {
         const idx = Math.min(i, micFreqData.length - 1);
-        const val = isSpeech ? micFreqData[idx] : 0;
+        const val = speech ? micFreqData[idx] : 0;
         bars[i].style.height = (3 + (val / 255) * 22) + 'px';
       }
     }

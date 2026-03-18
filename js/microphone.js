@@ -16,6 +16,7 @@
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
+import { initVad, pauseVad, resumeVad, destroyVad, isSpeaking, isVadReady } from './vad.js';
 
 // ── Module-level state ───────────────────────────────
 
@@ -35,10 +36,15 @@ let scriptProcessor = null;
 let micGainNode = null;
 
 /** Current gain value (0.05 .. 4, exponential from slider 0..1) */
-let micGainValue = 1;
+let micGainValue = 0.05 * Math.pow(80, 0.35); // match default slider 0.35
 
 /** Whether mic capture is actively running */
 let isMicActive = false;
+
+/** Pre-speech ring buffer — stores recent frames to avoid clipping first syllable */
+const PRE_SPEECH_FRAMES = 3; // ~768ms at 4096 samples / 16kHz
+let preBuffer = [];
+let wasSpeaking = false;
 
 /** Whether the user has muted the mic */
 let isMuted = false;
@@ -121,21 +127,36 @@ export async function startMic() {
       for (let i = 0; i < float32.length; i++) {
         int16[i] = Math.max(-32768, Math.min(32767, float32[i] * 32768));
       }
-      const base64Audio = arrayBufferToBase64(int16.buffer);
-      _ws.send(JSON.stringify({
-        realtimeInput: {
-          mediaChunks: [{
-            mimeType: 'audio/pcm;rate=16000',
-            data: base64Audio,
-          }],
-        },
-      }));
+
+      const speaking = isSpeaking();
+
+      if (!isVadReady()) {
+        // VAD not available — send everything (fallback)
+        sendAudioChunk(int16);
+      } else if (speaking) {
+        // Speech detected — flush pre-buffer first, then send current frame
+        if (!wasSpeaking) {
+          for (const buffered of preBuffer) sendAudioChunk(buffered);
+          preBuffer = [];
+        }
+        sendAudioChunk(int16);
+      } else {
+        // Silence — store in ring buffer for lookback
+        preBuffer.push(new Int16Array(int16));
+        if (preBuffer.length > PRE_SPEECH_FRAMES) preBuffer.shift();
+      }
+      wasSpeaking = speaking;
     };
 
     micSource.connect(micGainNode);
     micGainNode.connect(scriptProcessor);
     scriptProcessor.connect(micContext.destination);
     isMicActive = true;
+    preBuffer = [];
+    wasSpeaking = false;
+
+    // Initialize Silero VAD with the shared mic stream
+    initVad(micStream);
 
     bus.emit('mic:started');
   } catch (err) {
@@ -166,6 +187,7 @@ export function stopMic() {
  */
 export function destroyMic() {
   stopMic();
+  destroyVad();
   if (micContext) { micContext.close(); micContext = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 
@@ -188,8 +210,10 @@ export function toggleMute() {
   }
   if (isMuted) {
     mutedAfterTurn = false;
+    pauseVad();
   } else {
     mutedAfterTurn = false;
+    resumeVad();
   }
 
   bus.emit('mic:muted', { muted: isMuted });
@@ -235,6 +259,23 @@ export function getMicGainNode()     { return micGainNode; }
 export function getMicSource()       { return micSource; }
 
 // ── Internal helpers ────────────────────────────────
+
+/**
+ * Send an Int16Array audio chunk over the WebSocket.
+ * @param {Int16Array} int16
+ */
+function sendAudioChunk(int16) {
+  if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
+  const base64Audio = arrayBufferToBase64(int16.buffer);
+  _ws.send(JSON.stringify({
+    realtimeInput: {
+      mediaChunks: [{
+        mimeType: 'audio/pcm;rate=16000',
+        data: base64Audio,
+      }],
+    },
+  }));
+}
 
 /**
  * Convert an ArrayBuffer to a base64-encoded string.
