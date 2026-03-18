@@ -487,8 +487,8 @@ function handleSetupComplete(apiKey) {
  * @param {object} content — response.serverContent
  */
 function handleServerContent(content) {
-  // If muted and previous turn is done, ignore new model output
-  if (getMutedAfterTurn() && content.modelTurn?.parts) return;
+  // If muted, ignore all model output
+  if (getIsMuted() && content.modelTurn?.parts) return;
 
   if (content.modelTurn?.parts) {
     for (const part of content.modelTurn.parts) {

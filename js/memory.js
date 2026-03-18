@@ -3,8 +3,18 @@
 // No LLM summarization — saves RPM quota for actual conversation.
 
 const MAX_HISTORY = 20;
+const STORAGE_KEY = 'conversation_history';
 
-let conversationHistory = []; // { role, text }
+// Load from localStorage on init
+let conversationHistory = [];
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) conversationHistory = JSON.parse(saved);
+} catch (_) {}
+
+function persistHistory() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversationHistory)); } catch (_) {}
+}
 
 /**
  * Add a complete turn to conversation history.
@@ -17,6 +27,7 @@ export function appendTranscript(role, text) {
   if (conversationHistory.length > MAX_HISTORY) {
     conversationHistory = conversationHistory.slice(-MAX_HISTORY);
   }
+  persistHistory();
 }
 
 /**
@@ -47,6 +58,7 @@ export function getFullHistory() {
  */
 export function clearHistory() {
   conversationHistory = [];
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
 }
 
 // ── Debug: expose to console via window.memory ──

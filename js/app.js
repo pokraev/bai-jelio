@@ -82,6 +82,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setSoberMode(true);
   }
 
+  // Enable transcript button if there's saved history
+  if (window.memory && window.memory.count > 0) {
+    const tBtn = document.getElementById('transcriptBtn');
+    if (tBtn) tBtn.classList.add('has-turns');
+  }
+
   // Init waveform bars
   initWaveform();
 
