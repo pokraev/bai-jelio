@@ -692,6 +692,10 @@ export function showToiletBreak() {
 export async function startWebSearch(query) {
   // Note: even if grounding is blocked, knowledge search (Gemma) still works
 
+  // Clear previous search state — knowledge stays in knowledgeBank
+  searchCache = null;
+  if (typeof closeSearchResults === 'function') closeSearchResults();
+
   // Crossfade to searching image (dot already started from trigger detection)
   const stage = document.getElementById('stage');
   if (stage) stage.classList.add('searching');
