@@ -51,28 +51,17 @@
       <canvas id="mouthCanvas"></canvas>
     </div>
     <div class="stage-actions" id="stageActions" style="display:none">
-      <div class="actions-row-main">
-        <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
-          <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-          <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-        </button>
-        <div class="waveform idle" id="waveform"></div>
-        <canvas id="vadViz" width="80" height="36" title="VAD sensitivity" style="display:none; cursor:ew-resize;" class="vad-viz"></canvas>
-        <button class="round-btn round-btn-danger" id="disconnectBtn" onclick="disconnect()" title="Disconnect">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-        </button>
-      </div>
-      <div class="actions-row-secondary">
-        <button class="round-btn" id="transcriptBtn" onclick="openTranscriptModal()" title="Транскрипт">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
-        </button>
-        <button class="round-btn" id="settingsBtn" onclick="openSettings()" title="Настройки">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        </button>
-        <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        </button>
-      </div>
+      <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
+        <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </button>
+      <div class="waveform idle" id="waveform"></div>
+      <button class="round-btn" id="transcriptBtn" onclick="openTranscriptModal()" title="Транскрипт">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
+      </button>
+      <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
     </div>
   </div>
 
@@ -157,7 +146,9 @@
   </a>
   <span class="quota-pill" id="quotaDay"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
   <span class="quota-pill" id="quotaGrounding"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
-  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;">Reset</a>
+  <a href="#" class="quota-pill" id="settingsBtn" onclick="openSettings();return false;">Настройки</a>
+  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;">Ресет</a>
+  <a href="#" class="quota-pill" id="disconnectBtn" onclick="disconnect();return false;">Изход</a>
 </div>
 
 <!-- Settings Modal -->
@@ -210,6 +201,17 @@
             <div class="custom-select-item active" data-val="drunk">Готиния</div>
             <div class="custom-select-item" data-val="sober">Трезвен</div>
           </div>
+        </div>
+      </div>
+      <div class="settings-divider"></div>
+      <div class="settings-vad">
+        <div class="settings-vad-left">
+          <label>Детекция на глас</label>
+          <p class="settings-vad-desc">Настройте кога микрофонът улавя говор. Плъзнете нагоре/надолу за чувствителност, наляво/надясно за търпение преди прекъсване.</p>
+        </div>
+        <div class="settings-vad-right">
+          <canvas id="vadVizSettings" width="140" height="70" class="vad-viz vad-viz-large"></canvas>
+          <button class="settings-vad-reset" onclick="resetVadDefaults()">По подразбиране</button>
         </div>
       </div>
     </div>
@@ -295,94 +297,136 @@
 <script>
 // ── VAD Sensitivity Visualizer ──
 (function() {
-  var canvas, ctx, sensitivity = 0.5, dragging = false;
+  var canvas, ctx, sensitivity = 0.75, holdVal = 0.43, dragging = false;
   var sinPoints = [];
 
-  // Pre-compute static sinusoid
-  for (var x = 0; x < 80; x++) {
-    var t = x / 80 * Math.PI * 4;
-    sinPoints.push(Math.sin(t) * 0.7 + Math.sin(t * 2.3) * 0.3);
+  // Pre-compute: silence | ramp up | speech | ramp down | silence
+  for (var x = 0; x < 140; x++) {
+    var nx = x / 140;
+    var env = 0;
+    if (nx < 0.15) env = 0;                                    // silence
+    else if (nx < 0.25) env = (nx - 0.15) / 0.1;              // ramp up
+    else if (nx < 0.75) env = 1;                               // full speech
+    else if (nx < 0.85) env = 1 - (nx - 0.75) / 0.1;          // ramp down
+    else env = 0;                                               // silence
+    var t = nx * Math.PI * 6;
+    var wave = Math.sin(t) * 0.7 + Math.sin(t * 2.7) * 0.3;
+    sinPoints.push(wave * env);
   }
 
   function draw() {
-    if (!canvas) { canvas = document.getElementById('vadViz'); if (!canvas) return; ctx = canvas.getContext('2d'); }
+    if (!canvas) { canvas = document.getElementById('vadVizSettings'); if (!canvas) return; ctx = canvas.getContext('2d'); }
     var w = canvas.width, h = canvas.height, mid = h / 2;
 
     ctx.clearRect(0, 0, w, h);
 
-    // Draw sinusoid
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(240,165,0,0.25)';
-    ctx.lineWidth = 1.5;
-    for (var x = 0; x < w; x++) {
-      var y = mid + sinPoints[x] * (h * 0.4);
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Threshold lines — two vertical lines that move apart/together
-    // sensitivity 0 = lines at edges (most sensitive), 1 = lines at center (least sensitive)
-    var gap = (1 - sensitivity) * 0.45; // 0..0.45 from center
+    // Sensitivity: horizontal red line (drag up/down) — bars above = speech
+    var threshY = Math.round(sensitivity * h);
+    // Hold/timing: vertical orange lines (drag left/right) — wider = more patience
+    var gap = holdVal * 0.45;
     var leftX = Math.round(w / 2 - gap * w);
     var rightX = Math.round(w / 2 + gap * w);
 
-    // Fill the "active" zone between the lines
-    ctx.fillStyle = 'rgba(78,203,113,0.08)';
-    ctx.fillRect(leftX, 0, rightX - leftX, h);
-
-    // Redraw sinusoid in active zone with bright color
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(leftX, 0, rightX - leftX, h);
-    ctx.clip();
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(78,203,113,0.6)';
-    ctx.lineWidth = 1.5;
-    for (var x = 0; x < w; x++) {
-      var y = mid + sinPoints[x] * (h * 0.4);
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    // Draw bars: green if above threshold AND inside timing window, grey otherwise
+    var barW = 3, barGap = 2, barCount = Math.floor(w / (barW + barGap));
+    var step = 140 / barCount;
+    for (var b = 0; b < barCount; b++) {
+      var idx = Math.floor(b * step);
+      var amp = Math.abs(sinPoints[idx]);
+      var barH = Math.max(2, amp * h * 0.9);
+      var bx = b * (barW + barGap);
+      var barTop = h - barH;
+      var aboveThresh = barTop < threshY;
+      var inTiming = bx + barW >= leftX && bx <= rightX;
+      ctx.fillStyle = (aboveThresh && inTiming) ? 'rgba(78,203,113,0.6)' : 'rgba(136,153,170,0.2)';
+      ctx.beginPath();
+      ctx.roundRect(bx, barTop, barW, barH, 1);
+      ctx.fill();
     }
-    ctx.stroke();
-    ctx.restore();
 
-    // Draw threshold lines
+    // Horizontal sensitivity line (red dashed)
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = 'rgba(255,107,107,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, threshY); ctx.lineTo(w, threshY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Vertical timing lines (orange solid)
     ctx.strokeStyle = 'rgba(240,165,0,0.7)';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(leftX, 2); ctx.lineTo(leftX, h - 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(rightX, 2); ctx.lineTo(rightX, h - 2); ctx.stroke();
 
-    // Small arrows on the lines
+    // Arrows on timing lines (left/right)
     ctx.fillStyle = 'rgba(240,165,0,0.7)';
-    // Left arrow pointing left
     ctx.beginPath(); ctx.moveTo(leftX - 3, mid); ctx.lineTo(leftX + 2, mid - 4); ctx.lineTo(leftX + 2, mid + 4); ctx.fill();
-    // Right arrow pointing right
     ctx.beginPath(); ctx.moveTo(rightX + 3, mid); ctx.lineTo(rightX - 2, mid - 4); ctx.lineTo(rightX - 2, mid + 4); ctx.fill();
+
+    // Arrow on threshold line (up/down on right edge)
+    ctx.fillStyle = 'rgba(255,107,107,0.6)';
+    ctx.beginPath(); ctx.moveTo(w - 2, threshY - 4); ctx.lineTo(w - 6, threshY); ctx.lineTo(w - 2, threshY + 4); ctx.fill();
+  }
+
+  var tooltip = null;
+
+  function showTooltip(e) {
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.className = 'vad-tooltip';
+      document.body.appendChild(tooltip);
+    }
+    var s = typeof getVadSettings === 'function' ? getVadSettings() : {};
+    tooltip.innerHTML =
+      '<b>VAD</b><br>' +
+      'Speech on: ' + (s.speechOn || '?') + '<br>' +
+      'Speech off: ' + (s.speechOff || '?') + '<br>' +
+      'Hold: ' + (s.holdMs || '?') + 'ms<br>' +
+      'Pre-pad: ' + (s.padMs || '?') + 'ms';
+    tooltip.style.display = 'block';
+    var rect = canvas.getBoundingClientRect();
+    tooltip.style.left = rect.left + 'px';
+    tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+  }
+
+  function hideTooltip() {
+    if (tooltip) tooltip.style.display = 'none';
   }
 
   function onPointer(e) {
     if (!canvas) return;
     var rect = canvas.getBoundingClientRect();
-    var x = (e.clientX || (e.touches && e.touches[0].clientX) || 0) - rect.left;
-    // Map x position to sensitivity: center = max sensitivity (0), edges = min (1)
-    var fromCenter = Math.abs(x - rect.width / 2) / (rect.width / 2);
-    sensitivity = Math.max(0, Math.min(1, 1 - fromCenter));
-    if (typeof setVadSensitivity === 'function') setVadSensitivity(1 - sensitivity);
+    var px = (e.clientX || (e.touches && e.touches[0].clientX) || 0) - rect.left;
+    var py = (e.clientY || (e.touches && e.touches[0].clientY) || 0) - rect.top;
+    // Vertical drag: speech threshold — top = less sensitive, bottom = more sensitive
+    sensitivity = Math.max(0, Math.min(1, py / rect.height));
+    if (typeof setVadSensitivity === 'function') setVadSensitivity(sensitivity);
+    // Horizontal drag: hold/timing — edges = short, center = long patience
+    var fromCenter = Math.abs(px - rect.width / 2) / (rect.width / 2);
+    holdVal = Math.max(0, Math.min(1, 1 - fromCenter));
+    if (typeof setVadHold === 'function') setVadHold(holdVal);
     draw();
+    showTooltip(e);
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    canvas = document.getElementById('vadViz');
+    canvas = document.getElementById('vadVizSettings');
     if (!canvas) return;
     ctx = canvas.getContext('2d');
     draw();
 
     canvas.addEventListener('pointerdown', function(e) { dragging = true; canvas.setPointerCapture(e.pointerId); onPointer(e); });
     canvas.addEventListener('pointermove', function(e) { if (dragging) onPointer(e); });
-    canvas.addEventListener('pointerup', function() { dragging = false; });
-    canvas.addEventListener('pointercancel', function() { dragging = false; });
+    canvas.addEventListener('pointerup', function() { dragging = false; hideTooltip(); });
+    canvas.addEventListener('pointercancel', function() { dragging = false; hideTooltip(); });
   });
 
   window._drawVadViz = draw;
+  window.resetVadDefaults = function() {
+    sensitivity = 0.75; holdVal = 0.43;
+    if (typeof setVadSensitivity === 'function') setVadSensitivity(0.75);
+    if (typeof setVadHold === 'function') setVadHold(0.43);
+    draw();
+  };
 })();
 
 var currentIphoneStep = 0;
@@ -609,7 +653,28 @@ function escapeHtml(t) {
 <script type="module" src="js/app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    // Check for SW updates every 60 seconds
+    setInterval(function() { reg.update(); }, 60000);
+    // On new SW activated, reload
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
+  });
 }
+// Version check: fetch version.json, compare with localStorage, reload if newer
+(function() {
+  fetch('/version.json?t=' + Date.now()).then(function(r) { return r.json(); }).then(function(data) {
+    var remote = data.version;
+    var local = localStorage.getItem('app_version');
+    if (local && local !== remote) {
+      localStorage.setItem('app_version', remote);
+      window.location.reload(true);
+    } else if (!local) {
+      localStorage.setItem('app_version', remote);
+    }
+  }).catch(function() {});
+})();
 </script>
 </body></html>

@@ -7,7 +7,7 @@ import { getCookie, setCookie, setSoberMode, getSelectedLang } from './config.js
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import { startMic, stopMic, toggleMute, setWebSocket, getIsMuted } from './microphone.js';
-import { setVadSensitivity } from './vad.js';
+import { setVadSensitivity, setVadHold, getVadSettings } from './vad.js';
 import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected } from './connection.js';
 import {
   selectTopic, openSettings, closeSettings, saveSettings,
@@ -29,6 +29,8 @@ window.saveSettings = saveSettings;
 window.toggleMute = toggleMute;
 window.getIsMuted = getIsMuted;
 window.setVadSensitivity = setVadSensitivity;
+window.setVadHold = setVadHold;
+window.getVadSettings = getVadSettings;
 window.toggleLipsPopover = toggleLipsPopover;
 window.setEditTarget = setEditTarget;
 window.toggleConnection = toggleConnection;
@@ -124,7 +126,7 @@ bus.on('mic:muted', ({ muted }) => {
   if (offIcon) offIcon.style.display = muted ? '' : 'none';
   if (btn) btn.classList.toggle('muted', muted);
   // Disable/enable settings button and mic gain
-  const ids = ['vadViz'];
+  const ids = [];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.disabled = muted; el.style.opacity = muted ? '0.3' : ''; el.style.pointerEvents = muted ? 'none' : ''; }
@@ -139,11 +141,6 @@ bus.on('mic:muted', ({ muted }) => {
     b.disabled = muted;
     b.style.opacity = muted ? '0.3' : '';
     b.style.pointerEvents = muted ? 'none' : '';
-  });
-  // Disable quota bar pills
-  document.querySelectorAll('.quota-pill').forEach(p => {
-    p.style.opacity = muted ? '0.15' : '';
-    p.style.pointerEvents = muted ? 'none' : 'auto';
   });
 });
 
@@ -161,15 +158,6 @@ bus.on('mic:destroyed', () => {
   if (btn) btn.classList.remove('mic-active');
 });
 
-// ── Disconnect button: green when connected, red when disconnected ──
-bus.on('connection:ready', () => {
-  const btn = document.getElementById('disconnectBtn');
-  if (btn) { btn.classList.add('connected'); btn.classList.remove('disconnected'); }
-});
-bus.on('connection:disconnected', () => {
-  const btn = document.getElementById('disconnectBtn');
-  if (btn) { btn.classList.remove('connected'); btn.classList.add('disconnected'); }
-});
 
 // ── Speaking state ──
 bus.on('audio:playing-changed', ({ playing }) => {
@@ -195,6 +183,9 @@ bus.on('turn:complete', () => {
   if (_memBotBuffer.trim()) appendTranscript('bot', _memBotBuffer.trim());
   _memUserBuffer = '';
   _memBotBuffer = '';
+  // Enable transcript button once we have turns
+  const tBtn = document.getElementById('transcriptBtn');
+  if (tBtn && !tBtn.classList.contains('has-turns')) tBtn.classList.add('has-turns');
 });
 
 // ── Lip-sync wiring ──

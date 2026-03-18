@@ -13,6 +13,8 @@ let speaking = false;
 let vadReady = false;
 let currentPositiveThreshold = 0.5;
 let currentNegativeThreshold = 0.35;
+let currentRedemptionFrames = 16;
+let currentPreSpeechPadFrames = 3;
 
 /** Whether the user is currently speaking (per Silero VAD) */
 export function isSpeaking() { return speaking; }
@@ -38,8 +40,8 @@ export async function initVad(stream) {
       stream,
       positiveSpeechThreshold: currentPositiveThreshold,
       negativeSpeechThreshold: currentNegativeThreshold,
-      redemptionFrames: 16,
-      preSpeechPadFrames: 3,
+      redemptionFrames: currentRedemptionFrames,
+      preSpeechPadFrames: currentPreSpeechPadFrames,
       minSpeechFrames: 3,
       onSpeechStart: () => {
         speaking = true;
@@ -96,6 +98,32 @@ export function setVadSensitivity(val) {
     vadInstance.positiveSpeechThreshold = currentPositiveThreshold;
     vadInstance.negativeSpeechThreshold = currentNegativeThreshold;
   }
+}
+
+/**
+ * Set VAD hold time from normalized value (0..1).
+ * 0 = shortest hold (4 frames ~384ms), 1 = longest (32 frames ~3s).
+ * @param {number} val — 0..1
+ */
+export function setVadHold(val) {
+  currentRedemptionFrames = Math.round(4 + val * 28); // 4..32
+  currentPreSpeechPadFrames = Math.round(2 + val * 6); // 2..8
+  if (vadInstance) {
+    vadInstance.redemptionFrames = currentRedemptionFrames;
+    vadInstance.preSpeechPadFrames = currentPreSpeechPadFrames;
+  }
+}
+
+/**
+ * Get current VAD settings for display.
+ */
+export function getVadSettings() {
+  return {
+    speechOn: currentPositiveThreshold.toFixed(2),
+    speechOff: currentNegativeThreshold.toFixed(2),
+    holdMs: Math.round(currentRedemptionFrames * 96),
+    padMs: Math.round(currentPreSpeechPadFrames * 96),
+  };
 }
 
 /** Fully destroy the VAD instance */

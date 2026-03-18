@@ -1,4 +1,5 @@
-const CACHE_NAME = 'bai-zhelyo-v1';
+const CACHE_VERSION = '2.0.0';
+const CACHE_NAME = 'bai-zhelyo-v' + CACHE_VERSION;
 const ASSETS = [
   '/',
   '/index.html',
@@ -23,7 +24,12 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network-first strategy — app needs internet anyway
+  // Never cache version.json — always fetch fresh
+  if (e.request.url.includes('version.json')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+  // Network-first for everything else
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );

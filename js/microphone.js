@@ -70,19 +70,6 @@ export function setWebSocket(ws) {
   _ws = ws;
 }
 
-// ── Gain / sensitivity ──────────────────────────────
-
-/**
- * Map a slider value (0..1) to an exponential gain curve.
- * 0 = barely picks up anything, 0.5 = normal (gain ~1), 1 = very sensitive.
- * @param {number|string} val — slider value 0..1
- */
-export function setMicGain(val) {
-  const t = parseFloat(val);
-  micGainValue = 0.05 * Math.pow(80, t); // 0->0.05, 0.5->~1, 1->4
-  if (micGainNode) micGainNode.gain.value = micGainValue;
-}
-
 // ── Start / Stop / Destroy ──────────────────────────
 
 /**

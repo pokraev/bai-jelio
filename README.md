@@ -9,95 +9,111 @@ A real-time voice conversation app powered by Google Gemini's Live Audio API. Yo
 ### Voice Conversation
 - Real-time voice chat via WebSocket (Gemini Live Audio API)
 - Animated avatar with canvas-based lip-sync and blinking eyes
-- Natural Bulgarian speech patterns with appropriate filler words and slang
+- Natural Bulgarian speech patterns with filler words and slang
 - Ends each response with an open-ended question to keep conversation flowing
-- **Silero VAD** (Voice Activity Detection) — only sends audio when speech is detected, filtering out background noise. Pre-speech buffer (~768ms) prevents clipping the first syllable. Waveform visualizer reacts only to speech. Graceful fallback if VAD fails to load.
+
+### Silero VAD (Voice Activity Detection)
+- Only sends audio when speech is detected, filtering out background noise
+- Pre-speech buffer (~768ms) prevents clipping the first syllable
+- Waveform visualizer reacts only to speech, not noise
+- Adjustable sensitivity via interactive canvas in Settings:
+  - Vertical drag: speech detection threshold (how loud to trigger)
+  - Horizontal drag: hold time (how long to wait before end-of-speech)
+- Graceful fallback if VAD fails to load
 
 ### Topics
-8 conversation topics: **Life** (default), Philosophy, Psychology, Sociology, Science, Politics, Music, Literature. Switching topics immediately interrupts the avatar and transitions to the new topic.
+8 conversation topics: **Life** (default), Philosophy, Psychology, Sociology, Science, Politics, Music, Literature. Switching topics interrupts the avatar and transitions immediately.
 
 ### Intelligence Levels
-3 IQ levels with smooth in-conversation transitions:
-- **Среден (Average)** — 1-2 sentences, simple words, strong opinions
-- **Интелигентен (Intelligent)** — 2-4 sentences, balanced depth (default)
-- **Гениален (Genius)** — 3-5 sentences, deep cross-references and original thinking
+3 levels:
+- **Турбо** — 1-2 sentences, simple words, strong opinions
+- **Мега** — 2-4 sentences, balanced depth (default)
+- **Гига** — 3-5 sentences, deep cross-references and original thinking
 
 ### Voices
-5 male voice presets: **Enceladus** (default, breathy), Charon (informative), Fenrir (excitable), Puck (upbeat), Perseus
+10 voice presets: Orus (Firm), Charon (Informative), Fenrir (Excitable), Puck (Upbeat), **Enceladus** (Breathy, default), Iapetus (Clear), Algenib (Gravelly), Alnilam (Firm), Rasalgethi (Informative), Schedar (Even).
 
 ### Languages
-3 languages: **Bulgarian** (default), English (with thick Bulgarian accent), Spanish (same accent)
+3 languages: **Bulgarian** (default), English (with thick Bulgarian accent), Spanish (same accent). Language change triggers a full reconnect with updated system prompt.
+
+### Drunk / Sober Mode
+- **Готиния** (default) — classic pub philosopher, loose and opinionated
+- **Трезвен** — calmer, more structured, still authentic
+
+Switching mode reconnects with a different system prompt. The avatar says a transition phrase and continues the conversation with the new personality. Mode persists across sessions via cookie.
+
+### Settings Modal
+All configuration in one place — opened via "Настройки" pill at the bottom:
+- Language, Voice, Intelligence, Mode — custom styled dropdowns
+- VAD sensitivity — interactive waveform canvas with threshold controls
+- Save applies all changes in a single reconnect
+- X closes without saving
+
+### Transcript Modal
+View the conversation as a WhatsApp-style chat:
+- Opens via transcript button (speech bubble icon) under the avatar
+- Each turn is cleaned by Gemini (grammar, punctuation, capitalization, phonetic STT fixes)
+- Letter-by-letter typing animation with prefetch pipeline
+- Typing indicators: "Бай Жельо пише..." / "Вие пишете..."
+- Mutes mic while open, restores on close
 
 ### Web Search
-Ask the avatar to look something up:
 - Say "потърси", "провери", "гугълни", "search", "google it", or "busca"
-- Avatar says something natural, then triggers search via `ТЪРСЯ:` keyword
-- Phone overlay appears while searching
 - Uses model knowledge first (no quota cost), Google Search grounding only when needed
-- Prioritizes festivals, concerts, exhibitions, cultural events
-- Reports findings in character — highlights the most important result
-- On quota exhaustion: remembers for the session, doesn't retry, tells you naturally
+- Prioritizes festivals, concerts, cultural events
+- On quota exhaustion: blocked for session, avatar tells you naturally
 
 ### Location Awareness
-Tell the avatar where you are. It remembers and can answer questions about the place — landmarks, history, culture, what to do, what's famous.
+Tell the avatar where you are. It remembers and answers questions about the place.
 
 ### Conversation Memory
-- Keeps last 20 turns of conversation history
-- On reconnect, feeds recent history so the avatar picks up where it left off
-- Ask "какво си запомнил?" / "what do you remember?" — reports only actual conversation facts, no hallucination
+- Last 20 turns stored in memory
+- On reconnect, recent history injected so conversation continues seamlessly
+- Ask "какво си запомнил?" — reports only actual facts from the conversation
+
+### Avatar Controls
+Under the avatar (visible when connected): mic toggle, waveform indicator (VAD-gated), transcript button. Single row on all screen sizes.
 
 ### Smart Mute
-- Mute disables mic immediately
-- Avatar finishes current turn, then pauses all processing
-- All controls disabled (greyed out) except unmute and disconnect
-- Avatar picture gets dark overlay, title/subtitle/border go grey
-- Unmute restores everything instantly
+- Mute disables mic, VAD pauses, background REST calls skip
+- Avatar finishes current turn, then pauses
+- Topic buttons and quota pills greyed out
+- Dark overlay on avatar, title goes grey
+- Transcript and Settings buttons remain active while muted
 
 ### Error Recovery (The Toilet Protocol)
 - Recoverable errors → toilet break popup + 30s auto-reconnect
 - Quick retry for first 2 failures (2s, 5s), then full 30s break
-- Conversation picks up where it left off
 - Fatal errors (invalid API key) → clears cookie, back to key screen
 
-### UI Controls
-- All controls (topic, IQ, voice, language) debounced at 2 seconds — rapidly clicking applies only the last selection
-- Switching any control immediately interrupts the avatar
-- Inline mic sensitivity slider between mic and disconnect buttons
-- Disconnect button: green when connected, red when disconnected
-- Mic button: green when active, red when muted (with crossed-out icon)
+### Bottom Bar
+Fixed pill-styled bar at the bottom:
+- **iPhone** — PWA installation tutorial with step-by-step screenshots
+- **Chat quota** — remaining / 1500 daily API requests
+- **Grounding quota** — remaining / 100 daily search calls
+- **Настройки** — opens Settings modal
+- **Ресет** — clears API key cookie and reloads
+- **Изход** — disconnects from Gemini
 
-### Quota Bar
-Fixed bottom bar with pill-styled indicators:
-- **Chat quota** (speech bubble icon) — remaining / 1500 daily API requests
-- **Grounding quota** (magnifier icon) — remaining / 100 daily Google Search grounding calls
-- **Reset** — clears API key cookie and reloads
-- **iPhone** — opens the PWA installation tutorial
-
-Counters persist in localStorage across page reloads. When the API returns a 429 (quota exhausted), the grounding counter syncs to 0 immediately. Both counters reset automatically at midnight.
+Counters persist in localStorage. Grounding counter syncs to 0 on API 429. Both reset at midnight.
 
 ### Install as App (PWA)
-Works on iPhone and Android — add to home screen for a fullscreen, app-like experience.
 
 **iPhone (Safari):**
-A built-in interactive tutorial walks you through the steps with screenshots. It opens automatically on first visit (can be dismissed or permanently hidden via "Don't show again" checkbox, Skip, or Finish buttons). You can also open it anytime from the **iPhone** pill button at the bottom of the screen.
+Built-in interactive tutorial opens automatically on first visit. Can be dismissed or permanently hidden. Reopen anytime from the iPhone pill button.
 
 **Android (Chrome):**
-1. Open the app in Chrome
-2. Tap **⋮** menu → **Add to Home Screen** (or accept the install banner)
-3. Icon switches automatically when you toggle dark/light mode (Chrome 128+)
+1. Open in Chrome → **⋮** menu → **Add to Home Screen**
+2. Icon switches with dark/light mode (Chrome 128+)
 
 ## Getting Started
 
 ### 1. Get a Gemini API Key (Free)
-
 1. Go to [Google AI Studio](https://aistudio.google.com/)
 2. Click "Get API Key" → "Create API Key"
 3. Copy it — looks like `AIzaSy...`
 
 ### 2. Run Locally
-
-The app uses ES modules — requires an HTTP server (won't work with `file://`).
-
 ```bash
 cd bai-jelio
 python3 -m http.server 8080
@@ -105,7 +121,6 @@ python3 -m http.server 8080
 ```
 
 ### 3. Connect and Talk
-
 1. Paste your API key
 2. Click the play button
 3. Allow microphone access
@@ -115,62 +130,51 @@ python3 -m http.server 8080
 
 ```
 bai-jelio/
-├── index.html                 # HTML shell — just markup, no logic
+├── index.html                 # HTML + inline scripts (VAD viz, transcript, settings)
 ├── avatar.jpg                 # Avatar image
-├── manifest.webmanifest       # PWA manifest (name, icons, display mode)
-├── sw.js                      # Service worker (network-first caching)
-├── README.md
+├── manifest.webmanifest       # PWA manifest
+├── sw.js                      # Service worker (network-first)
 │
 ├── icons/
-│   ├── icon-light-{180,192,512}.png  # Light theme icons
-│   └── icon-dark-{180,192,512}.png   # Dark theme icons
+│   ├── icon-light-{180,192,512}.png
+│   └── icon-dark-{180,192,512}.png
 │
 ├── images/
-│   └── iphone-step{1-5}.png          # iPhone PWA install tutorial screenshots
+│   └── iphone-step{1-5}.png   # iPhone PWA tutorial screenshots
 │
 ├── css/
 │   └── main.css               # All styles
 │
 ├── js/
-│   ├── app.js                 # Entry point — wires all modules via event bus
-│   ├── events.js              # Pub/sub event bus (decouples everything)
-│   ├── config.js              # Constants, cookies, mutable state (topic/IQ/lang/voice)
-│   ├── connection.js          # WebSocket lifecycle, reconnection, search trigger
+│   ├── app.js                 # Entry point — wires modules via event bus
+│   ├── events.js              # Pub/sub event bus
+│   ├── config.js              # Constants, cookies, mutable state
+│   ├── connection.js          # WebSocket lifecycle, reconnection, search
 │   ├── audio-player.js        # PCM 24kHz playback via Web Audio API
-│   ├── microphone.js          # Mic capture (ScriptProcessor), mute, gain
-│   ├── search.js              # Web search: model knowledge → Google grounding fallback
-│   ├── memory.js              # Conversation history (last 20 turns), reconnect context
-│   ├── intent.js              # Detects if user message needs live data (keywords + LLM)
+│   ├── microphone.js          # Mic capture, mute, VAD integration
+│   ├── vad.js                 # Silero VAD wrapper (sensitivity, hold, ONNX)
+│   ├── search.js              # Web search: model knowledge → grounding fallback
+│   ├── memory.js              # Conversation history (last 20 turns)
+│   ├── intent.js              # Detects search intent (keywords + LLM)
 │   ├── gemini-rest.js         # REST API wrapper with RPM tracking
 │   ├── prompts.js             # Loads .txt templates, assembles system prompts
-│   ├── quota.js               # Daily usage tracking (localStorage)
-│   ├── ui-controls.js         # Topic/IQ/voice/language selectors, debounce
-│   ├── vad.js                 # Silero VAD wrapper (speech detection via ONNX)
-│   ├── waveform.js            # Mic input waveform visualizer (VAD-gated)
-│   ├── render-state.js        # Shared mutable state for canvas rendering
-│   ├── avatar-renderer.js     # Canvas mouth/face drawing (~500 lines)
-│   ├── lip-sync.js            # Viseme mapping, transcript + FFT lip-sync
+│   ├── quota.js               # Daily usage + grounding tracking (localStorage)
+│   ├── ui-controls.js         # Settings modal, topic selection
+│   ├── waveform.js            # Mic waveform visualizer (VAD-gated)
+│   ├── render-state.js        # Shared rendering state
+│   ├── avatar-renderer.js     # Canvas mouth/face drawing
+│   ├── lip-sync.js            # Viseme mapping, FFT lip-sync
 │   ├── eye-renderer.js        # Eyelid drawing, blink state machine
-│   ├── positioning.js         # Drag-to-position editor (hidden, for development)
-│   └── animation.js           # Main requestAnimationFrame loop
+│   ├── positioning.js         # Drag-to-position editor (dev only)
+│   └── animation.js           # requestAnimationFrame loop
 │
 └── prompts/
-    ├── system-base.txt        # Core character prompt with {placeholders}
-    ├── topic-life.txt          # Topic knowledge blocks (8 files)
-    ├── topic-philosophy.txt
-    ├── topic-psychology.txt
-    ├── topic-sociology.txt
-    ├── topic-science.txt
-    ├── topic-politics.txt
-    ├── topic-music.txt
-    ├── topic-literature.txt
-    ├── iq-average.txt          # IQ profiles (3 files)
-    ├── iq-intelligent.txt
-    ├── iq-genius.txt
-    ├── lang-bg.txt             # Language instructions (3 files)
-    ├── lang-en.txt
-    ├── lang-es.txt
-    ├── deferred-knowledge.txt  # Beer + metal knowledge (only on explicit request)
+    ├── system-base.txt         # Drunk character prompt
+    ├── sober-system-base.txt   # Sober character prompt
+    ├── topic-*.txt             # 8 topic knowledge files
+    ├── iq-*.txt                # 3 IQ profile files
+    ├── lang-*.txt              # 3 language instruction files
+    ├── deferred-knowledge.txt  # Beer + metal knowledge
     ├── metalhead.txt           # Metalhead Brewery details
     └── search-trigger.txt      # Search detection instructions
 ```
@@ -178,7 +182,7 @@ bai-jelio/
 ## Architecture
 
 ### Event Bus
-All modules communicate via a pub/sub event bus (`events.js`). No module directly calls another — they emit and listen to events. Key events:
+All modules communicate via pub/sub (`events.js`). Key events:
 
 | Event | Emitted by | Data |
 |-------|-----------|------|
@@ -192,119 +196,41 @@ All modules communicate via a pub/sub event bus (`events.js`). No module directl
 | `turn:interrupted` | connection.js | — |
 | `search:triggered` | connection.js | `{ query }` |
 | `mic:started/stopped/muted` | microphone.js | `{ muted }` |
+| `vad:speech-start/end` | vad.js | — |
 | `ui:topic-changed` | ui-controls.js | `{ topic }` |
 | `ui:iq-changed` | ui-controls.js | `{ transitionMsg }` |
-| `ui:voice-changed` | ui-controls.js | `{ voiceId }` |
-| `ui:lang-changed` | ui-controls.js | `{ switchMsg }` |
-
-### System Instructions
-App-originated messages use `sendSystemInstruction()` which prefixes with `///SYS:`. The system prompt teaches the model to follow these silently without treating them as user speech. User speech uses `sendTextToGemini()` (no prefix).
-
-### Search Flow
-1. Avatar detects search intent → says "Чакай да видя..." + `ТЪРСЯ: query`
-2. `connection.js` detects `ТЪРСЯ:` in accumulated bot text at turnComplete
-3. Phone overlay appears, WebSocket closes
-4. `search.js` tries model knowledge first (no grounding quota)
-5. If model says `NEED_LIVE_DATA`, uses Google Search grounding
-6. On 429: sets `groundingBlocked=true` for session, no more attempts
-7. Results sent back via reconnect prompt, avatar reports in character
+| `ui:settings-reconnect` | ui-controls.js | `{ reason }` |
 
 ### Reconnection
-Single `reconnectReason` enum replaces the old 4-boolean system:
-- `'silent'` — continue conversation seamlessly
+Single `reconnectReason` enum:
+- `'silent'` — continue seamlessly (voice/lang/settings change)
 - `'search'` — report search results
+- `'sober'` / `'drunk'` — personality transition with phrase
 - `'toilet-return'` — funny return from error recovery
 - `null` — fresh connect with casual greeting
-
-## Console Debugging
-
-On app start, a help table is printed to the browser console:
-
-| Command | Description |
-|---------|-------------|
-| `memory.history` | Array of `{role, text}` turns (copy, safe to inspect) |
-| `memory.summary` | Formatted summary used for reconnect |
-| `memory.full` | Full history as readable text |
-| `memory.count` | Number of stored turns |
-| `memory.reconnectPrompt` | Exact text that would be injected on reconnect |
-| `memory.print()` | Print full history to console |
-| `_debugPrompts.getSystemPrompt()` | Current assembled system prompt |
-| `_debugPrompts.getDeferredKnowledge()` | Beer + metal knowledge block |
-
-All read-only — no side effects on the running app.
-
-### Key Console Logs
-- `👤 User: ...` — aggregated user transcript per turn
-- `🍺 Bai Zhelyo: ...` — aggregated bot transcript per turn
-- `[search] ...` — search flow events
-- `[gemini-rest] RPM usage: X/12` — REST API rate tracking
-- `[memory] X turns, Y unsummarized` — memory state (every 5th turn)
-- `Search triggered: ...` — ТЪРСЯ: keyword detected
 
 ## Data Storage
 
 | What | Where | Duration | Purpose |
 |------|-------|----------|---------|
 | API Key | Cookie | 90 days | Auto-connect on return |
+| Sober mode | Cookie | 365 days | Persist personality choice |
+| Tutorial preference | Cookie | 365 days | "Don't show again" |
 | Daily request count | localStorage | 1 day | Chat quota tracking |
 | Daily grounding count | localStorage | 1 day | Grounding quota tracking |
-| Tutorial preference | Cookie | 365 days | "Don't show again" for iPhone tutorial |
 | Conversation history | JS memory | Session | Reconnect context |
-| Everything else | Nowhere | — | No server, pure client-side |
-
-## Known Limitations
-
-### API Quota (Free Tier)
-- **Live Audio**: ~1500 requests/day shared across all models
-- **Google Search grounding**: ~100 per day, tracked in quota bar
-- **REST API**: 15 RPM shared with Live API — REST calls compete for quota
-- After 429 on grounding: blocked for session, avatar says "утре пак"
-
-### Voice Quality
-- Bulgarian accent/stress can be imperfect — depends on voice preset
-- No `languageCode` support in the native audio model's API — language set via system prompt only
-- Speech-to-text for Bulgarian can be garbled, especially with slang
-
-### Connection
-- WebSocket may drop with error 1008 — auto-recovers via toilet protocol
-- Reconnect loses the Gemini session context — relies on conversation history replay
-- Voice change requires full reconnect (voice is set in setup message)
-
-## Editing Prompts
-
-All prompts are in `prompts/*.txt`. Edit them and refresh — no code changes needed.
-
-### Placeholders in system-base.txt
-| Placeholder | Source |
-|-------------|--------|
-| `{lang_speak}` | `lang-{bg/en/es}.txt` → `speak` field |
-| `{topic}` | `topic-{name}.txt` content |
-| `{iq_depth}` | `iq-{level}.txt` → `depth` field |
-| `{iq_style}` | `iq-{level}.txt` → `style` field |
-| `{iq_length}` | `iq-{level}.txt` → `length` field |
-| `{lang_greeting}` | `lang-{bg/en/es}.txt` → `greeting` field |
-| `{lang_rules}` | `lang-{bg/en/es}.txt` → `rules` field |
-
-## Deployment
-
-```bash
-# GitHub Pages
-git push origin main
-# Settings → Pages → Deploy from main branch
-
-# Any static hosting — upload all files preserving directory structure
-# Must be served over HTTP/HTTPS (not file://)
-```
+| Raw transcripts | JS memory | Session | Transcript modal display |
 
 ## Tech Stack
 
 - **Frontend**: HTML/CSS/JS (ES modules, no build step, no dependencies)
 - **AI Model**: Google Gemini 2.5 Flash Native Audio Preview
-- **Voice**: 5 presets via Gemini Live API
+- **Voice**: 10 presets via Gemini Live API
+- **VAD**: Silero VAD v5 via @ricky0123/vad-web (ONNX, loaded from CDN)
 - **Animation**: Canvas 2D lip-sync + blink state machine
 - **Audio**: ScriptProcessorNode (mic), Web Audio API (playback)
-- **VAD**: Silero VAD v5 via @ricky0123/vad-web (ONNX, loaded from CDN)
 - **Search**: Gemini REST API with optional Google Search grounding
+- **Transcript cleanup**: Gemini REST API (grammar/STT correction per turn)
 - **State**: Event bus + cookies + localStorage
 
 ## License
