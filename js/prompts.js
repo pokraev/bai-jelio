@@ -55,7 +55,7 @@ export async function loadPrompts() {
     'topic-science', 'topic-politics', 'topic-music',
     'topic-literature', 'topic-life',
     'iq-average', 'iq-intelligent', 'iq-genius',
-    'lang-bg', 'lang-en', 'lang-es',
+    'lang-bg', 'lang-en', 'lang-es', 'lang-hi',
     'deferred-knowledge', 'search-trigger',
   ];
 
@@ -211,6 +211,7 @@ function buildFallbackPrompt(topic, iq, lang) {
     bg: { speak: 'Говориш САМО на български.', greeting: 'Първо съобщение: кратко поздрави, кажи нещо провокативно/смешно.', rules: 'Помни всичко казано.' },
     en: { speak: 'You speak ONLY in English.', greeting: 'First message: short greeting, something funny.', rules: 'Remember everything said.' },
     es: { speak: 'Hablas SOLO en español.', greeting: 'Primer mensaje: saludo corto, algo gracioso.', rules: 'Recuerda todo lo dicho.' },
+    hi: { speak: 'You speak ONLY in Hindi.', greeting: 'First message: short greeting, something funny.', rules: 'Remember everything said.' },
   };
   const iqP = iqFallback[iq] || iqFallback.intelligent;
   const lP = langFallback[lang] || langFallback.bg;

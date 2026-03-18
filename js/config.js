@@ -27,9 +27,9 @@ export const VOICES = [
 
 // ── Language options ──
 
-export const LANGS = ['bg', 'en', 'es'];
+export const LANGS = ['bg', 'en', 'es', 'hi'];
 
-export const LANG_LABELS = { bg: 'BG', en: 'EN', es: 'ES' };
+export const LANG_LABELS = { bg: 'BG', en: 'EN', es: 'ES', hi: 'HI' };
 
 // ── Topic knowledge descriptions ──
 

@@ -136,7 +136,11 @@ export function saveSettings() {
   // Apply all state changes
   if (voiceChanged) setSelectedVoice(newVoice);
   if (iqChanged) setSelectedIQ(newIQ);
-  if (langChanged) setSelectedLang(newLang);
+  if (langChanged) {
+    setSelectedLang(newLang);
+    // Also switch UI language
+    if (typeof window.switchUILang === 'function') window.switchUILang(newLang);
+  }
   if (modeChanged) {
     setSoberMode(newMode === 'sober');
     setCookie('sober_mode', newMode === 'sober' ? '1' : '', 365);

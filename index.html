@@ -20,17 +20,17 @@
 <body>
 
 <div class="app">
-  <h1>Поговори с бай Жельо<br><span id="subtitle" style="font-style:italic; font-size:0.6em; font-weight:300">Фен на крафт бирите, хейви музиката и приятните разговори</span></h1>
+  <h1><span data-i18n="page_title">Поговори с бай Жельо</span><br><span id="subtitle" data-i18n="subtitle" style="font-style:italic; font-size:0.6em; font-weight:300">Фен на крафт бирите, хейви музиката и приятните разговори</span></h1>
 
   <div class="topics" id="topics">
-    <button class="topic-btn active" onclick="selectTopic(this, 'life')">Живот</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'philosophy')">Философия</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'psychology')">Психология</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'sociology')">Социология</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'science')">Наука</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'politics')">Политика</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'music')">Музика</button>
-    <button class="topic-btn" onclick="selectTopic(this, 'literature')">Литература</button>
+    <button class="topic-btn active" onclick="selectTopic(this, 'life')" data-i18n="topic_life">Живот</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'philosophy')" data-i18n="topic_philosophy">Философия</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'psychology')" data-i18n="topic_psychology">Психология</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'sociology')" data-i18n="topic_sociology">Социология</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'science')" data-i18n="topic_science">Наука</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'politics')" data-i18n="topic_politics">Политика</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'music')" data-i18n="topic_music">Музика</button>
+    <button class="topic-btn" onclick="selectTopic(this, 'literature')" data-i18n="topic_literature">Литература</button>
   </div>
 
   <div id="lipsPopover" style="display:none; width:100%">
@@ -56,7 +56,7 @@
         <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
       </button>
       <div class="waveform idle" id="waveform"></div>
-      <button class="round-btn" id="transcriptBtn" onclick="openTranscriptModal()" title="Транскрипт">
+      <button class="round-btn" id="transcriptBtn" onclick="openTranscriptModal()" data-i18n-title="transcript_title" title="Транскрипт">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
       </button>
       <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
@@ -66,15 +66,15 @@
   </div>
 
   <div class="controls">
-    <button class="cheers-btn" id="cheersBtn" onclick="toggleConnection()" style="display:none">🍺 ¡Vamos!</button>
+    <button class="cheers-btn" id="cheersBtn" onclick="toggleConnection()" style="display:none" data-i18n="cheers">🍺 Наздраве!</button>
     <div class="config-section" id="configSection">
       <div class="config-body">
         <div class="field-group">
-          <label>Gemini API Key
-            <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('visible');" title="Как да получа ключ?">?</button>
+          <label><span data-i18n="api_key_label">Gemini API Key</span>
+            <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('visible');" data-i18n-title="api_key_help" title="Как да получа ключ?">?</button>
           </label>
           <div class="row">
-            <input type="password" id="apiKey" placeholder="Въведете вашият Gemini API key тук">
+            <input type="password" id="apiKey" data-i18n-placeholder="api_key_placeholder" placeholder="Въведете вашият Gemini API key тук">
             <button class="round-btn round-btn-connect" id="connectBtn" onclick="toggleConnection()" title="Connect">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"></polygon></svg>
             </button>
@@ -92,13 +92,13 @@
       <div class="modal-header">
         <div class="modal-title">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-          Как да получа безплатен Gemini ключ?
+          <span data-i18n="help_title">Как да получа безплатен Gemini ключ?</span>
         </div>
         <button class="modal-close" onclick="document.getElementById('helpModal').classList.remove('visible')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
         </button>
       </div>
-      <div class="modal-body help-modal-body">
+      <div class="modal-body help-modal-body" data-i18n-html="help_body">
         <h3>Стъпка по стъпка</h3>
         <ol>
           <li>Отворете <strong>Google AI Studio</strong> в браузъра:<br><code>aistudio.google.com</code></li>
@@ -128,15 +128,15 @@
 <div class="toilet-overlay" id="toiletOverlay">
   <div class="toilet-box">
     <div class="emoji">🚽🍺</div>
-    <div class="msg">Бай Жельо отиде до тоалетната да направи място за още бира. Връща се след малко...</div>
+    <div class="msg" data-i18n="toilet_msg">Бай Жельо отиде до тоалетната да направи място за още бира. Връща се след малко...</div>
     <div class="timer" id="toiletTimer">30</div>
   </div>
 </div>
 <div class="toilet-overlay" id="searchOverlay">
   <div class="toilet-box">
     <div class="emoji">📱🔍</div>
-    <div class="msg">Бай Жельо си грабна телефона и почна да рови нещо...</div>
-    <div class="timer" id="searchStatus">Търси...</div>
+    <div class="msg" data-i18n="search_msg">Бай Жельо си грабна телефона и почна да рови нещо...</div>
+    <div class="timer" id="searchStatus" data-i18n="search_status">Търси...</div>
   </div>
 </div>
 <div class="quota-bar" id="quotaBar">
@@ -146,9 +146,9 @@
   </a>
   <span class="quota-pill" id="quotaDay"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
   <span class="quota-pill" id="quotaGrounding"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
-  <a href="#" class="quota-pill" id="settingsBtn" onclick="openSettings();return false;">Настройки</a>
-  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;">Ресет</a>
-  <a href="#" class="quota-pill" id="disconnectBtn" onclick="disconnect();return false;">Изход</a>
+  <a href="#" class="quota-pill" id="settingsBtn" onclick="openSettings();return false;" data-i18n="pill_settings">Настройки</a>
+  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;" data-i18n="pill_reset">Ресет</a>
+  <a href="#" class="quota-pill" id="disconnectBtn" onclick="disconnect();return false;" data-i18n="pill_exit">Изход</a>
 </div>
 
 <!-- Settings Modal -->
@@ -157,7 +157,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        Настройки
+        <span data-i18n="settings_title">Настройки</span>
       </div>
       <button class="modal-close" onclick="closeSettings()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
@@ -165,58 +165,59 @@
     </div>
     <div class="settings-body">
       <div class="settings-row">
-        <label>Език</label>
+        <label data-i18n="settings_lang">Език</label>
         <div class="custom-select" id="settingsLang" data-value="bg">
           <div class="custom-select-btn"><span>Български</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
           <div class="custom-select-menu">
-            <div class="custom-select-item active" data-val="bg">Български</div>
-            <div class="custom-select-item" data-val="en">English</div>
-            <div class="custom-select-item" data-val="es">Español</div>
+            <div class="custom-select-item active" data-val="bg" data-i18n="lang_bg">Български</div>
+            <div class="custom-select-item" data-val="en" data-i18n="lang_en">English</div>
+            <div class="custom-select-item" data-val="es" data-i18n="lang_es">Español</div>
+            <div class="custom-select-item" data-val="hi" data-i18n="lang_hi">हिन्दी</div>
           </div>
         </div>
       </div>
       <div class="settings-row">
-        <label>Глас</label>
+        <label data-i18n="settings_voice">Глас</label>
         <div class="custom-select" id="settingsVoice" data-value="Enceladus">
           <div class="custom-select-btn"><span>Enceladus (Breathy)</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
           <div class="custom-select-menu" id="settingsVoiceMenu"></div>
         </div>
       </div>
       <div class="settings-row">
-        <label>Интелигентност</label>
+        <label data-i18n="settings_iq">Интелигентност</label>
         <div class="custom-select" id="settingsIQ" data-value="intelligent">
           <div class="custom-select-btn"><span>Интелигентен</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
           <div class="custom-select-menu">
-            <div class="custom-select-item" data-val="genius">Гига</div>
-            <div class="custom-select-item active" data-val="intelligent">Мега</div>
-            <div class="custom-select-item" data-val="average">Турбо</div>
+            <div class="custom-select-item" data-val="genius" data-i18n="iq_giga">Гига</div>
+            <div class="custom-select-item active" data-val="intelligent" data-i18n="iq_mega">Мега</div>
+            <div class="custom-select-item" data-val="average" data-i18n="iq_turbo">Турбо</div>
           </div>
         </div>
       </div>
       <div class="settings-row">
-        <label>Режим</label>
+        <label data-i18n="settings_mode">Режим</label>
         <div class="custom-select" id="settingsMode" data-value="drunk">
           <div class="custom-select-btn"><span>Готиния</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
           <div class="custom-select-menu">
-            <div class="custom-select-item active" data-val="drunk">Готиния</div>
-            <div class="custom-select-item" data-val="sober">Трезвен</div>
+            <div class="custom-select-item active" data-val="drunk" data-i18n="mode_drunk">Готиния</div>
+            <div class="custom-select-item" data-val="sober" data-i18n="mode_sober">Трезвен</div>
           </div>
         </div>
       </div>
       <div class="settings-divider"></div>
       <div class="settings-vad">
         <div class="settings-vad-left">
-          <label>Детекция на глас</label>
-          <p class="settings-vad-desc">Настройте кога микрофонът улавя говор. Плъзнете нагоре/надолу за чувствителност, наляво/надясно за търпение преди прекъсване.</p>
+          <label data-i18n="vad_title">Детекция на глас</label>
+          <p class="settings-vad-desc" data-i18n="vad_desc">Настройте кога микрофонът улавя говор. Плъзнете нагоре/надолу за чувствителност, наляво/надясно за търпение преди прекъсване.</p>
         </div>
         <div class="settings-vad-right">
           <canvas id="vadVizSettings" width="140" height="70" class="vad-viz vad-viz-large"></canvas>
-          <button class="settings-vad-reset" onclick="resetVadDefaults()">По подразбиране</button>
+          <button class="settings-vad-reset" onclick="resetVadDefaults()" data-i18n="vad_reset">По подразбиране</button>
         </div>
       </div>
     </div>
     <div class="settings-footer">
-      <button class="btn btn-save" onclick="saveSettings()">Запази</button>
+      <button class="btn btn-save" onclick="saveSettings()" data-i18n="settings_save">Запази</button>
     </div>
   </div>
 </div>
@@ -227,7 +228,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
-        Транскрипт
+        <span data-i18n="transcript_title">Транскрипт</span>
       </div>
       <button class="modal-close" onclick="closeTranscriptModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
@@ -243,7 +244,7 @@
     <div class="modal-header">
       <div class="modal-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15.5 1.5c-1.1.2-2.3.9-3 1.8-.7.8-1.2 2-1 3.1 1.2.1 2.4-.5 3.1-1.4.7-.9 1.1-2 .9-3.5zM18.5 12.7c0-2.7 2.2-4 2.3-4.1-1.3-1.9-3.2-2.1-3.9-2.2-1.6-.2-3.2 1-4 1s-2.1-1-3.5-.9c-1.8.1-3.4 1-4.3 2.6-1.9 3.2-.5 8 1.3 10.7.9 1.3 2 2.8 3.4 2.7 1.4-.1 1.9-.9 3.5-.9s2.1.9 3.5.9c1.5 0 2.4-1.3 3.3-2.7 1-1.5 1.5-3 1.5-3-.1-.1-2.8-1.1-2.8-4.1z"/></svg>
-        Как да инсталирам бай Жельо на моя айфон
+        <span data-i18n="iphone_title">Как да инсталирам бай Жельо на моя айфон</span>
       </div>
       <button class="modal-close" onclick="document.getElementById('iphoneModal').classList.remove('visible')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
@@ -253,40 +254,40 @@
     <div class="iphone-steps" id="iphoneSteps">
       <div class="iphone-step active" data-step="0" onclick="iphoneTutorialStep(0)">
         <div class="step-indicator"><div class="step-dot"><div class="dot-inner"></div></div><div class="step-line"></div></div>
-        <div class="step-body"><p class="step-text">Отвори в Safari и натисни трите точки (...) в долният десен ъгъл.</p><img class="step-img" src="images/iphone-step1.png" alt="Стъпка 1"></div>
+        <div class="step-body"><p class="step-text" data-i18n="iphone_step1">Отвори в Safari и натисни трите точки (...) в долният десен ъгъл.</p><img class="step-img" src="images/iphone-step1.png" alt="Стъпка 1"></div>
       </div>
       <div class="iphone-step" data-step="1" onclick="iphoneTutorialStep(1)">
         <div class="step-indicator"><div class="step-dot"><div class="dot-inner"></div></div><div class="step-line"></div></div>
-        <div class="step-body"><p class="step-text">Натисни Share бутона.</p><img class="step-img" src="images/iphone-step2.png" alt="Стъпка 2"></div>
+        <div class="step-body"><p class="step-text" data-i18n="iphone_step2">Натисни Share бутона.</p><img class="step-img" src="images/iphone-step2.png" alt="Стъпка 2"></div>
       </div>
       <div class="iphone-step" data-step="2" onclick="iphoneTutorialStep(2)">
         <div class="step-indicator"><div class="step-dot"><div class="dot-inner"></div></div><div class="step-line"></div></div>
-        <div class="step-body"><p class="step-text">Натисни View More.</p><img class="step-img" src="images/iphone-step3.png" alt="Стъпка 3"></div>
+        <div class="step-body"><p class="step-text" data-i18n="iphone_step3">Натисни View More.</p><img class="step-img" src="images/iphone-step3.png" alt="Стъпка 3"></div>
       </div>
       <div class="iphone-step" data-step="3" onclick="iphoneTutorialStep(3)">
         <div class="step-indicator"><div class="step-dot"><div class="dot-inner"></div></div><div class="step-line"></div></div>
-        <div class="step-body"><p class="step-text">Натисни Add to Home Screen.</p><img class="step-img" src="images/iphone-step4.png" alt="Стъпка 4"></div>
+        <div class="step-body"><p class="step-text" data-i18n="iphone_step4">Натисни Add to Home Screen.</p><img class="step-img" src="images/iphone-step4.png" alt="Стъпка 4"></div>
       </div>
       <div class="iphone-step" data-step="4" onclick="iphoneTutorialStep(4)">
         <div class="step-indicator"><div class="step-dot"><div class="dot-inner"></div></div></div>
-        <div class="step-body"><p class="step-text">Натисни Add. Бай Жельо е вече при иконките на вашият телефон!</p><img class="step-img" src="images/iphone-step5.png" alt="Стъпка 5"></div>
+        <div class="step-body"><p class="step-text" data-i18n="iphone_step5">Натисни Add. Бай Жельо е вече при иконките на вашият телефон!</p><img class="step-img" src="images/iphone-step5.png" alt="Стъпка 5"></div>
       </div>
     </div>
 
     <div class="iphone-nav">
-      <button class="round-btn iphone-round" id="iphonePrev" onclick="iphoneTutorialStep(currentIphoneStep-1)" title="Назад">
+      <button class="round-btn iphone-round" id="iphonePrev" onclick="iphoneTutorialStep(currentIphoneStep-1)" data-i18n-title="iphone_prev" title="Назад">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
       </button>
-      <label class="iphone-checkbox" title="Не показвай пак">
+      <label class="iphone-checkbox" data-i18n-title="iphone_dont_show" title="Не показвай пак">
         <input type="checkbox" id="iphoneDontShow" onchange="setCookie('iphone_tutorial_hide', this.checked ? '1' : '', 365)">
         <span class="checkbox-mark"></span>
-        Не показвай пак
+        <span data-i18n="iphone_dont_show">Не показвай пак</span>
       </label>
       <div class="iphone-nav-right">
-        <button class="round-btn iphone-round" id="iphoneSkip" onclick="setCookie('iphone_tutorial_hide','1',365);document.getElementById('iphoneModal').classList.remove('visible')" title="Пропусни">
+        <button class="round-btn iphone-round" id="iphoneSkip" onclick="setCookie('iphone_tutorial_hide','1',365);document.getElementById('iphoneModal').classList.remove('visible')" data-i18n-title="iphone_skip" title="Пропусни">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5,4 15,12 5,20"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
         </button>
-        <button class="round-btn iphone-round iphone-round-next" id="iphoneNext" onclick="iphoneTutorialStep(currentIphoneStep+1)" title="Напред">
+        <button class="round-btn iphone-round iphone-round-next" id="iphoneNext" onclick="iphoneTutorialStep(currentIphoneStep+1)" data-i18n-title="iphone_next" title="Напред">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
         </button>
       </div>
@@ -439,11 +440,11 @@ function iphoneTutorialStep(n) {
   prev.style.visibility = currentIphoneStep === 0 ? 'hidden' : 'visible';
   if (currentIphoneStep === 4) {
     next.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"></path></svg>';
-    next.title = 'Готово';
+    next.title = typeof t === 'function' ? t('iphone_done') : 'Готово';
     next.onclick = function() { setCookie('iphone_tutorial_hide','1',365); document.getElementById('iphoneModal').classList.remove('visible'); };
   } else {
     next.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>';
-    next.title = 'Напред';
+    next.title = typeof t === 'function' ? t('iphone_next') : 'Напред';
     next.onclick = function() { iphoneTutorialStep(currentIphoneStep + 1); };
   }
   var activeEl = document.querySelector('#iphoneSteps .iphone-step.active');
@@ -519,7 +520,7 @@ async function openTranscriptModal() {
     ? window._rawTranscripts
     : (window.memory ? window.memory.history : []);
   if (history.length === 0) {
-    chat.innerHTML = '<div class="transcript-empty">Няма транскрипт</div>';
+    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'Няма транскрипт') + '</div>';
     return;
   }
 
@@ -542,7 +543,9 @@ async function openTranscriptModal() {
     var cls = turn.role === 'user' ? 'user' : 'bot';
 
     // Show typing indicator while waiting for LLM
-    var typingLabel = turn.role === 'user' ? 'Вие пишете' : 'Бай Жельо пише';
+    var typingLabel = turn.role === 'user'
+      ? (typeof t === 'function' ? t('transcript_user_typing') : 'Вие пишете')
+      : (typeof t === 'function' ? t('transcript_bot_typing') : 'Бай Жельо пише');
     var typingEl = document.createElement('div');
     typingEl.className = 'chat-typing' + (turn.role === 'user' ? ' chat-typing-user' : '');
     typingEl.innerHTML = '<span class="typing-label">' + typingLabel + '</span><span class="typing-dots"></span>';

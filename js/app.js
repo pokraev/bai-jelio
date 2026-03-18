@@ -20,6 +20,7 @@ import { setIsSpeaking } from './render-state.js';
 import { feedTranscriptToLipSync, clearTranscriptQueue, driveLipSyncFromAudio } from './lip-sync.js';
 import { appendTranscript } from './memory.js';
 import { initWaveform, startWaveformAnimation, resetWaveform } from './waveform.js';
+import { initI18n, t, switchUILang } from './i18n.js';
 
 // ── Expose functions to inline onclick handlers in HTML ──
 window.selectTopic = selectTopic;
@@ -38,6 +39,8 @@ window.disconnect = disconnect;
 window.setCookie = setCookie;
 window.getCookie = getCookie;
 window.getSelectedLang = getSelectedLang;
+window.t = t;
+window.switchUILang = switchUILang;
 
 // Debug: read-only prompt inspection from console
 window._debugPrompts = { getDeferredKnowledge, getSystemPrompt };
@@ -55,6 +58,9 @@ function toggleConnection() {
 // ── Initialization ──
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Init i18n (detects lang from URL/cookie, loads translations, applies)
+  await initI18n();
+
   // Load prompt text files
   await loadPrompts();
 
