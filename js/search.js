@@ -66,7 +66,7 @@ export async function searchAndNarrate(query, opts) {
     'IMPORTANT: Respond with TWO sections separated by ---ITEMS--- marker.\n' +
     'Section 1: A natural spoken summary in ' + responseLang + '. Max 150 words. No markdown.\n' +
     'Section 2: After ---ITEMS---, list each result as one line: TITLE | SHORT_DESCRIPTION (max 15 words, in ' + responseLang + ')\n' +
-    'STRICT: NO duplicate results. Each item must be unique — different event/topic. If multiple sources mention the same thing, merge into ONE item.\n' +
+    'STRICT: NO duplicate results. Each item must be unique. Maximum 5 items — pick the most relevant/interesting ones. Merge similar items into one.\n' +
     'Example:\n' +
     'Here are today\'s events in Valencia...\n' +
     '---ITEMS---\n' +

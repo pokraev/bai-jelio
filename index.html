@@ -1197,10 +1197,10 @@ async function renderSummary(turns, dateStr, hourVal) {
       'Summarize this conversation. Use these sections with **bold headings**:\n' +
       '**' + h.topics + '** — main subjects discussed (bullet points)\n' +
       '**' + h.keyPoints + '** — important facts, ideas, or arguments (bullet points)\n' +
-      '**' + h.agreements + '** — things both sides agreed on (bullet points, skip if none)\n' +
-      '**' + h.disagreements + '** — things they disagreed on (bullet points, skip if none)\n' +
-      '**' + h.decisions + '** — any conclusions, plans, or commitments made (bullet points, skip if none)\n' +
-      'STRICT RULE: Only include information explicitly stated in the conversation text below. Do NOT invent, assume, or hallucinate anything not directly written in the transcript. If user messages are missing (only bot messages visible), summarize ONLY what the bot said — do NOT guess what the user said.\n' +
+      '**' + h.agreements + '** — things both sides EXPLICITLY agreed on in the text (bullet points, skip if none)\n' +
+      '**' + h.disagreements + '** — ONLY where one person explicitly contradicted or disagreed with the other. Must be a clear "no", "I disagree", or opposing statement. Do NOT list differences in opinion as disagreements unless one person directly challenged the other. Skip if none.\n' +
+      '**' + h.decisions + '** — any conclusions, plans, or commitments explicitly made (bullet points, skip if none)\n' +
+      'STRICT RULE: Only include information EXPLICITLY stated in the conversation text below. Do NOT invent, assume, infer, or hallucinate anything. If something was not directly said, do NOT include it. If user messages are missing (only bot messages visible), summarize ONLY what the bot said — do NOT guess what the user said.\n' +
       'The summary is written from MY perspective (the user). Use first person singular for "' + userName + '" (I asked, I wanted — NOT "user asks"). Use first person plural when both participants agree/share something (we agreed, we both think — NOT "they both think"). Conjugate all verbs accordingly in ' + langName + '.\n' +
       'Keep it under 400 words. Skip empty sections. Write ONLY the summary in ' + langName + ', no preamble.\n\n' +
       'CONVERSATION:\n' + convText
