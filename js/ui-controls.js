@@ -1,28 +1,18 @@
 // ──────────────────────────────────────────────────────
 // ui-controls.js — All UI interaction code
 // ──────────────────────────────────────────────────────
-// Topics, IQ, voice, language, status, wake lock,
-// connect/disconnect button handlers.
+// Topics, settings modal, status, wake lock.
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
-
-// ── Debounce: 2s delay, last selected wins ──────────
-const _debounceTimers = {};
-function debouncedEmit(key, event, data, delay) {
-  if (_debounceTimers[key]) clearTimeout(_debounceTimers[key]);
-  _debounceTimers[key] = setTimeout(() => {
-    _debounceTimers[key] = null;
-    bus.emit(event, data);
-  }, delay || 2000);
-}
 import {
   VOICES, LANGS, LANG_LABELS, IQ_LEVELS, IQ_NAMES, TOPIC_KNOWLEDGE,
   getSelectedTopic, setSelectedTopic,
   getSelectedIQ, setSelectedIQ,
   getSelectedLang, setSelectedLang,
   getSelectedVoice, setSelectedVoice,
-  getCookie,
+  getSoberMode, setSoberMode,
+  getCookie, setCookie,
 } from './config.js';
 import { getIQProfile, getLangPrompt } from './prompts.js';
 
@@ -43,11 +33,6 @@ export function releaseWakeLock() {
 
 // ── Status Display ──────────────────────────────────
 
-/**
- * Set the status text in the UI.
- * @param {string} msg
- * @param {boolean} [active]
- */
 export function setStatus(msg, active) {
   const el = document.getElementById('status');
   if (!el) return;
@@ -57,139 +42,130 @@ export function setStatus(msg, active) {
 
 // ── Topic Selection ─────────────────────────────────
 
-/**
- * Select a named topic (philosophy, psychology, etc.).
- * Emits 'ui:topic-changed' with the new topic.
- * @param {HTMLElement} btn — the clicked button
- * @param {string} topic — topic key
- */
 export function selectTopic(btn, topic) {
   setSelectedTopic(topic);
   document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  debouncedEmit('topic', 'ui:topic-changed', { topic });
+  bus.emit('ui:topic-changed', { topic });
 }
 
+// ── Settings Modal ──────────────────────────────────
 
-
-// ── IQ Selection ────────────────────────────────────
-
-export function toggleIQMenu() {
-  const menu = document.getElementById('iqMenu');
-  const btn = document.getElementById('iqBtn');
-  const isOpen = menu.classList.contains('open');
-  menu.classList.toggle('open');
-  btn.classList.toggle('open');
-  if (!isOpen) {
-    setTimeout(() => document.addEventListener('click', closeIQMenuOutside, { once: true }), 0);
-  }
-}
-
-function closeIQMenuOutside(e) {
-  const wrap = document.getElementById('iqWrap');
-  if (!wrap.contains(e.target)) {
-    document.getElementById('iqMenu').classList.remove('open');
-    document.getElementById('iqBtn').classList.remove('open');
-  }
-}
+let _settingsMuted = false;
 
 /**
- * Select an IQ level from the menu.
- * @param {string} newIQ — 'average', 'intelligent', or 'genius'
+ * Populate voice menu items on first use.
  */
-export function selectIQ(newIQ) {
-  document.getElementById('iqMenu').classList.remove('open');
-  document.getElementById('iqBtn').classList.remove('open');
-  document.querySelectorAll('.iq-menu-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.iq === newIQ);
-  });
-  document.getElementById('iqBtnLabel').textContent = IQ_NAMES[newIQ];
-  changeIQ(newIQ);
-}
-
-/**
- * Change IQ and emit event if connected.
- * @param {string} newIQ
- */
-export function changeIQ(newIQ) {
-  const oldIQ = getSelectedIQ();
-  setSelectedIQ(newIQ);
-  const iq = getIQProfile(newIQ);
-  const langReminder = (getLangPrompt(getSelectedLang()) || {}).speak || '';
-  const transitionMsg = 'СИСТЕМНА ИНСТРУКЦИЯ: ' + langReminder + ' От сега нататък отговаряй на това ниво: ' + (iq.depth || '') + ' ' + (iq.style || '') + ' Дължина: ' + (iq.length || '') + ' ' +
-    'Направи кратък и забавен преход — импровизирай, бъди естествен и смешен. После продължи разговора на новото ниво.';
-  debouncedEmit('iq', 'ui:iq-changed', { oldIQ, newIQ, transitionMsg });
-}
-
-// ── Voice Selection ─────────────────────────────────
-
-export function toggleVoiceMenu() {
-  const menu = document.getElementById('voiceMenu');
-  const btn = document.getElementById('voiceBtn');
-  const isOpen = menu.classList.toggle('open');
-  btn.classList.toggle('open', isOpen);
-  if (isOpen) {
-    setTimeout(() => document.addEventListener('click', closeVoiceMenuOutside, { once: true }), 0);
-  }
-}
-
-function closeVoiceMenuOutside(e) {
-  const wrap = document.getElementById('voiceWrap');
-  if (!wrap.contains(e.target)) {
-    document.getElementById('voiceMenu').classList.remove('open');
-    document.getElementById('voiceBtn').classList.remove('open');
-  }
-}
-
-/**
- * Select a voice.
- * @param {string} voiceId
- */
-export function selectVoice(voiceId) {
-  document.getElementById('voiceMenu').classList.remove('open');
-  document.getElementById('voiceBtn').classList.remove('open');
-  document.querySelectorAll('#voiceMenu .iq-menu-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.voice === voiceId);
-  });
-  document.getElementById('voiceBtnLabel').textContent = voiceId;
-  if (voiceId === getSelectedVoice()) return;
-  setSelectedVoice(voiceId);
-  debouncedEmit('voice', 'ui:voice-changed', { voiceId });
-}
-
-/**
- * Build voice menu items in the DOM.
- * Call once on DOMContentLoaded.
- */
-export function initVoiceMenu() {
-  const menu = document.getElementById('voiceMenu');
-  if (!menu) return;
-  const currentVoice = getSelectedVoice();
+export function initSettingsVoices() {
+  const menu = document.getElementById('settingsVoiceMenu');
+  if (!menu || menu.children.length > 0) return;
   VOICES.forEach(v => {
     const item = document.createElement('div');
-    item.className = 'iq-menu-item' + (v.id === currentVoice ? ' active' : '');
-    item.dataset.voice = v.id;
+    item.className = 'custom-select-item';
+    item.dataset.val = v.id;
     item.textContent = v.label;
-    item.onclick = () => selectVoice(v.id);
     menu.appendChild(item);
   });
 }
 
-// ── Language Cycling ────────────────────────────────
+function setCustomSelect(id, value) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.dataset.value = value;
+  const items = sel.querySelectorAll('.custom-select-item');
+  items.forEach(i => {
+    const isActive = i.dataset.val === value;
+    i.classList.toggle('active', isActive);
+    if (isActive) sel.querySelector('.custom-select-btn span').textContent = i.textContent;
+  });
+}
+
+function getCustomSelect(id) {
+  const sel = document.getElementById(id);
+  return sel ? sel.dataset.value : '';
+}
 
 /**
- * Cycle to the next language.
- * Emits 'ui:lang-changed'.
+ * Open the settings modal — populate selects with current values, mute mic.
  */
-export function cycleLang() {
-  const currentLang = getSelectedLang();
-  const idx = (LANGS.indexOf(currentLang) + 1) % LANGS.length;
-  const newLang = LANGS[idx];
-  setSelectedLang(newLang);
-  document.getElementById('langLabel').textContent = LANG_LABELS[newLang];
-  const langNames = { bg: 'български', en: 'English', es: 'español' };
-  debouncedEmit('lang', 'ui:lang-changed', {
-    lang: newLang,
-    switchMsg: 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък говори САМО на ' + langNames[newLang] + '. Направи кратък преход към новия език.'
-  });
+export function openSettings() {
+  initSettingsVoices();
+  const modal = document.getElementById('settingsModal');
+
+  // Populate current values
+  setCustomSelect('settingsVoice', getSelectedVoice());
+  setCustomSelect('settingsIQ', getSelectedIQ());
+  setCustomSelect('settingsLang', getSelectedLang());
+  setCustomSelect('settingsMode', getSoberMode() ? 'sober' : 'drunk');
+
+  modal.classList.add('visible');
+
+  // Mute if not already muted
+  _settingsMuted = false;
+  if (typeof window.getIsMuted === 'function' && !window.getIsMuted()) {
+    window.toggleMute();
+    _settingsMuted = true;
+  }
+}
+
+/**
+ * Close settings without saving — revert and unmute.
+ */
+export function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('visible');
+  if (_settingsMuted) {
+    window.toggleMute();
+    _settingsMuted = false;
+  }
+}
+
+/**
+ * Save settings — apply changes, emit events, close modal.
+ */
+export function saveSettings() {
+  const newVoice = getCustomSelect('settingsVoice');
+  const newIQ = getCustomSelect('settingsIQ');
+  const newLang = getCustomSelect('settingsLang');
+  const newMode = getCustomSelect('settingsMode');
+
+  const voiceChanged = newVoice !== getSelectedVoice();
+  const iqChanged = newIQ !== getSelectedIQ();
+  const langChanged = newLang !== getSelectedLang();
+  const modeChanged = (newMode === 'sober') !== getSoberMode();
+
+  // Apply all state changes
+  if (voiceChanged) setSelectedVoice(newVoice);
+  if (iqChanged) setSelectedIQ(newIQ);
+  if (langChanged) setSelectedLang(newLang);
+  if (modeChanged) {
+    setSoberMode(newMode === 'sober');
+    setCookie('sober_mode', newMode === 'sober' ? '1' : '', 365);
+  }
+
+  // Close modal and unmute
+  document.getElementById('settingsModal').classList.remove('visible');
+  if (_settingsMuted) {
+    window.toggleMute();
+    _settingsMuted = false;
+  }
+
+  // Determine what needs to happen:
+  // Voice or lang or mode change → reconnect (system prompt / voice in setup)
+  // IQ only → safeSwitchCommand (no reconnect needed)
+  const needsReconnect = voiceChanged || langChanged || modeChanged;
+
+  if (needsReconnect) {
+    // Set reconnect reason based on mode change
+    if (modeChanged) {
+      bus.emit('ui:settings-reconnect', { reason: newMode === 'sober' ? 'sober' : 'drunk' });
+    } else {
+      bus.emit('ui:settings-reconnect', { reason: 'silent' });
+    }
+  } else if (iqChanged) {
+    const iq = getIQProfile(newIQ);
+    const langReminder = (getLangPrompt(getSelectedLang()) || {}).speak || '';
+    const transitionMsg = 'СИСТЕМНА ИНСТРУКЦИЯ: ' + langReminder + ' От сега нататък отговаряй на това ниво: ' + (iq.depth || '') + ' ' + (iq.style || '') + ' Дължина: ' + (iq.length || '') + ' ' +
+      'Направи кратък и забавен преход — импровизирай, бъди естествен и смешен. После продължи разговора на новото ниво.';
+    bus.emit('ui:iq-changed', { transitionMsg });
+  }
 }

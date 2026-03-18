@@ -61,7 +61,7 @@ export async function geminiRest(prompt, options) {
     console.log(`[gemini-rest] call recorded, RPM now: ${callTimestamps.length}/${RPM_LIMIT}`);
 
     if (!res.ok) {
-      console.warn('[gemini-rest] ' + model + ' ' + res.status + ' ' + res.statusText);
+      console.warn('[gemini-rest]', model, res.status);
       if (res.status === 429) {
         let retrySeconds = null;
         // Check Retry-After header
@@ -102,7 +102,7 @@ export async function geminiRest(prompt, options) {
 
         lastQuotaRetrySeconds = retrySeconds;
         lastQuotaScope = quotaScope;
-        console.warn('[gemini-rest] grounding_quota_exhausted', { model, retrySeconds, quotaScope });
+        console.warn('[gemini-rest] quota exhausted', { model, retrySeconds, quotaScope });
         return '__429__';
       }
       return null;

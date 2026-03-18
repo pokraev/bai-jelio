@@ -35,8 +35,8 @@ let scriptProcessor = null;
 /** @type {GainNode|null} */
 let micGainNode = null;
 
-/** Current gain value (0.05 .. 4, exponential from slider 0..1) */
-let micGainValue = 0.05 * Math.pow(80, 0.35); // match default slider 0.35
+/** Current gain value — fixed at 1.0 (VAD handles sensitivity now) */
+let micGainValue = 1;
 
 /** Whether mic capture is actively running */
 let isMicActive = false;

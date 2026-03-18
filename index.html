@@ -51,38 +51,23 @@
       <canvas id="mouthCanvas"></canvas>
     </div>
     <div class="stage-actions" id="stageActions" style="display:none">
-      <div class="actions-row actions-row-top">
-        <div class="iq-wrap" id="voiceWrap">
-          <button class="iq-btn" id="voiceBtn" onclick="toggleVoiceMenu()" title="Глас">
-            <span id="voiceBtnLabel">Enceladus</span>
-            <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-          <div class="iq-menu" id="voiceMenu"></div>
-        </div>
-        <div class="iq-wrap" id="iqWrap">
-          <button class="iq-btn" id="iqBtn" onclick="toggleIQMenu()" title="Ниво на интелигентност">
-            <span id="iqBtnLabel">Интелигентен</span>
-            <svg width="8" height="5" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-          <div class="iq-menu" id="iqMenu">
-            <div class="iq-menu-item" data-iq="genius" onclick="selectIQ('genius')">Гениален</div>
-            <div class="iq-menu-item active" data-iq="intelligent" onclick="selectIQ('intelligent')">Интелигентен</div>
-            <div class="iq-menu-item" data-iq="average" onclick="selectIQ('average')">Среден</div>
-          </div>
-        </div>
-      </div>
-      <div class="actions-row actions-row-bottom">
-        <button class="round-btn lang-btn" id="langBtn" onclick="cycleLang()" title="Language">
-          <span id="langLabel">BG</span>
-        </button>
-        <div class="waveform idle" id="waveform"></div>
+      <div class="actions-row-main">
         <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
           <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
           <svg id="micOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
         </button>
-        <input type="range" id="micGain" min="0" max="1" step="0.01" value="0.35" oninput="setMicGain(this.value)" title="Mic sensitivity" style="width:40px; display:none" class="mic-gain-inline">
+        <div class="waveform idle" id="waveform"></div>
+        <input type="range" id="vadSensitivity" min="0" max="1" step="0.01" value="0.5" oninput="setVadSensitivity(this.value)" title="VAD sensitivity" style="width:40px; display:none" class="mic-gain-inline">
         <button class="round-btn round-btn-danger" id="disconnectBtn" onclick="disconnect()" title="Disconnect">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+        </button>
+      </div>
+      <div class="actions-row-secondary">
+        <button class="round-btn" id="transcriptBtn" onclick="openTranscriptModal()" title="Транскрипт">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
+        </button>
+        <button class="round-btn" id="settingsBtn" onclick="openSettings()" title="Настройки">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
         <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -166,17 +151,72 @@
   </div>
 </div>
 <div class="quota-bar" id="quotaBar">
-  <button class="round-btn transcript-btn" id="transcriptBtn" onclick="openTranscriptModal()" title="Транскрипт">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
-  </button>
-  <a href="#" class="quota-pill" id="soberBtn" onclick="toggleSoberMode();return false;"></a>
-  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;">Reset</a>
   <a href="#" class="quota-pill" onclick="document.getElementById('iphoneModal').classList.add('visible');iphoneTutorialStep(0);return false;">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15.5 1.5c-1.1.2-2.3.9-3 1.8-.7.8-1.2 2-1 3.1 1.2.1 2.4-.5 3.1-1.4.7-.9 1.1-2 .9-3.5zM18.5 12.7c0-2.7 2.2-4 2.3-4.1-1.3-1.9-3.2-2.1-3.9-2.2-1.6-.2-3.2 1-4 1s-2.1-1-3.5-.9c-1.8.1-3.4 1-4.3 2.6-1.9 3.2-.5 8 1.3 10.7.9 1.3 2 2.8 3.4 2.7 1.4-.1 1.9-.9 3.5-.9s2.1.9 3.5.9c1.5 0 2.4-1.3 3.3-2.7 1-1.5 1.5-3 1.5-3-.1-.1-2.8-1.1-2.8-4.1z"/></svg>
     iPhone
   </a>
-  <span id="quotaDay"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
-  <span id="quotaGrounding"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+  <span class="quota-pill" id="quotaDay"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
+  <span class="quota-pill" id="quotaGrounding"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+  <a href="#" class="quota-pill" onclick="setCookie('gemini_api_key','',-1);location.reload();return false;">Reset</a>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="settingsModal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal-card settings-modal-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Настройки
+      </div>
+      <button class="modal-close" onclick="closeSettings()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-row">
+        <label>Език</label>
+        <div class="custom-select" id="settingsLang" data-value="bg">
+          <div class="custom-select-btn"><span>Български</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="custom-select-menu">
+            <div class="custom-select-item active" data-val="bg">Български</div>
+            <div class="custom-select-item" data-val="en">English</div>
+            <div class="custom-select-item" data-val="es">Español</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Глас</label>
+        <div class="custom-select" id="settingsVoice" data-value="Enceladus">
+          <div class="custom-select-btn"><span>Enceladus (Breathy)</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="custom-select-menu" id="settingsVoiceMenu"></div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Интелигентност</label>
+        <div class="custom-select" id="settingsIQ" data-value="intelligent">
+          <div class="custom-select-btn"><span>Интелигентен</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="custom-select-menu">
+            <div class="custom-select-item" data-val="genius">Гига</div>
+            <div class="custom-select-item active" data-val="intelligent">Мега</div>
+            <div class="custom-select-item" data-val="average">Турбо</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Режим</label>
+        <div class="custom-select" id="settingsMode" data-value="drunk">
+          <div class="custom-select-btn"><span>Готиния</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="custom-select-menu">
+            <div class="custom-select-item active" data-val="drunk">Готиния</div>
+            <div class="custom-select-item" data-val="sober">Трезвен</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="settings-footer">
+      <button class="btn btn-save" onclick="saveSettings()">Запази</button>
+    </div>
+  </div>
 </div>
 
 <!-- Transcript Modal -->
@@ -286,6 +326,30 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// ── Custom select dropdowns ──
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.custom-select-btn');
+  if (btn) {
+    var sel = btn.parentElement;
+    // Close all others
+    document.querySelectorAll('.custom-select.open').forEach(function(s) { if (s !== sel) s.classList.remove('open'); });
+    sel.classList.toggle('open');
+    return;
+  }
+  var item = e.target.closest('.custom-select-item');
+  if (item) {
+    var sel = item.closest('.custom-select');
+    sel.querySelectorAll('.custom-select-item').forEach(function(i) { i.classList.remove('active'); });
+    item.classList.add('active');
+    sel.dataset.value = item.dataset.val;
+    sel.querySelector('.custom-select-btn span').textContent = item.textContent;
+    sel.classList.remove('open');
+    return;
+  }
+  // Click outside — close all
+  document.querySelectorAll('.custom-select.open').forEach(function(s) { s.classList.remove('open'); });
+});
+
 var transcriptAbort = null;
 
 function closeTranscriptModal() {
@@ -297,7 +361,7 @@ function closeTranscriptModal() {
     window._transcriptMuted = false;
   }
 }
-var TYPE_SPEED_MS = 30;
+var TYPE_SPEED_MS = 38;
 var PREFETCH_PCT = 0.9; // start prefetching next turn at 90% typed
 
 async function openTranscriptModal() {
@@ -315,7 +379,9 @@ async function openTranscriptModal() {
   }
   var signal = transcriptAbort.signal;
 
-  var history = window.memory ? window.memory.history : [];
+  var history = window._rawTranscripts && window._rawTranscripts.length > 0
+    ? window._rawTranscripts
+    : (window.memory ? window.memory.history : []);
   if (history.length === 0) {
     chat.innerHTML = '<div class="transcript-empty">Няма транскрипт</div>';
     return;
@@ -339,22 +405,31 @@ async function openTranscriptModal() {
     var icon = turn.role === 'user' ? '👤' : '🍺';
     var cls = turn.role === 'user' ? 'user' : 'bot';
 
-    // Wait for this turn's cleaned text (nextClean may be null if no prefetch happened)
+    // Show typing indicator while waiting for LLM
+    var typingLabel = turn.role === 'user' ? 'Вие пишете' : 'Бай Жельо пише';
+    var typingEl = document.createElement('div');
+    typingEl.className = 'chat-typing' + (turn.role === 'user' ? ' chat-typing-user' : '');
+    typingEl.innerHTML = '<span class="typing-label">' + typingLabel + '</span><span class="typing-dots"></span>';
+    chat.appendChild(typingEl);
+    autoScrollChat(chat);
+
+    // Wait for this turn's cleaned text
     var cleaned;
     try {
       cleaned = nextClean ? await nextClean : await cleanTranscript(turn.text, langRule, signal);
     } catch (e) {
-      if (e.name === 'AbortError') return;
+      if (e.name === 'AbortError') { typingEl.remove(); return; }
       cleaned = turn.text;
     }
     if (!cleaned) cleaned = turn.text;
 
-    // Create bubble (empty, no raw text shown)
+    // Remove typing indicator, show bubble
+    typingEl.remove();
     var bubble = document.createElement('div');
     bubble.className = 'chat-bubble ' + cls;
     bubble.innerHTML = '<span class="bubble-icon">' + icon + '</span> <span class="bubble-text"></span>';
     chat.appendChild(bubble);
-    bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    autoScrollChat(chat);
 
     // Type it out, prefetch next at 90%
     var prefetchStarted = false;
@@ -367,7 +442,7 @@ async function openTranscriptModal() {
         nextClean = cleanTranscript(history[i + 1].text, langRule, signal);
         prefetchStarted = true;
       }
-      if (c % 4 === 0) bubble.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      if (c % 4 === 0) autoScrollChat(chat);
       await new Promise(function(r) { setTimeout(r, TYPE_SPEED_MS); });
     }
     bubble.classList.add('done');
@@ -401,29 +476,35 @@ async function cleanTranscript(text, langRule, signal) {
             '5. CAPITALIZE first letter of each sentence.\n' +
             'Keep the same meaning, tone, slang and colloquial style. Do NOT translate. Do NOT add quotes. Return ONLY the corrected text.\n\n' + text
           }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 500 }
+          generationConfig: { temperature: 0.0, topP: 0.1, topK: 1, maxOutputTokens: 500 }
         }),
         signal: signal
       }
     );
     if (res.status === 429) {
-      console.warn('[transcript] 429 Too Many Requests — waiting 5s before retry');
       await new Promise(function(r) { setTimeout(r, 5000); });
       return text;
     }
-    if (!res.ok) {
-      console.warn('[transcript]', res.status, res.statusText);
-      return text;
-    }
+    if (!res.ok) return text;
     var data = await res.json();
     var result = data.candidates && data.candidates[0] && data.candidates[0].content &&
       data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
       data.candidates[0].content.parts[0].text;
-    return result ? result.trim() : text;
+    return result ? stripForeignChars(result.trim()) : text;
   } catch (e) {
     if (e.name === 'AbortError') throw e;
     return text;
   }
+}
+
+function stripForeignChars(text) {
+  // Keep: Latin, Cyrillic, Greek, digits, punctuation, spaces, common symbols, Spanish accented chars
+  return text.replace(/[^\u0000-\u024F\u0400-\u04FF\u0370-\u03FF\u1E00-\u1EFF\u2000-\u206F\u2018-\u201F\u00A0-\u00BF¿¡""''…—–\s]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+function autoScrollChat(el) {
+  var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  if (atBottom) el.scrollTop = el.scrollHeight;
 }
 
 function escapeHtml(t) {

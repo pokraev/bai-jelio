@@ -11,6 +11,8 @@ import bus from './events.js';
 let vadInstance = null;
 let speaking = false;
 let vadReady = false;
+let currentPositiveThreshold = 0.5;
+let currentNegativeThreshold = 0.35;
 
 /** Whether the user is currently speaking (per Silero VAD) */
 export function isSpeaking() { return speaking; }
@@ -34,9 +36,9 @@ export async function initVad(stream) {
   try {
     vadInstance = await vad.MicVAD.new({
       stream,
-      positiveSpeechThreshold: 0.5,
-      negativeSpeechThreshold: 0.35,
-      redemptionFrames: 8,
+      positiveSpeechThreshold: currentPositiveThreshold,
+      negativeSpeechThreshold: currentNegativeThreshold,
+      redemptionFrames: 16,
       preSpeechPadFrames: 3,
       minSpeechFrames: 3,
       onSpeechStart: () => {
@@ -76,6 +78,23 @@ export function pauseVad() {
 export function resumeVad() {
   if (vadInstance) {
     vadInstance.start();
+  }
+}
+
+/**
+ * Set VAD sensitivity from slider value (0..1).
+ * 0 = most sensitive (picks up whispers), 1 = least sensitive (needs loud speech).
+ * Maps to positiveSpeechThreshold: 0.15 .. 0.85
+ * @param {number|string} val — slider value 0..1
+ */
+export function setVadSensitivity(val) {
+  const t = parseFloat(val);
+  // Invert: slider 0 = sensitive (low threshold), slider 1 = strict (high threshold)
+  currentPositiveThreshold = 0.15 + t * 0.7;  // 0.15 .. 0.85
+  currentNegativeThreshold = currentPositiveThreshold - 0.15; // always 0.15 below
+  if (vadInstance) {
+    vadInstance.positiveSpeechThreshold = currentPositiveThreshold;
+    vadInstance.negativeSpeechThreshold = currentNegativeThreshold;
   }
 }
 

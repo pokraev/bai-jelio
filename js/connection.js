@@ -25,7 +25,7 @@ import {
   GEMINI_WS_URL, GEMINI_MODEL,
   getSelectedVoice, getSelectedTopic, getSelectedLang,
   getCookie, setCookie, base64ToUint8Array,
-  getSoberMode, setSoberMode,
+  getSoberMode,
 } from './config.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import {
@@ -308,7 +308,7 @@ export function disconnect() {
   connectBtn.classList.remove('connected');
   connectBtn.disabled = false;
   document.getElementById('stageActions').style.display = 'none';
-  document.getElementById('micGain').style.display = 'none';
+  document.getElementById('vadSensitivity').style.display = 'none';
   const savedKey = getCookie('gemini_api_key');
   const cheersBtn = document.getElementById('cheersBtn');
   if (savedKey) {
@@ -398,34 +398,6 @@ export function setSearchCache(result) {
 export function getIsSearching() { return isSearching; }
 export function setIsSearching(v) { isSearching = v; }
 
-/**
- * Toggle sober/drunk mode — reconnects with new system prompt.
- */
-export function toggleSoberMode() {
-  const goingSober = !getSoberMode();
-  setSoberMode(goingSober);
-  setCookie('sober_mode', goingSober ? '1' : '', 365);
-  updateSoberButton();
-  if (_isConnected) {
-    reconnectReason = goingSober ? 'sober' : 'drunk';
-    audioPlayer.stop();
-    bus.emit('audio:playing-changed', { playing: false });
-    if (ws) { ws.close(); ws = null; }
-    setWebSocket(null);
-    _isConnected = false;
-    stopMic();
-    connect();
-  }
-}
-
-export function updateSoberButton() {
-  const btn = document.getElementById('soberBtn');
-  if (!btn) return;
-  const sober = getSoberMode();
-  btn.innerHTML = sober
-    ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 11V3a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v8"/><path d="M7 11l-2 9h14l-2-9"/><circle cx="12" cy="16" r="1"/></svg> Върни готиния бай Жельо'
-    : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><circle cx="9" cy="10" r="0.5" fill="currentColor"/><circle cx="15" cy="10" r="0.5" fill="currentColor"/></svg> Изтрезни бай Жельо';
-}
 
 // ── Internal handlers ───────────────────────────────
 
@@ -457,7 +429,7 @@ function handleSetupComplete(apiKey) {
   connectBtn.classList.add('connected');
   connectBtn.disabled = true;
   document.getElementById('stageActions').style.display = 'flex';
-  document.getElementById('micGain').style.display = '';
+  document.getElementById('vadSensitivity').style.display = '';
   document.getElementById('configSection').style.display = 'none';
   const cheersBtn = document.getElementById('cheersBtn');
   if (cheersBtn) cheersBtn.style.display = 'none';
@@ -556,13 +528,16 @@ function handleServerContent(content) {
     audioPlayer.complete();
     trackUsage();
 
-    // Log aggregated transcripts
+    // Log aggregated transcripts and store for transcript modal
+    if (!window._rawTranscripts) window._rawTranscripts = [];
     if (pendingUserText) {
       console.log('👤 User:', pendingUserText.trim());
+      window._rawTranscripts.push({ role: 'user', text: pendingUserText.trim() });
       pendingUserText = '';
     }
     if (pendingBotText) {
       console.log('🍺 Бай Жельо:', pendingBotText.trim());
+      window._rawTranscripts.push({ role: 'bot', text: pendingBotText.trim() });
     }
 
     // Detect search trigger from accumulated bot output
@@ -716,21 +691,10 @@ export async function startWebSearch(query) {
 
 // ── Bus event subscriptions ─────────────────────────
 
-// UI: voice changed — reconnect with new voice
-bus.on('ui:voice-changed', () => {
+// Settings: reconnect with new voice/lang/mode
+bus.on('ui:settings-reconnect', ({ reason }) => {
   if (_isConnected) {
-    console.log('Voice changed — reconnecting');
-    reconnectReason = 'silent';
-    if (ws) { _isConnected = false; ws.close(); ws = null; }
-    setWebSocket(null);
-    connect();
-  }
-});
-
-// UI: language changed — send switch command
-bus.on('ui:lang-changed', () => {
-  if (_isConnected) {
-    reconnectReason = 'silent';
+    reconnectReason = reason || 'silent';
     audioPlayer.stop();
     bus.emit('audio:playing-changed', { playing: false });
     if (ws) { ws.close(); ws = null; }

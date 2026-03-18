@@ -6,11 +6,11 @@ import bus from './events.js';
 import { getCookie, setCookie, setSoberMode, getSelectedLang } from './config.js';
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
-import { startMic, stopMic, toggleMute, setMicGain, setWebSocket, getIsMuted } from './microphone.js';
-import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected, toggleSoberMode, updateSoberButton, stopEnrichmentPipeline, startEnrichmentPipeline, stopSummarizer, startSummarizer } from './connection.js';
+import { startMic, stopMic, toggleMute, setWebSocket, getIsMuted } from './microphone.js';
+import { setVadSensitivity } from './vad.js';
+import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected } from './connection.js';
 import {
-  selectTopic, toggleIQMenu, selectIQ,
-  toggleVoiceMenu, selectVoice, initVoiceMenu, cycleLang,
+  selectTopic, openSettings, closeSettings, saveSettings,
   setStatus, requestWakeLock, releaseWakeLock,
 } from './ui-controls.js';
 import { initQuota } from './quota.js';
@@ -22,23 +22,19 @@ import { appendTranscript } from './memory.js';
 import { initWaveform, startWaveformAnimation, resetWaveform } from './waveform.js';
 
 // ── Expose functions to inline onclick handlers in HTML ──
-// (These will be removed once we migrate to addEventListener)
 window.selectTopic = selectTopic;
-window.toggleIQMenu = toggleIQMenu;
-window.selectIQ = selectIQ;
-window.toggleVoiceMenu = toggleVoiceMenu;
-window.selectVoice = selectVoice;
-window.cycleLang = cycleLang;
+window.openSettings = openSettings;
+window.closeSettings = closeSettings;
+window.saveSettings = saveSettings;
 window.toggleMute = toggleMute;
 window.getIsMuted = getIsMuted;
-window.setMicGain = setMicGain;
+window.setVadSensitivity = setVadSensitivity;
 window.toggleLipsPopover = toggleLipsPopover;
 window.setEditTarget = setEditTarget;
 window.toggleConnection = toggleConnection;
 window.disconnect = disconnect;
 window.setCookie = setCookie;
 window.getCookie = getCookie;
-window.toggleSoberMode = toggleSoberMode;
 window.getSelectedLang = getSelectedLang;
 
 // Debug: read-only prompt inspection from console
@@ -78,15 +74,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     setSoberMode(true);
   }
 
-  // Init voice menu dropdown, waveform bars, sober button
-  initVoiceMenu();
+  // Init waveform bars
   initWaveform();
-  updateSoberButton();
 
   // Init quota tracking UI
   initQuota();
 
-  // Init canvas animation (must match original: getBoundingClientRect + setTransform)
+  // Init canvas animation
   const canvas = document.getElementById('mouthCanvas');
   if (canvas) {
     const ctx = canvas.getContext('2d');
@@ -122,15 +116,15 @@ bus.on('mic:stopped', () => resetWaveform());
 bus.on('mic:destroyed', () => resetWaveform());
 bus.on('mic:muted', ({ muted }) => {
   if (muted) resetWaveform(); else startWaveformAnimation();
-  // Switch mic icon: red muted / green unmuted
+  // Switch mic icon
   const btn = document.getElementById('muteBtn');
   const onIcon = document.getElementById('micOnIcon');
   const offIcon = document.getElementById('micOffIcon');
   if (onIcon) onIcon.style.display = muted ? 'none' : '';
   if (offIcon) offIcon.style.display = muted ? '' : 'none';
   if (btn) btn.classList.toggle('muted', muted);
-  // Disable/enable all controls except mute and disconnect
-  const ids = ['voiceBtn', 'iqBtn', 'langBtn', 'micGain'];
+  // Disable/enable settings button and mic gain
+  const ids = ['vadSensitivity'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.disabled = muted; el.style.opacity = muted ? '0.3' : ''; el.style.pointerEvents = muted ? 'none' : ''; }
@@ -146,13 +140,11 @@ bus.on('mic:muted', ({ muted }) => {
     b.style.opacity = muted ? '0.3' : '';
     b.style.pointerEvents = muted ? 'none' : '';
   });
-  // Disable quota bar pills and transcript button
+  // Disable quota bar pills
   document.querySelectorAll('.quota-pill').forEach(p => {
     p.style.opacity = muted ? '0.15' : '';
     p.style.pointerEvents = muted ? 'none' : 'auto';
   });
-  const tBtn = document.getElementById('transcriptBtn');
-  if (tBtn) { tBtn.style.opacity = muted ? '0.15' : ''; tBtn.style.pointerEvents = muted ? 'none' : ''; }
 });
 
 // Mic started → show green icon
@@ -179,8 +171,7 @@ bus.on('connection:disconnected', () => {
   if (btn) { btn.classList.remove('connected'); btn.classList.add('disconnected'); }
 });
 
-// ── Speaking state (shared between connection and animation via render-state) ──
-
+// ── Speaking state ──
 bus.on('audio:playing-changed', ({ playing }) => {
   setIsSpeaking(playing);
   const stage = document.getElementById('stage');
@@ -194,8 +185,7 @@ bus.on('audio:playing-changed', ({ playing }) => {
   }
 });
 
-// ── Memory: feed AGGREGATED transcripts per turn (not per chunk) ──
-// connection.js emits 'turn:complete' with accumulated text
+// ── Memory: feed AGGREGATED transcripts per turn ──
 let _memBotBuffer = '';
 let _memUserBuffer = '';
 bus.on('transcript:bot', ({ text }) => { _memBotBuffer += text; });
@@ -207,7 +197,7 @@ bus.on('turn:complete', () => {
   _memBotBuffer = '';
 });
 
-// ── Lip-sync wiring: feed transcript text + clear on turn/disconnect ──
+// ── Lip-sync wiring ──
 bus.on('transcript:bot', ({ text }) => feedTranscriptToLipSync(text));
 bus.on('audio:data', ({ audioData }) => driveLipSyncFromAudio(audioData));
 bus.on('turn:complete', () => clearTranscriptQueue());
