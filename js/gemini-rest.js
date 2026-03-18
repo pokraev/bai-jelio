@@ -92,15 +92,20 @@ export async function geminiRest(prompt, options) {
               }
             }
           }
-          const errMsg = (errData.error?.message || '').toLowerCase();
-          if (errMsg.includes('per day') || errMsg.includes('daily')) quotaScope = 'per-day';
-          if (errMsg.includes('per minute')) quotaScope = 'per-minute';
+          const errMsg = (errData.error?.message || '');
+          // Check for small daily limits (e.g. "limit: 20" = free tier RPD)
+          const limitMatch = errMsg.match(/limit:\s*(\d+)/);
+          if (limitMatch && parseInt(limitMatch[1]) <= 100) quotaScope = 'per-day';
+          const errLower = errMsg.toLowerCase();
+          if (errLower.includes('per day') || errLower.includes('daily')) quotaScope = 'per-day';
+          if (errLower.includes('per minute') && quotaScope !== 'per-day') quotaScope = 'per-minute';
         } catch (_) {}
 
-        // If retrySeconds > 3600, likely daily quota
-        if (retrySeconds && retrySeconds > 3600) quotaScope = 'per-day';
-        // If retrySeconds < 120, likely per-minute
-        if (retrySeconds && retrySeconds <= 120) quotaScope = 'per-minute';
+        // Heuristic fallbacks (only if not already determined from error body)
+        if (quotaScope === 'unknown') {
+          if (retrySeconds && retrySeconds > 3600) quotaScope = 'per-day';
+          else if (retrySeconds && retrySeconds <= 120) quotaScope = 'per-minute';
+        }
 
         lastQuotaRetrySeconds = retrySeconds;
         lastQuotaScope = quotaScope;

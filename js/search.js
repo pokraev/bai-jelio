@@ -6,7 +6,7 @@
 // or user explicitly asks for live/current data.
 // This preserves the scarce free-tier grounding quota.
 
-import { geminiRest } from './gemini-rest.js';
+import { geminiRest, getLastQuotaScope } from './gemini-rest.js';
 import { trackGrounding } from './quota.js';
 
 const SEARCH_PROMPT_SUFFIX =
@@ -52,10 +52,31 @@ export async function searchAndNarrate(query, opts) {
     console.log('[search] model knowledge sufficient:', knowledgeResult.substring(0, 200));
     window._lastSearchText = knowledgeResult;
     window._lastSearchQuery = query;
+    // Parse text into items for the modal
+    var lines = knowledgeResult.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+    var items = [];
+    for (var i = 0; i < lines.length && items.length < 5; i++) {
+      var line = lines[i].replace(/^[\*\-•]\s*/, '').replace(/\*\*/g, '').trim();
+      if (!line || line.startsWith('---')) continue;
+      var dashIdx = line.search(/[\-–—:]/);
+      if (dashIdx > 3 && dashIdx < line.length - 3) {
+        items.push({ title: line.substring(0, dashIdx).trim(), desc: line.substring(dashIdx + 1).trim() });
+      } else {
+        items.push({ title: line, desc: '' });
+      }
+    }
+    window._lastSearchItems = items;
+    window._searchWasGrounded = false;
     return knowledgeResult;
   }
 
   // Step 2: Model says it needs live data — use grounded search
+  if (window._groundingBlocked) {
+    console.log('[search] grounding blocked, returning knowledge fallback');
+    // Return null so agent says it can't search live data today
+    window._searchWasGrounded = false;
+    return null;
+  }
   console.log('[search] model needs live data, using google_search grounding...');
   trackGrounding();
 
@@ -78,11 +99,17 @@ export async function searchAndNarrate(query, opts) {
   );
 
   if (groundedResult === '__429__') {
-    console.log('[search] grounding RPM limited, retrying in 12s...');
-    await new Promise(r => setTimeout(r, 12000));
-    groundedResult = await geminiRest(groundingPrompt,
-      { model: 'gemini-2.5-flash', tools: [{ google_search: {} }] }
-    );
+    var scope = getLastQuotaScope();
+    if (scope === 'per-minute') {
+      console.log('[search] grounding RPM limited, retrying in 12s...');
+      await new Promise(r => setTimeout(r, 12000));
+      groundedResult = await geminiRest(groundingPrompt,
+        { model: 'gemini-2.5-flash', tools: [{ google_search: {} }] }
+      );
+    } else {
+      console.log('[search] grounding daily quota exhausted, no retry');
+      window._groundingBlocked = true;
+    }
   }
 
   if (groundedResult === '__429__') return '__429__';
@@ -93,6 +120,7 @@ export async function searchAndNarrate(query, opts) {
 
   console.log('[search] grounded result:', groundedResult.substring(0, 300));
   window._lastSearchQuery = query;
+  window._searchWasGrounded = true;
 
   // Parse structured response
   var parts = groundedResult.split('---ITEMS---');

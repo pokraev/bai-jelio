@@ -452,17 +452,25 @@ function handleSetupComplete(apiKey) {
     reconnectReason = null;
     const results = searchCache || 'Не намерих нищо.';
     searchCache = null;
-    // Open results modal first, then narrate after a short delay
-    if (window._lastSearchItems && window._lastSearchItems.length > 0 && typeof openSearchResults === 'function') {
+    const hasResults = window._lastSearchText || (window._lastSearchItems && window._lastSearchItems.length > 0);
+    if (hasResults && typeof openSearchResults === 'function') {
+      // Has results: open modal first, then narrate after short delay
       openSearchResults();
-    }
-    setTimeout(() => {
+      setTimeout(() => {
+        sendSystemInstruction(
+          getReconnectPrompt('search', {
+            summary, searchResult: results, deferredKnowledge
+          })
+        );
+      }, 1500);
+    } else {
+      // No results / quota exhausted: send instruction immediately
       sendSystemInstruction(
         getReconnectPrompt('search', {
           summary, searchResult: results, deferredKnowledge
         })
       );
-    }, 1500);
+    }
   } else if (reconnectReason === 'silent') {
     reconnectReason = null;
     sendSystemInstruction(
@@ -555,14 +563,26 @@ function handleServerContent(content) {
       if (searchMatch) {
         const query = searchMatch[1].trim();
         console.log('Search triggered:', query);
-        // Show searching image + orbit dot immediately
         const stg = document.getElementById('stage');
         if (stg) stg.classList.add('searching');
         if (typeof startSearchOrbit === 'function') startSearchOrbit();
         pendingBotText = '';
         isSearching = true;
         bus.emit('search:triggered', { query });
-        return; // skip other turnComplete handling
+        return;
+      }
+      // Fallback: bot said it would search but forgot ТЪРСЯ: — use user's text as query
+      if (!searchMatch && /чакай да (видя|проверя|погледна)|дай да (видя|проверя|търся)|ще проверя|ще потърся|let me check|let me search|déjame buscar/i.test(pendingBotText)) {
+        if (lastUserText && lastUserText.length > 5) {
+          console.log('[search] bot promised to search but no ТЪРСЯ:, using user text:', lastUserText);
+          const stg = document.getElementById('stage');
+          if (stg) stg.classList.add('searching');
+          if (typeof startSearchOrbit === 'function') startSearchOrbit();
+          pendingBotText = '';
+          isSearching = true;
+          bus.emit('search:triggered', { query: lastUserText });
+          return;
+        }
       }
       // Detect "show results" trigger from bot
       if (/ПОКАЖИ_РЕЗУЛТАТИ/i.test(pendingBotText)) {
@@ -575,6 +595,13 @@ function handleServerContent(content) {
       if (window._lastSearchText && typeof openSearchResults === 'function') {
         openSearchResults();
       }
+    }
+    // Close search results if modal is open and user spoke (they're done looking)
+    var searchModal = document.getElementById('searchResultsModal');
+    if (searchModal && searchModal.classList.contains('visible') && lastUserText) {
+      if (typeof closeSearchResults === 'function') closeSearchResults();
+      // Tell the agent to not mention closing the window
+      sendSystemInstruction('Прозорецът с резултатите вече е затворен. НЕ споменавай затварянето, НЕ казвай "затварям го". Просто отговори на потребителя и продължи разговора естествено.');
     }
     pendingBotText = '';
 
@@ -663,13 +690,7 @@ export function showToiletBreak() {
  * @param {string} query
  */
 export async function startWebSearch(query) {
-  // If grounding already blocked this session, respond directly without disconnecting
-  if (groundingBlocked) {
-    console.log('[search] grounding blocked for session, skipping');
-    isSearching = false;
-    sendSystemInstruction('НЕ казвай ТЪРСЯ:. Кажи директно: "Абе мой, нали ти казах че днес не мога да търся повече. Утре пак."');
-    return;
-  }
+  // Note: even if grounding is blocked, knowledge search (Gemma) still works
 
   // Crossfade to searching image (dot already started from trigger detection)
   const stage = document.getElementById('stage');
@@ -701,6 +722,7 @@ export async function startWebSearch(query) {
   if (result === '__429__' || result === null) {
     if (result === '__429__') {
       groundingBlocked = true;
+      window._groundingBlocked = true;
       groundingExhausted();
       searchCache = 'СИСТЕМНА ИНСТРУКЦИЯ: От сега нататък НЕ използвай ТЪРСЯ: за нищо. Нямаш достъп до търсене до утре. Ако потребителят поиска да търсиш, кажи директно: "Абе мой, днес не мога да търся повече, утре пак." НЕ казвай "Чакай да видя", НЕ казвай ТЪРСЯ:, просто обясни че не можеш. А сега КАЖИ ТОЧНО ТОВА: "Лек, с тоя безплатен API key, не мога много да търся. Трябва да се ъпгрейдна, щото Гугъл имат някакви лимити ама не съм ги гледал. Утре пак ще мога да търся."';
       console.log('[search] quota exhausted — grounding blocked for session');
