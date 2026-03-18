@@ -129,7 +129,8 @@ bus.on('mic:started', () => startWaveformAnimation());
 bus.on('mic:stopped', () => resetWaveform());
 bus.on('mic:destroyed', () => resetWaveform());
 bus.on('mic:muted', ({ muted }) => {
-  if (muted) resetWaveform(); else startWaveformAnimation();
+  if (muted) resetWaveform();
+  // Waveform restart handled by mic:started event after startMic() completes
   // Switch mic icon
   const btn = document.getElementById('muteBtn');
   const onIcon = document.getElementById('micOnIcon');
