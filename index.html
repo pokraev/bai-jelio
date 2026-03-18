@@ -339,14 +339,15 @@ async function openTranscriptModal() {
     var icon = turn.role === 'user' ? '👤' : '🍺';
     var cls = turn.role === 'user' ? 'user' : 'bot';
 
-    // Wait for this turn's cleaned text
+    // Wait for this turn's cleaned text (nextClean may be null if no prefetch happened)
     var cleaned;
     try {
-      cleaned = await nextClean;
+      cleaned = nextClean ? await nextClean : await cleanTranscript(turn.text, langRule, signal);
     } catch (e) {
       if (e.name === 'AbortError') return;
       cleaned = turn.text;
     }
+    if (!cleaned) cleaned = turn.text;
 
     // Create bubble (empty, no raw text shown)
     var bubble = document.createElement('div');
