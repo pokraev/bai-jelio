@@ -291,7 +291,11 @@ var transcriptAbort = null;
 function closeTranscriptModal() {
   document.getElementById('transcriptModal').classList.remove('visible');
   if (transcriptAbort) { transcriptAbort.abort(); transcriptAbort = null; }
-  if (typeof resumeBackgroundProcessing === 'function') resumeBackgroundProcessing();
+  // Unmute if we muted on open
+  if (typeof getIsMuted === 'function' && getIsMuted() && window._transcriptMuted) {
+    toggleMute();
+    window._transcriptMuted = false;
+  }
 }
 var TYPE_SPEED_MS = 18;
 var PREFETCH_PCT = 0.8; // start prefetching next turn at 80% typed
@@ -303,7 +307,12 @@ async function openTranscriptModal() {
   chat.innerHTML = '';
   if (transcriptAbort) transcriptAbort.abort();
   transcriptAbort = new AbortController();
-  if (typeof pauseBackgroundProcessing === 'function') pauseBackgroundProcessing();
+  // Mute mic while transcript is open (also pauses background processing via mute handler)
+  window._transcriptMuted = false;
+  if (typeof getIsMuted === 'function' && !getIsMuted()) {
+    toggleMute();
+    window._transcriptMuted = true;
+  }
   var signal = transcriptAbort.signal;
 
   var history = window.memory ? window.memory.history : [];

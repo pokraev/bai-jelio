@@ -6,7 +6,7 @@ import bus from './events.js';
 import { getCookie, setCookie, setSoberMode, getSelectedLang } from './config.js';
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
-import { startMic, stopMic, toggleMute, setMicGain, setWebSocket } from './microphone.js';
+import { startMic, stopMic, toggleMute, setMicGain, setWebSocket, getIsMuted } from './microphone.js';
 import { connect, disconnect, sendTextToGemini, safeSwitchCommand, isConnected, toggleSoberMode, updateSoberButton, stopEnrichmentPipeline, startEnrichmentPipeline, stopSummarizer, startSummarizer } from './connection.js';
 import {
   selectTopic, toggleIQMenu, selectIQ,
@@ -30,6 +30,7 @@ window.toggleVoiceMenu = toggleVoiceMenu;
 window.selectVoice = selectVoice;
 window.cycleLang = cycleLang;
 window.toggleMute = toggleMute;
+window.getIsMuted = getIsMuted;
 window.setMicGain = setMicGain;
 window.toggleLipsPopover = toggleLipsPopover;
 window.setEditTarget = setEditTarget;
@@ -39,8 +40,6 @@ window.setCookie = setCookie;
 window.getCookie = getCookie;
 window.toggleSoberMode = toggleSoberMode;
 window.getSelectedLang = getSelectedLang;
-window.pauseBackgroundProcessing = function() { stopEnrichmentPipeline(); stopSummarizer(); };
-window.resumeBackgroundProcessing = function() { startEnrichmentPipeline(); startSummarizer(); };
 
 // Debug: read-only prompt inspection from console
 window._debugPrompts = { getDeferredKnowledge, getSystemPrompt };
