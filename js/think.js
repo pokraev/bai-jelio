@@ -118,26 +118,33 @@ export async function startDeepThink(query, deps) {
     }
 
     if (!result) {
-      // Gemma 12B fallback
-      console.log('[think] using Gemma 12B fallback');
-      const res = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key=' + encodeURIComponent(apiKey),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 4000 }
-          })
+      // Gemma fallback — try 12B, then 4B
+      const models = ['gemma-3-12b-it', 'gemma-3-4b-it'];
+      for (const model of models) {
+        console.log('[think] trying', model);
+        const res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(apiKey),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 4000 }
+            })
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          result = data.candidates && data.candidates[0] && data.candidates[0].content &&
+            data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+            data.candidates[0].content.parts[0].text;
+          if (result) break;
+        } else {
+          console.warn('[think]', model, 'error:', res.status);
+          if (res.status === 429) {
+            await new Promise(r => setTimeout(r, 3000));
+          }
         }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        result = data.candidates && data.candidates[0] && data.candidates[0].content &&
-          data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-          data.candidates[0].content.parts[0].text;
-      } else {
-        console.error('[think] Gemma error:', res.status);
       }
     }
   } catch (e) {
