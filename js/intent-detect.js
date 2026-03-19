@@ -7,15 +7,16 @@
 
 const THINK_RE = /МИСЛИ:\s*(.+)/i;
 const SEARCH_RE = /ТЪРСЯ:\s*(.+)/i;
+const SUMMARY_RE = /РЕЗЮМЕ:\s*(.*)/i;
 const SHOW_RESULTS_RE = /ПОКАЖИ_РЕЗУЛТАТИ/i;
 const SEARCH_FALLBACK_RE = /чакай да (видя|проверя|погледна)|дай да (видя|проверя|търся)|ще проверя|ще потърся|let me check|let me search|déjame buscar/i;
 
 /**
  * Parse accumulated bot output for trigger keywords.
- * Priority: МИСЛИ: > ТЪРСЯ: > fallback search > ПОКАЖИ_РЕЗУЛТАТИ
+ * Priority: МИСЛИ: > ТЪРСЯ: > РЕЗЮМЕ: > fallback search > ПОКАЖИ_РЕЗУЛТАТИ
  * @param {string} botText
  * @param {string} lastUserText — for fallback search
- * @returns {{ type: 'think'|'search'|'show-results'|'none', query: string|null }}
+ * @returns {{ type: 'think'|'search'|'summary'|'show-results'|'none', query: string|null }}
  */
 export function parseBotIntent(botText, lastUserText) {
   const thinkMatch = botText.match(THINK_RE);
@@ -26,6 +27,11 @@ export function parseBotIntent(botText, lastUserText) {
   const searchMatch = botText.match(SEARCH_RE);
   if (searchMatch) {
     return { type: 'search', query: searchMatch[1].trim() };
+  }
+
+  const summaryMatch = botText.match(SUMMARY_RE);
+  if (summaryMatch) {
+    return { type: 'summary', query: (summaryMatch[1] || '').trim() };
   }
 
   // Bot promised to search but forgot ТЪРСЯ: — use user's text

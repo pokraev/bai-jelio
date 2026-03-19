@@ -62,7 +62,7 @@ export async function loadPrompts() {
     'lang-bg', 'lang-en', 'lang-es', 'lang-hi',
     'assitent-lang-bg', 'assitent-lang-en', 'assitent-lang-es', 'assitent-lang-hi',
     'deferred-knowledge', 'search-trigger', 'assitent-search-trigger',
-    'search-prompt-full', 'thinking-prompt-full',
+    'search-prompt-full', 'thinking-prompt-full', 'summary-full-prompt',
   ];
 
   const entries = await Promise.all(
@@ -124,6 +124,18 @@ export function getSystemPrompt(topic, iq, lang) {
   // Intent detection patterns (shared by all personas)
   const searchPatterns = promptCache['search-prompt-full'] || '';
   const thinkingPatterns = promptCache['thinking-prompt-full'] || '';
+  const summaryPatterns = promptCache['summary-full-prompt'] || '';
+
+  // Summary trigger instruction (appended after patterns)
+  const summaryTrigger =
+    '\n\nSUMMARY TRIGGER INSTRUCTION:\n' +
+    'When you detect conversation summary intent (as defined above), do NOT summarize verbally. ' +
+    'Instead, say something brief like "Момент, подготвям резюмето.", "One moment, preparing the summary.", or "Un momento, preparo el resumen." ' +
+    'Then output the EXACT keyword РЕЗЮМЕ: followed by a brief note of what the user wants (e.g. "full summary", "action items only", "decisions and pending"). ' +
+    'РЕЗЮМЕ: is an internal system command — do NOT translate it, do NOT explain it. Stop after РЕЗЮМЕ:.\n' +
+    'Example: "One moment. РЕЗЮМЕ: full conversation summary"\n' +
+    'Example: "Момент. РЕЗЮМЕ: само действия и задачи"\n' +
+    'Example: "Un momento. РЕЗЮМЕ: decisiones y puntos pendientes"';
 
   // Assistant mode — self-contained prompt with language injection
   if (getAssistantMode()) {
@@ -135,7 +147,8 @@ export function getSystemPrompt(topic, iq, lang) {
       .replace('{assistant_lang_rules}', aLang.rules || '')
       + (searchTrigger ? '\n\n' + searchTrigger : '')
       + (searchPatterns ? '\n\n' + searchPatterns : '')
-      + (thinkingPatterns ? '\n\n' + thinkingPatterns : '');
+      + (thinkingPatterns ? '\n\n' + thinkingPatterns : '')
+      + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '');
   }
 
   const base = getSoberMode()
@@ -154,7 +167,8 @@ export function getSystemPrompt(topic, iq, lang) {
     .replace('{lang_greeting}', langPrompt.greeting || '')
     .replace('{lang_rules}', langPrompt.rules || '')
     + (searchPatterns ? '\n\n' + searchPatterns : '')
-    + (thinkingPatterns ? '\n\n' + thinkingPatterns : '');
+    + (thinkingPatterns ? '\n\n' + thinkingPatterns : '')
+    + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '');
 }
 
 /**

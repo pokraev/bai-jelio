@@ -632,6 +632,12 @@ function handleServerContent(content) {
         bus.emit('search:triggered', { query: botIntent.query });
         return;
       }
+      if (botIntent.type === 'summary') {
+        console.log('Summary triggered:', botIntent.query);
+        pendingBotText = '';
+        if (typeof openTranscriptModal === 'function') openTranscriptModal();
+        return;
+      }
       if (botIntent.type === 'show-results') {
         pendingBotText = stripShowResultsTrigger(pendingBotText);
         if (typeof openSearchResults === 'function') openSearchResults();
