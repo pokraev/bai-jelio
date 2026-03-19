@@ -42,7 +42,7 @@ export function updateAvatarForMode(isAssistant) {
   var eyelids = document.querySelectorAll('.eyelid');
 
   if (avatarImg) avatarImg.src = isAssistant ? 'images/avatar-assitent.jpg' : 'avatar.jpg';
-  if (searchImg) searchImg.src = isAssistant ? 'images/avatar-assitent-serching.jpg' : 'images/searching.jpg';
+  if (searchImg) searchImg.src = isAssistant ? 'images/avatar-assitent-searching.jpg' : 'images/searching.jpg';
 
   // Hide mouth and eyelid animations in assistant mode
   if (mouthCanvas) mouthCanvas.style.display = isAssistant ? 'none' : '';

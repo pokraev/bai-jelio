@@ -20,6 +20,10 @@ const IQ_PROFILES = {};
 
 const LANG_PROMPTS = {};
 
+// ── Assistant language prompt blocks ─────────────────
+
+const ASSISTANT_LANG_PROMPTS = {};
+
 // ── Helpers ─────────────────────────────────────────
 
 /**
@@ -56,7 +60,8 @@ export async function loadPrompts() {
     'topic-literature', 'topic-life',
     'iq-average', 'iq-intelligent', 'iq-genius',
     'lang-bg', 'lang-en', 'lang-es', 'lang-hi',
-    'deferred-knowledge', 'search-trigger',
+    'assitent-lang-bg', 'assitent-lang-en', 'assitent-lang-es', 'assitent-lang-hi',
+    'deferred-knowledge', 'search-trigger', 'assitent-search-trigger',
   ];
 
   const entries = await Promise.all(
@@ -89,6 +94,12 @@ export async function loadPrompts() {
     LANG_PROMPTS[lang] = parseKeyValue(raw);
   }
 
+  // Parse assistant language prompts
+  for (const lang of LANGS) {
+    const raw = promptCache['assitent-lang-' + lang] || '';
+    ASSISTANT_LANG_PROMPTS[lang] = parseKeyValue(raw);
+  }
+
   console.log('[prompts] loaded', Object.keys(promptCache).length, 'files');
 }
 
@@ -109,11 +120,15 @@ export function getSystemPrompt(topic, iq, lang) {
     return buildFallbackPrompt(t, i, l);
   }
 
-  // Assistant mode — self-contained prompt, no IQ/topic/lang placeholders
+  // Assistant mode — self-contained prompt with language injection
   if (getAssistantMode()) {
     const assistantBase = promptCache['assitent-system-base'] || '';
-    const searchTrigger = promptCache['search-trigger'] || '';
-    return assistantBase + (searchTrigger ? '\n\n' + searchTrigger : '');
+    const aLang = ASSISTANT_LANG_PROMPTS[l] || ASSISTANT_LANG_PROMPTS.bg || {};
+    const searchTrigger = promptCache['assitent-search-trigger'] || promptCache['search-trigger'] || '';
+    return assistantBase
+      .replace('{assistant_lang_speak}', aLang.speak || '')
+      .replace('{assistant_lang_rules}', aLang.rules || '')
+      + (searchTrigger ? '\n\n' + searchTrigger : '');
   }
 
   const base = getSoberMode()
@@ -155,11 +170,25 @@ export function getDeferredKnowledge() {
 export function getReconnectPrompt(reason, context) {
   const dk = context.deferredKnowledge || '';
   const summary = context.summary || '';
+  const isAssistant = getAssistantMode();
 
   switch (reason) {
     case 'search': {
-      const results = context.searchResult || 'Не намерих нищо.';
+      const results = context.searchResult || (isAssistant ? 'No results found.' : 'Не намерих нищо.');
       const grounded = window._searchWasGrounded;
+
+      if (isAssistant) {
+        const sourceNote = grounded
+          ? 'These results are from an INTERNET SEARCH — current data.'
+          : 'NOTE: These results are from memory, NOT the internet. They may be outdated. Mention this to the user.';
+        return 'Search complete. Results are displayed on the user\'s screen.\n' +
+          sourceNote + '\n' +
+          'Results:\n' + results + '\n\n' +
+          'The user can SEE the results. Summarize the 2-3 most important findings concisely. ' +
+          'Mention there is more on screen. Do NOT read everything. Do NOT mention API keys, limits, or technical issues. ' +
+          summary;
+      }
+
       const sourceNote = grounded
         ? 'Тези резултати са от ТЪРСЕНЕ В ИНТЕРНЕТ — актуални данни.'
         : 'ВНИМАНИЕ: Тези резултати са от ПАМЕТТА ти, НЕ от интернет. Може да не са актуални. Спомени на потребителя че това е от паметта ти и може да не е съвсем точно. Кажи нещо като "Доколкото помня..." или "От каквото знам...".';
@@ -176,13 +205,19 @@ export function getReconnectPrompt(reason, context) {
         summary + dk;
     }
     case 'silent':
+      if (isAssistant) {
+        return 'Continue the conversation from where it left off. Do not mention any interruption. ' + summary;
+      }
       return 'Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary + dk;
 
     case 'toilet-return':
+      if (isAssistant) {
+        return 'Continue the conversation. ' + summary;
+      }
       return 'Току що се върна от тоалетната. Кажи нещо кратко смешно и продължи разговора. ' + summary + dk;
 
     default:
-      return summary + dk;
+      return summary + (isAssistant ? '' : dk);
   }
 }
 

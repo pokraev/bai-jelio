@@ -445,7 +445,8 @@ function handleSetupComplete(apiKey) {
   bus.emit('connection:ready');
 
   // ── Character opens the conversation based on reconnectReason ──
-  const deferredKnowledge = getDeferredKnowledge() + getEnrichmentContext();
+  const isAssistant = getAssistantMode();
+  const deferredKnowledge = isAssistant ? '' : getDeferredKnowledge() + getEnrichmentContext();
   const summary = getConversationSummary();
 
   if (reconnectReason === 'search') {
@@ -484,8 +485,8 @@ function handleSetupComplete(apiKey) {
   } else if (reconnectReason === 'fresh') {
     // Clean start — new persona, no old context
     reconnectReason = null;
-    if (getAssistantMode()) {
-      sendSystemInstruction('Представи се с едно изречение. Кажи че си готов да помогнеш.');
+    if (isAssistant) {
+      sendSystemInstruction('Introduce yourself in one sentence. Say you are ready to help.');
     } else {
       sendSystemInstruction('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. НЕ споменавай бира, метъл или музика. Просто започни разговор като нормален човек. Максимум 2 изречения.');
     }
@@ -503,14 +504,23 @@ function handleSetupComplete(apiKey) {
     // Returning user — greet with context from previous conversation
     reconnectReason = null;
     const brief = getLastSessionBrief();
-    const instruction = 'Потребителят се връща отново. Поздрави го топло като стар познайник: "Ехо, здравей отново!" ' +
-      'После кажи накратко за какво сте говорили последния път (1 изречение, базирано на предишния разговор по-долу). ' +
-      'НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. Максимум 3 изречения.\n' + brief;
-    sendSystemInstruction(instruction);
+    if (isAssistant) {
+      const instruction = 'The user is returning. Briefly acknowledge what was discussed last time (1 sentence based on context below). Then ask how you can help. Max 2 sentences.\n' + brief;
+      sendSystemInstruction(instruction);
+    } else {
+      const instruction = 'Потребителят се връща отново. Поздрави го топло като стар познайник: "Ехо, здравей отново!" ' +
+        'После кажи накратко за какво сте говорили последния път (1 изречение, базирано на предишния разговор по-долу). ' +
+        'НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. Максимум 3 изречения.\n' + brief;
+      sendSystemInstruction(instruction);
+    }
   } else {
-    // Fresh connect — first time user, casual opening
+    // Fresh connect — first time user
     reconnectReason = null;
-    sendSystemInstruction('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. НЕ споменавай бира, метъл или музика. Просто започни разговор като нормален човек. Максимум 2 изречения.');
+    if (isAssistant) {
+      sendSystemInstruction('Introduce yourself in one sentence. Say you are ready to help.');
+    } else {
+      sendSystemInstruction('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. НЕ споменавай бира, метъл или музика. Просто започни разговор като нормален човек. Максимум 2 изречения.');
+    }
   }
 
   connectRetries = 0;
