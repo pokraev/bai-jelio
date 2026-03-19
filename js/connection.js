@@ -583,8 +583,22 @@ function handleServerContent(content) {
       window._rawTranscripts.push({ role: 'bot', text: pendingBotText.trim(), ts: Date.now() });
     }
 
-    // Detect search trigger from accumulated bot output
+    // Detect search or think trigger from accumulated bot output
     if (pendingBotText && !isSearching) {
+      // Deep analysis trigger: МИСЛИ:
+      const thinkMatch = pendingBotText.match(/МИСЛИ:\s*(.+)/i);
+      if (thinkMatch) {
+        const query = thinkMatch[1].trim();
+        console.log('Think triggered:', query);
+        const stg = document.getElementById('stage');
+        if (stg) stg.classList.add('thinking');
+        if (typeof startSearchOrbit === 'function') startSearchOrbit();
+        pendingBotText = '';
+        isSearching = true;
+        bus.emit('think:triggered', { query });
+        return;
+      }
+      // Web search trigger: ТЪРСЯ:
       const searchMatch = pendingBotText.match(/ТЪРСЯ:\s*(.+)/i);
       if (searchMatch) {
         const query = searchMatch[1].trim();
@@ -769,6 +783,83 @@ export async function startWebSearch(query) {
   connect();
 }
 
+/**
+ * Deep analysis: call Gemma 12B, display formatted result, reconnect.
+ * @param {string} query
+ */
+export async function startDeepThink(query) {
+  searchCache = null;
+  if (typeof closeSearchResults === 'function') closeSearchResults();
+
+  const stage = document.getElementById('stage');
+  if (stage) stage.classList.add('thinking');
+  if (typeof startSearchOrbit === 'function') startSearchOrbit();
+
+  audioPlayer.stop();
+  bus.emit('audio:playing-changed', { playing: false });
+  _isConnected = false;
+  if (ws) { ws.close(); ws = null; }
+  setWebSocket(null);
+  stopMic();
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  let result = null;
+
+  try {
+    const lang = getSelectedLang();
+    const langNames = { bg: 'Bulgarian', en: 'English', es: 'Spanish', hi: 'Hindi' };
+    const langName = langNames[lang] || 'English';
+
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            'You are a precise, knowledgeable analyst. Write your ENTIRE response in ' + langName + '.\n' +
+            'Provide a thorough, well-structured analysis. Use clear sections with **bold headings**, bullet points where appropriate. ' +
+            'Be factual, concise, and direct. No filler. No fluff.\n\n' +
+            'QUERY: ' + query
+          }] }],
+          generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 4000 }
+        })
+      }
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      result = data.candidates && data.candidates[0] && data.candidates[0].content &&
+        data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+        data.candidates[0].content.parts[0].text;
+    }
+  } catch (e) {
+    console.error('[think] error:', e);
+  } finally {
+    const stageEl = document.getElementById('stage');
+    if (stageEl) stageEl.classList.remove('thinking');
+    if (typeof stopSearchOrbit === 'function') stopSearchOrbit();
+    isSearching = false;
+  }
+
+  if (result) {
+    // Store as formatted analysis for display
+    window._lastSearchQuery = query;
+    window._lastSearchItems = [];
+    window._lastSearchSources = [];
+    window._lastSearchText = result;
+    window._lastThinkResult = result;
+    searchCache = result;
+    console.log('[think] result:', result.substring(0, 300));
+  } else {
+    searchCache = 'Analysis could not be completed.';
+    window._lastThinkResult = null;
+  }
+
+  reconnectReason = 'search';
+  connect();
+}
+
 // ── Bus event subscriptions ─────────────────────────
 
 // Settings: reconnect with new voice/lang/mode
@@ -803,4 +894,9 @@ bus.on('ui:iq-changed', ({ transitionMsg }) => {
 // Search triggered from bot output
 bus.on('search:triggered', ({ query }) => {
   startWebSearch(query);
+});
+
+// Deep analysis triggered from bot output
+bus.on('think:triggered', ({ query }) => {
+  startDeepThink(query);
 });

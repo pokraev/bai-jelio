@@ -97,6 +97,10 @@ h1 span { color: var(--text); font-weight: 400; font-size: 0.85em; }
   opacity: 0;
   z-index: 2;
 }
+.stage .think-img {
+  opacity: 0;
+  z-index: 2;
+}
 .stage.searching #avatarImg {
   opacity: 0;
 }
@@ -104,6 +108,16 @@ h1 span { color: var(--text); font-weight: 400; font-size: 0.85em; }
   opacity: 1;
 }
 .stage.searching #mouthCanvas {
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.stage.thinking #avatarImg {
+  opacity: 0;
+}
+.stage.thinking .think-img {
+  opacity: 1;
+}
+.stage.thinking #mouthCanvas {
   opacity: 0;
   transition: opacity 1s ease;
 }
@@ -1455,6 +1469,18 @@ select {
   color: var(--text-muted);
   line-height: 1.4;
   font-style: italic;
+}
+.think-result {
+  padding: 8px 4px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.think-result .summary-heading {
+  margin-top: 12px;
+}
+.think-result .summary-list li {
+  font-style: normal;
 }
 .search-result-url {
   font-size: 0.65rem;
