@@ -304,14 +304,11 @@
     </div>
     <div class="notes-filter-bar">
       <input type="text" id="notesSearch" class="notes-input" placeholder="Search notes..." oninput="renderNotes()">
-      <select id="notesLookahead" onchange="renderNotes()" class="notes-select">
+      <select id="notesPeriod" onchange="renderNotes()" class="notes-select">
         <option value="0">Today</option>
         <option value="3" selected>3 days</option>
         <option value="7">7 days</option>
         <option value="30">30 days</option>
-      </select>
-      <select id="notesPeriod" onchange="renderNotes()" class="notes-select">
-        <option value="upcoming" selected>Upcoming</option>
         <option value="all">All</option>
       </select>
     </div>
@@ -702,14 +699,13 @@ function renderNotes() {
   if (!window.notesApi) { chat.innerHTML = '<div class="transcript-empty">Notes not available</div>'; return; }
 
   var period = document.getElementById('notesPeriod').value;
-  var lookahead = parseInt(document.getElementById('notesLookahead').value);
   var searchQuery = (document.getElementById('notesSearch').value || '').trim().toLowerCase();
   var notes;
 
   if (period === 'all') {
     notes = window.notesApi.getAllNotes();
   } else {
-    notes = window.notesApi.getNotesLookahead(lookahead);
+    notes = window.notesApi.getNotesLookahead(parseInt(period));
   }
 
   // Apply text filter
