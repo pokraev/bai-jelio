@@ -16,18 +16,13 @@ function saveNotes(notes) {
 }
 
 /**
- * Add a note with timestamp and optional agent response context.
- * @param {string} text — the note content
- * @param {string} [agentResponse] — what the agent said when saving
- * @returns {{ text: string, ts: number, agentResponse: string }}
+ * Add a note — the literal agent turn text with timestamp.
+ * @param {string} text — the agent's spoken response
+ * @returns {{ text: string, ts: number }}
  */
-export function addNote(text, agentResponse) {
+export function addNote(text) {
   const notes = loadNotes();
-  const note = {
-    text: text.trim(),
-    ts: Date.now(),
-    agentResponse: (agentResponse || '').trim(),
-  };
+  const note = { text: text.trim(), ts: Date.now() };
   notes.push(note);
   saveNotes(notes);
   return note;

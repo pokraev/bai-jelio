@@ -640,11 +640,11 @@ function handleServerContent(content) {
       }
       if (botIntent.type === 'note') {
         console.log('Note triggered:', botIntent.query);
-        // Extract agent response (text before БЕЛЕЖКА:)
-        const agentText = pendingBotText.split(/БЕЛЕЖКА:/i)[0].trim();
+        // Save the agent's literal spoken response as the note
+        const fullAgentTurn = pendingBotText.replace(/БЕЛЕЖКА:\s*.*/i, '').trim();
         pendingBotText = '';
         if (typeof window.notesApi !== 'undefined') {
-          window.notesApi.addNote(botIntent.query, agentText);
+          window.notesApi.addNote(fullAgentTurn);
           if (typeof openNotesModal === 'function') openNotesModal();
         }
       }
