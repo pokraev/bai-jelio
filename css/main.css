@@ -1505,38 +1505,57 @@ select {
 /* ── Notes ── */
 .notes-toolbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 12px 16px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.notes-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding: 14px 16px 0;
 }
 .notes-label {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
   letter-spacing: 0.02em;
 }
-.notes-filters {
+.notes-filter-bar {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  padding: 10px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
+.notes-input {
+  flex: 1;
+  background: var(--bg-deep);
+  border: 1.5px solid rgba(240,165,0,0.25);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  color: var(--text);
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 0.8rem;
+  transition: border-color 0.3s;
+  min-width: 0;
+}
+.notes-input:focus { outline: none; border-color: var(--accent); }
+.notes-input::placeholder { color: var(--text-muted); opacity: 0.4; }
 .notes-select {
-  font-size: 0.72rem;
-  padding: 4px 24px 4px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
+  flex: 0 0 auto;
+  background: var(--bg-deep);
+  border: 1.5px solid rgba(240,165,0,0.25);
+  border-radius: var(--radius);
+  padding: 8px 28px 8px 10px;
+  color: var(--text);
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 0.8rem;
+  transition: border-color 0.3s;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23f0a500' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.notes-select:focus { outline: none; border-color: var(--accent); }
+.notes-select option {
   background: var(--bg-deep);
   color: var(--text);
-  appearance: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238899aa' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
 }
 .notes-date-header {
   font-size: 0.7rem;
