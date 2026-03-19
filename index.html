@@ -53,6 +53,15 @@
       <img src="images/avatar-assitent-thinking.jpg" id="thinkImg" class="think-img">
       <canvas id="mouthCanvas"></canvas>
     </div>
+    <script>
+      // Immediately apply assistant avatar before JS modules load (prevent flash)
+      if (document.cookie.indexOf('assistant_mode=1') !== -1) {
+        document.getElementById('avatarImg').src = 'images/avatar-assitent.jpg';
+        document.getElementById('searchImg').src = 'images/avatar-assitent-searching.jpg';
+        document.getElementById('mouthCanvas').style.display = 'none';
+        document.querySelectorAll('.eyelid').forEach(function(el) { el.style.display = 'none'; });
+      }
+    </script>
     <div class="stage-actions" id="stageActions" style="display:none">
       <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
         <svg id="micOnIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
