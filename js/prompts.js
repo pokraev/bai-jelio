@@ -134,6 +134,7 @@ export function getSystemPrompt(topic, iq, lang) {
     'confirm briefly (e.g. "Записано.", "Noted.", "Anotado.") then output the EXACT keyword БЕЛЕЖКА: followed by the note content. ' +
     'БЕЛЕЖКА: is an internal system command — do NOT translate it, do NOT explain it. Stop after БЕЛЕЖКА:.\n' +
     'Extract the essential information — clean it up, remove filler, keep it concise.\n' +
+    'If the user says just "запиши", "save this", "anota esto" WITHOUT specifying what — save YOUR last response as the note. Do NOT ask "what do you want to save?"\n' +
     'Example: "Записано. БЕЛЕЖКА: Да се обадя на Иван утре в 10:00"\n' +
     'Example: "Noted. БЕЛЕЖКА: Buy wine and vegetables for the barbecue"\n' +
     'Example: "Anotado. БЕЛЕЖКА: Llamar al dentista el lunes"\n\n' +

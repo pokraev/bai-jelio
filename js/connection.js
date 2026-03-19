@@ -683,10 +683,21 @@ function handleServerContent(content) {
         return;
       }
       if (botIntent.type === 'note') {
-        console.log('Note triggered:', botIntent.query);
+        let noteContent = botIntent.query;
+        // If bot output БЕЛЕЖКА: with empty/missing content, use last bot transcript
+        if (!noteContent || noteContent.length < 3) {
+          const transcripts = window._rawTranscripts || [];
+          for (let ti = transcripts.length - 1; ti >= 0; ti--) {
+            if (transcripts[ti].role === 'bot') {
+              noteContent = transcripts[ti].text.replace(/БЕЛЕЖКА:\s*/gi, '').replace(/ТЪРСЯ:\s*.*/gi, '').replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
+              if (noteContent.length > 3) break;
+            }
+          }
+        }
+        console.log('Note triggered:', noteContent);
         pendingBotText = '';
-        if (typeof window.notesApi !== 'undefined') {
-          window.notesApi.addNote(botIntent.query);
+        if (noteContent && noteContent.length > 3 && typeof window.notesApi !== 'undefined') {
+          window.notesApi.addNote(noteContent);
           if (typeof openNotesModal === 'function') openNotesModal();
         }
       }
