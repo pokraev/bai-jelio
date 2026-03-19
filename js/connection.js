@@ -472,6 +472,24 @@ function handleSetupComplete(apiKey) {
         })
       );
     }
+  } else if (reconnectReason === 'think') {
+    reconnectReason = null;
+    searchCache = null;
+    if (window._thinkResultText && typeof openSearchResults === 'function') {
+      openSearchResults();
+      setTimeout(() => {
+        sendSystemInstruction(
+          'IMPORTANT PERSONA RULE: Stay in character as a professional assistant.\n' +
+          'Your deep analysis is complete and displayed on the user\'s screen. ' +
+          'Say briefly: "The analysis is ready on your screen. Would you like me to read it to you?" ' +
+          'Wait for the user\'s response. Do NOT summarize or read anything yet.'
+        );
+      }, 1500);
+    } else {
+      sendSystemInstruction(
+        'The analysis could not be completed. Apologize briefly and offer to try again.'
+      );
+    }
   } else if (reconnectReason === 'silent') {
     reconnectReason = null;
     sendSystemInstruction(
@@ -639,7 +657,7 @@ function handleServerContent(content) {
     // Detect "read it to me" when think/search modal is open
     var searchModal = document.getElementById('searchResultsModal');
     if (searchModal && searchModal.classList.contains('visible') && lastUserText) {
-      if (/прочети|прочитай|чети|разкажи|кажи ми какво пише|read it|read .*(to me|aloud|out)|léelo|léeme/i.test(lastUserText) && window._thinkResultText) {
+      if (/прочети|прочитай|чети|разкажи|кажи ми какво пише|read it|read .*(to me|aloud|out)|léelo|léeme|^да$|^yes$|^sí$|^да,?\s|^yes,?\s|^sí,?\s|давай|go ahead|sure|разбира се|of course/i.test(lastUserText) && window._thinkResultText) {
         const isAst = getAssistantMode();
         sendSystemInstruction(
           (isAst ? 'STAY IN CHARACTER. Professional tone.\n' : '') +
@@ -870,7 +888,7 @@ export async function startDeepThink(query) {
     window._thinkResultText = null;
   }
 
-  reconnectReason = 'search';
+  reconnectReason = 'think';
   connect();
 }
 
