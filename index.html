@@ -61,6 +61,12 @@
         document.getElementById('mouthCanvas').style.display = 'none';
         document.querySelectorAll('.eyelid').forEach(function(el) { el.style.display = 'none'; });
       }
+      try {
+        if (localStorage.getItem('god_mode')) {
+          var titleEl = document.querySelector('h1 [data-i18n="page_title"]');
+          if (titleEl) titleEl.insertAdjacentHTML('afterend', ' <span class="god-badge">GOD MODE</span>');
+        }
+      } catch(_) {}
     </script>
     <div class="stage-actions" id="stageActions" style="display:none">
       <button class="round-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute microphone">
@@ -292,12 +298,7 @@
   <div class="modal-card transcript-modal-card">
     <div class="transcript-toolbar">
       <div class="transcript-tabs">
-        <button class="transcript-tab active" id="tabSummary" onclick="switchTranscriptTab('summary')">
-          <span data-i18n="transcript_summary">Резюме</span>
-        </button>
-        <button class="transcript-tab" id="tabTranscript" onclick="switchTranscriptTab('transcript')">
-          <span data-i18n="transcript_title">Транскрипт</span>
-        </button>
+        <span class="transcript-tab active" data-i18n="transcript_summary">Резюме</span>
       </div>
       <div class="transcript-controls">
         <div class="transcript-calendar-wrap">
@@ -757,7 +758,7 @@ async function callClaude(prompt, opts) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': god.key,
-        'anthropic-version': '2023-06-01',
+        'anthropic-version': '2025-01-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -766,7 +767,7 @@ async function callClaude(prompt, opts) {
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    if (!res.ok) return null;
+    if (!res.ok) { try { console.error('[claude] error:', res.status, await res.clone().json()); } catch(_) {} return null; }
     var data = await res.json();
     return data.content && data.content[0] && data.content[0].text || null;
   } catch (_) {
@@ -791,7 +792,7 @@ async function callClaudeWithSearch(prompt, opts) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': god.key,
-        'anthropic-version': '2023-06-01',
+        'anthropic-version': '2025-01-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -801,7 +802,7 @@ async function callClaudeWithSearch(prompt, opts) {
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    if (!res.ok) return null;
+    if (!res.ok) { try { console.error('[claude] error:', res.status, await res.clone().json()); } catch(_) {} return null; }
     var data = await res.json();
     // Extract text blocks from response (skip tool_use/web_search blocks)
     var text = '';
@@ -821,64 +822,9 @@ async function callClaudeWithSearch(prompt, opts) {
 // Expose for modules
 window.callClaudeWithSearch = callClaudeWithSearch;
 
-/**
- * Stream Claude API response, calling onChunk for each text delta.
- * @param {string} prompt
- * @param {{ maxTokens?: number, onChunk: function(string), signal?: AbortSignal }} opts
- * @returns {Promise<string>} — full accumulated text
- */
-async function streamClaude(prompt, opts) {
-  var god = getGodMode();
-  if (!god) return '';
-  var model = CLAUDE_MODELS[opts.tier || 'medium'];
-  var fullText = '';
-  var res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': god.key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: model,
-      max_tokens: opts.maxTokens || 2000,
-      stream: true,
-      messages: [{ role: 'user', content: prompt }]
-    }),
-    signal: opts.signal
-  });
-  if (!res.ok) return '';
-  var reader = res.body.getReader();
-  var decoder = new TextDecoder();
-  var buffer = '';
-  while (true) {
-    if (opts.signal && opts.signal.aborted) { reader.cancel(); return fullText; }
-    var chunk = await reader.read();
-    if (chunk.done) break;
-    buffer += decoder.decode(chunk.value, { stream: true });
-    var lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i].trim();
-      if (!line.startsWith('data: ')) continue;
-      var jsonStr = line.substring(6);
-      try {
-        var evt = JSON.parse(jsonStr);
-        if (evt.type === 'content_block_delta' && evt.delta && evt.delta.text) {
-          fullText += evt.delta.text;
-          if (opts.onChunk) opts.onChunk(evt.delta.text, fullText);
-        }
-      } catch (_) {}
-    }
-  }
-  return fullText;
-}
-
 // Expose for modules
 window.getGodMode = getGodMode;
 window.callClaude = callClaude;
-window.streamClaude = streamClaude;
 
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
@@ -930,8 +876,6 @@ function closeTranscriptModal() {
     window._transcriptMuted = false;
   }
 }
-var TYPE_SPEED_MS = 38;
-var PREFETCH_PCT = 0.9; // start prefetching next turn at 90% typed
 
 // ── Transcript cache (1-day TTL) ──
 var TRANSCRIPT_CACHE_KEY = 'transcript_cache';
@@ -968,8 +912,7 @@ function getCachedEntry(key) {
 }
 
 // ── Active tab state ──
-var _transcriptActiveTab = 'summary';
-var _apiSuspended = false; // true while summary is generating — blocks cleanTranscript calls
+var _apiSuspended = false; // true while summary is generating
 
 // ── Transcript helpers ──
 function getFullTranscriptHistory() {
@@ -1305,8 +1248,13 @@ function setupTranscriptControls(history) {
             item.onclick = function() {
               dropdown.classList.remove('open');
               searchInput.value = '';
-              // Find which date/hour this result is in and render from that point
-              renderTranscriptFromIndex(history, res.index);
+              // Find the date of this result and show summary for that date
+              if (history[res.index] && history[res.index].ts) {
+                var d = new Date(history[res.index].ts);
+                _calSelectedDate = toDateKey(d);
+                document.getElementById('calToggleLabel').textContent = formatDateLabel(_calSelectedDate);
+                renderFilteredTranscript(history, _calSelectedDate, '');
+              }
             };
             dropdown.appendChild(item);
           })(results[r]);
@@ -1331,37 +1279,10 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-var MAX_RENDER_TURNS = 10;
 
 function renderFilteredTranscript(history, dateStr, hourVal) {
   var filtered = filterTranscriptHistory(history, dateStr, hourVal);
-  if (_transcriptActiveTab === 'summary') {
-    renderSummary(filtered, dateStr, hourVal);
-  } else {
-    // Show only the last N turns
-    var slice = filtered.length > MAX_RENDER_TURNS ? filtered.slice(-MAX_RENDER_TURNS) : filtered;
-    renderTranscriptTurns(slice);
-  }
-}
-
-function renderTranscriptFromIndex(history, startIndex) {
-  _transcriptActiveTab = 'transcript';
-  document.getElementById('tabTranscript').classList.add('active');
-  document.getElementById('tabSummary').classList.remove('active');
-  // Include previous turn for context, cap at MAX_RENDER_TURNS
-  var from = Math.max(0, startIndex - 1);
-  var slice = history.slice(from, from + MAX_RENDER_TURNS);
-  renderTranscriptTurns(slice, startIndex > 0 ? 1 : 0);
-}
-
-function switchTranscriptTab(tab) {
-  _transcriptActiveTab = tab;
-  document.getElementById('tabTranscript').classList.toggle('active', tab === 'transcript');
-  document.getElementById('tabSummary').classList.toggle('active', tab === 'summary');
-  var history = getFullTranscriptHistory();
-  var dateStr = _calSelectedDate;
-  var hourVal = document.getElementById('transcriptHour').dataset.value;
-  renderFilteredTranscript(history, dateStr, hourVal);
+  renderSummary(filtered, dateStr, hourVal);
 }
 
 async function renderSummary(turns, dateStr, hourVal) {
@@ -1458,124 +1379,6 @@ async function renderSummary(turns, dateStr, hourVal) {
   var isAssistantMode = document.cookie.indexOf('assistant_mode=1') !== -1;
   var models = isAssistantMode ? ['gemma-3-12b-it', 'gemma-3-4b-it'] : ['gemma-3-4b-it', 'gemma-3-1b-it'];
   var promptText = promptParts.join('');
-
-  // ── Assistant mode: streaming with typewriter effect ──
-  if (isAssistantMode) {
-    typingEl.remove();
-    chat.innerHTML = '';
-    var summaryContainer = document.createElement('div');
-    summaryContainer.className = 'summary-container';
-    summaryContainer.innerHTML =
-      '<div class="summary-header">' +
-        '<span class="summary-icon">📋</span>' +
-        '<span class="summary-title">' + (typeof t === 'function' ? t('transcript_summary') : 'Резюме') +
-          (_calSelectedDate ? ' — ' + formatDateLabel(_calSelectedDate) : '') + '</span>' +
-      '</div>' +
-      '<div class="summary-body" id="streamingBody">' +
-        '<div class="chat-typing"><span class="typing-label">' +
-          (typeof t === 'function' ? t('transcript_summarizing') : 'Генериране на резюме') +
-        '</span><span class="typing-dots"></span></div>' +
-      '</div>';
-    chat.appendChild(summaryContainer);
-    var streamBody = document.getElementById('streamingBody');
-    var fullText = '';
-    var streamStarted = false;
-
-    var godMode = getGodMode();
-
-    try {
-      if (godMode) {
-        // ── Claude streaming ──
-        fullText = await streamClaude(promptText, {
-          maxTokens: 2000,
-          tier: 'medium',
-          signal: signal,
-          onChunk: function(delta, accumulated) {
-            if (!streamStarted) { streamStarted = true; streamBody.innerHTML = ''; }
-            streamBody.innerHTML = formatSummaryHtml(accumulated);
-            autoScrollChat(chat);
-          }
-        });
-      } else {
-        // ── Gemma streaming ──
-        var streamRes = null;
-        for (var mi = 0; mi < models.length; mi++) {
-          if (signal.aborted) { _apiSuspended = false; return; }
-          streamRes = await fetch(
-            'https://generativelanguage.googleapis.com/v1beta/models/' + models[mi] + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(apiKey),
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 2000 }
-              }),
-              signal: signal
-            }
-          );
-          if (streamRes.ok) break;
-        }
-
-        if (!streamRes || !streamRes.ok) {
-          _apiSuspended = false;
-          var errData = streamRes ? await streamRes.json() : {};
-          var errMsg = (errData.error && errData.error.message) || 'HTTP ' + (streamRes ? streamRes.status : 'unknown');
-          streamBody.innerHTML = '<div class="transcript-empty">Error: ' + escapeHtml(errMsg) + '</div>';
-          return;
-        }
-
-        var reader = streamRes.body.getReader();
-        var decoder = new TextDecoder();
-        var buffer = '';
-
-        while (true) {
-          if (signal.aborted) { _apiSuspended = false; reader.cancel(); return; }
-          var chunk = await reader.read();
-          if (chunk.done) break;
-          buffer += decoder.decode(chunk.value, { stream: true });
-
-          var lines = buffer.split('\n');
-          buffer = lines.pop();
-          for (var li = 0; li < lines.length; li++) {
-            var line = lines[li].trim();
-            if (!line.startsWith('data: ')) continue;
-            var jsonStr = line.substring(6);
-            if (jsonStr === '[DONE]') continue;
-            try {
-              var parsed = JSON.parse(jsonStr);
-              var text = parsed.candidates && parsed.candidates[0] &&
-                parsed.candidates[0].content && parsed.candidates[0].content.parts &&
-                parsed.candidates[0].content.parts[0] && parsed.candidates[0].content.parts[0].text;
-              if (text) {
-                if (!streamStarted) { streamStarted = true; streamBody.innerHTML = ''; }
-                fullText += text;
-                streamBody.innerHTML = formatSummaryHtml(fullText);
-                autoScrollChat(chat);
-              }
-            } catch (_) {}
-          }
-        }
-      }
-
-      _apiSuspended = false;
-      fullText = fullText.trim();
-      if (fullText) {
-        streamBody.innerHTML = formatSummaryHtml(fullText);
-        if (cacheKey) {
-          try { localStorage.setItem(cacheKey, fullText); } catch (_) {}
-        }
-      } else {
-        streamBody.innerHTML = '<div class="transcript-empty">No summary generated</div>';
-      }
-    } catch (e) {
-      _apiSuspended = false;
-      if (e.name === 'AbortError') return;
-      streamBody.innerHTML = '<div class="transcript-empty">Error: ' + escapeHtml(e.message) + '</div>';
-    }
-    return;
-  }
-
-  // ── Standard mode: non-streaming ──
   var godMode = getGodMode();
   var reqBody = JSON.stringify({
     contents: [{ parts: [{ text: promptText }] }],
@@ -1717,105 +1520,6 @@ function showSummaryBubble(chat, text) {
   autoScrollChat(chat);
 }
 
-async function renderTranscriptTurns(turns, highlightFirst) {
-  var modal = document.getElementById('transcriptModal');
-  var chat = document.getElementById('transcriptChat');
-  chat.innerHTML = '';
-  if (transcriptAbort) transcriptAbort.abort();
-  transcriptAbort = new AbortController();
-  var signal = transcriptAbort.signal;
-
-  if (turns.length === 0) {
-    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'Няма транскрипт') + '</div>';
-    return;
-  }
-
-  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
-  var langRules = {
-    bg: 'Bulgarian. Apply all Bulgarian grammar rules: gender agreements (род), verb conjugation, definite articles (членуване), commas before "че", "който", "когато", "защото". The AI agent is called "Бай Жельо" (also "Бат Жельо", "бай Жельо", "бат Жельо") — keep this name correct.',
-    en: 'English. Apply standard English grammar, punctuation, and spelling rules. The AI agent is called "Bai Zhelyo" — keep this name correct.',
-    es: 'Spanish. Apply all Spanish grammar rules: gender/number agreements, accent marks, punctuation (¿¡). The AI agent is called "Bai Zhelyo" — keep this name correct.',
-    hi: 'Hindi. Apply standard Hindi grammar and Devanagari script rules. The AI agent is called "बाई झेल्यो" (Bai Zhelyo) — keep this name correct.'
-  };
-  var langRule = langRules[lang] || langRules.bg;
-
-  // Date/time label (WhatsApp-style)
-  if (turns[0].ts) {
-    var d = new Date(turns[0].ts);
-    var dateLabel = formatDateLabel(toDateKey(d));
-    var hourSel = document.getElementById('transcriptHour');
-    var hourVal = hourSel ? hourSel.dataset.value : '';
-    var timeLabel = hourVal !== '' ? String(parseInt(hourVal)).padStart(2, '0') + ':00' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-    var tag = document.createElement('div');
-    tag.className = 'chat-date-label';
-    tag.textContent = dateLabel + ', ' + timeLabel;
-    chat.appendChild(tag);
-  }
-
-  var nextClean = cleanTranscript(turns[0].text, langRule, signal);
-
-  for (var i = 0; i < turns.length; i++) {
-    if (signal.aborted || !modal.classList.contains('visible')) return;
-
-    var turn = turns[i];
-    var icon = turn.role === 'user' ? '👤' : '🍺';
-    var cls = turn.role === 'user' ? 'user' : 'bot';
-
-    var typingLabel = turn.role === 'user'
-      ? (typeof t === 'function' ? t('transcript_user_typing') : 'Вие пишете')
-      : (typeof t === 'function' ? t('transcript_bot_typing') : 'Бай Жельо пише');
-    var typingEl = document.createElement('div');
-    typingEl.className = 'chat-typing' + (turn.role === 'user' ? ' chat-typing-user' : '');
-    typingEl.innerHTML = '<span class="typing-label">' + typingLabel + '</span><span class="typing-dots"></span>';
-    chat.appendChild(typingEl);
-    autoScrollChat(chat);
-
-    var cleaned;
-    try {
-      cleaned = nextClean ? await nextClean : await cleanTranscript(turn.text, langRule, signal);
-    } catch (e) {
-      if (e.name === 'AbortError') { typingEl.remove(); return; }
-      cleaned = turn.text;
-    }
-    if (!cleaned) cleaned = turn.text;
-
-    typingEl.remove();
-    var bubble = document.createElement('div');
-    bubble.className = 'chat-bubble ' + cls;
-    // Add timestamp badge if available
-    var timeBadge = '';
-    if (turn.ts) {
-      var d = new Date(turn.ts);
-      timeBadge = '<span class="bubble-time">' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</span>';
-    }
-    bubble.innerHTML = '<span class="bubble-icon">' + icon + '</span> <span class="bubble-text"></span>' + timeBadge;
-    if (highlightFirst !== undefined && i === highlightFirst) bubble.classList.add('highlight');
-    chat.appendChild(bubble);
-    autoScrollChat(chat);
-
-    var prefetchStarted = false;
-    nextClean = null;
-    var textEl = bubble.querySelector('.bubble-text');
-    for (var c = 0; c < cleaned.length; c++) {
-      if (signal.aborted) return;
-      textEl.textContent += cleaned[c];
-      if (!prefetchStarted && i + 1 < turns.length && c >= Math.floor(cleaned.length * PREFETCH_PCT)) {
-        nextClean = cleanTranscript(turns[i + 1].text, langRule, signal);
-        prefetchStarted = true;
-      }
-      if (c % 20 === 0) autoScrollChat(chat);
-      await new Promise(function(r) { setTimeout(r, TYPE_SPEED_MS); });
-    }
-    bubble.classList.add('done');
-
-    if (!prefetchStarted && i + 1 < turns.length) {
-      await new Promise(function(r) { setTimeout(r, 2000); });
-      if (signal.aborted) return;
-      nextClean = cleanTranscript(turns[i + 1].text, langRule, signal);
-    }
-  }
-}
-
 async function openTranscriptModal() {
   var modal = document.getElementById('transcriptModal');
   var chat = document.getElementById('transcriptChat');
@@ -1828,11 +1532,6 @@ async function openTranscriptModal() {
     toggleMute();
     window._transcriptMuted = true;
   }
-
-  // Reset to summary tab (default)
-  _transcriptActiveTab = 'summary';
-  document.getElementById('tabSummary').classList.add('active');
-  document.getElementById('tabTranscript').classList.remove('active');
 
   var history = getFullTranscriptHistory();
   setupTranscriptControls(history);
@@ -1851,73 +1550,6 @@ async function openTranscriptModal() {
     filtered = history;
   }
   await renderSummary(filtered, dateStr, hourVal);
-}
-
-async function cleanTranscript(text, langRule, signal) {
-  if (_apiSuspended) return text;
-  var apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey || text.length < 3) return text;
-  // Check cache first
-  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
-  var cacheKey = 'clean_' + lang + '_' + text.length + '_' + text.substring(0, 60).replace(/\s/g, '_');
-  var cached = getCachedEntry(cacheKey);
-  if (cached) return cached;
-
-  var cleanPrompt = 'Language: ' + langRule + '\n\n' +
-    'This is a SPEECH-TO-TEXT transcript with many recognition errors. Fix ALL of the following:\n' +
-    '1. PHONETIC ERRORS: The STT often mishears words. Guess the correct word from context. Examples: "Ти Ти Ти ли си" → "Чел ли си", "чело" → "чела" (gender), "бачител" → "бащител/бащата/учител" depending on context.\n' +
-    '2. REPEATED/STUTTERED WORDS: Remove accidental repetitions from STT.\n' +
-    '3. GRAMMAR: Fix gender agreements, verb forms, definite articles (членуване), commas, capitalization.\n' +
-    '4. PROPER NOUNS: Fix misspelled names of people, books, places, bands (e.g. "Каарамазови" → "Карамазови", "Достоевски", "Iron Maiden").\n' +
-    '5. CAPITALIZE first letter of each sentence.\n' +
-    'Keep the same meaning, tone, slang and colloquial style. Do NOT translate. Do NOT add quotes. Return ONLY the corrected text.\n\n' + text;
-
-  try {
-    var godMode = getGodMode();
-    var result = null;
-
-    if (godMode) {
-      // Use Claude
-      result = await callClaude(cleanPrompt, { maxTokens: 500, tier: 'fast' });
-    }
-
-    if (!result) {
-      // Fallback to Gemma
-      var res = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-4b-it:generateContent?key=' + encodeURIComponent(apiKey),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: cleanPrompt }] }],
-            generationConfig: { temperature: 0.0, topP: 0.1, topK: 1, maxOutputTokens: 500 }
-          }),
-          signal: signal
-        }
-      );
-      if (res.status === 429) {
-        await new Promise(function(r) { setTimeout(r, 5000); });
-        return text;
-      }
-      if (!res.ok) return text;
-      var data = await res.json();
-      result = data.candidates && data.candidates[0] && data.candidates[0].content &&
-        data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-        data.candidates[0].content.parts[0].text;
-    }
-
-    var cleaned = result ? stripForeignChars(result.trim()) : text;
-    if (cleaned && cleaned !== text) setTranscriptCache(cacheKey, cleaned);
-    return cleaned;
-  } catch (e) {
-    if (e.name === 'AbortError') throw e;
-    return text;
-  }
-}
-
-function stripForeignChars(text) {
-  // Keep: Latin, Cyrillic, Greek, digits, punctuation, spaces, common symbols, Spanish accented chars
-  return text.replace(/[^\u0000-\u024F\u0400-\u04FF\u0370-\u03FF\u1E00-\u1EFF\u2000-\u206F\u2018-\u201F\u00A0-\u00BF¿¡""''…—–\s]/g, '').replace(/\s{2,}/g, ' ').trim();
 }
 
 function autoScrollChat(el) {
