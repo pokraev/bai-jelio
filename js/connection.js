@@ -526,12 +526,18 @@ function handleSetupComplete(apiKey) {
       getReconnectPrompt('toilet-return', { summary, deferredKnowledge })
     );
   } else if (reconnectReason === 'fresh') {
-    // Clean start — new persona, no old context
+    // New persona but keep conversation memory
     reconnectReason = null;
     if (isAssistant) {
-      sendSystemInstruction('Introduce yourself in one sentence. Say you are ready to help.');
+      sendSystemInstruction(
+        'You switched to assistant mode. Introduce yourself briefly and continue.\n' +
+        'You REMEMBER everything from the conversation so far. Here is the context:\n' + summary
+      );
     } else {
-      sendSystemInstruction('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. НЕ споменавай бира, метъл или музика. Просто започни разговор като нормален човек. Максимум 2 изречения.');
+      sendSystemInstruction(
+        'Сменихме темата/режима. Поздрави небрежно и продължи разговора. ' +
+        'ПОМНИШ всичко казано до момента. Ето контекста:\n' + summary + ' ' + deferredKnowledge
+      );
     }
   } else if (reconnectReason === 'sober') {
     reconnectReason = null;
