@@ -16,6 +16,7 @@ import {
   setStatus, requestWakeLock, releaseWakeLock, updateAvatarForMode,
 } from './ui-controls.js';
 import { initQuota } from './quota.js';
+import './notes.js';
 import { startAnimation } from './animation.js';
 import { initPositioning, toggleLipsPopover, setEditTarget } from './positioning.js';
 import { setIsSpeaking } from './render-state.js';

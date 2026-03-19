@@ -62,7 +62,7 @@ export async function loadPrompts() {
     'lang-bg', 'lang-en', 'lang-es', 'lang-hi',
     'assitent-lang-bg', 'assitent-lang-en', 'assitent-lang-es', 'assitent-lang-hi',
     'deferred-knowledge', 'search-trigger', 'assitent-search-trigger',
-    'search-prompt-full', 'thinking-prompt-full', 'summary-full-prompt',
+    'search-prompt-full', 'thinking-prompt-full', 'summary-full-prompt', 'take-note-full-prompt',
   ];
 
   const entries = await Promise.all(
@@ -125,6 +125,18 @@ export function getSystemPrompt(topic, iq, lang) {
   const searchPatterns = promptCache['search-prompt-full'] || '';
   const thinkingPatterns = promptCache['thinking-prompt-full'] || '';
   const summaryPatterns = promptCache['summary-full-prompt'] || '';
+  const notePatterns = promptCache['take-note-full-prompt'] || '';
+
+  // Note trigger instruction
+  const noteTrigger =
+    '\n\nNOTE-TAKING TRIGGER INSTRUCTION:\n' +
+    'When you detect that the user wants to save a note, reminder, task, or anything to remember — ' +
+    'confirm briefly (e.g. "Записано.", "Noted.", "Anotado.") then output the EXACT keyword БЕЛЕЖКА: followed by the note content. ' +
+    'БЕЛЕЖКА: is an internal system command — do NOT translate it, do NOT explain it. Stop after БЕЛЕЖКА:.\n' +
+    'Extract the essential information — clean it up, remove filler, keep it concise.\n' +
+    'Example: "Записано. БЕЛЕЖКА: Да се обадя на Иван утре в 10:00"\n' +
+    'Example: "Noted. БЕЛЕЖКА: Buy wine and vegetables for the barbecue"\n' +
+    'Example: "Anotado. БЕЛЕЖКА: Llamar al dentista el lunes"';
 
   // Summary trigger instruction (appended after patterns)
   const summaryTrigger =
@@ -148,7 +160,8 @@ export function getSystemPrompt(topic, iq, lang) {
       + (searchTrigger ? '\n\n' + searchTrigger : '')
       + (searchPatterns ? '\n\n' + searchPatterns : '')
       + (thinkingPatterns ? '\n\n' + thinkingPatterns : '')
-      + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '');
+      + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '')
+      + (notePatterns ? '\n\n' + notePatterns + noteTrigger : '');
   }
 
   const base = getSoberMode()
@@ -168,7 +181,8 @@ export function getSystemPrompt(topic, iq, lang) {
     .replace('{lang_rules}', langPrompt.rules || '')
     + (searchPatterns ? '\n\n' + searchPatterns : '')
     + (thinkingPatterns ? '\n\n' + thinkingPatterns : '')
-    + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '');
+    + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '')
+    + (notePatterns ? '\n\n' + notePatterns + noteTrigger : '');
 }
 
 /**

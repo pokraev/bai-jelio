@@ -638,6 +638,16 @@ function handleServerContent(content) {
         if (typeof openTranscriptModal === 'function') openTranscriptModal();
         return;
       }
+      if (botIntent.type === 'note') {
+        console.log('Note triggered:', botIntent.query);
+        // Extract agent response (text before БЕЛЕЖКА:)
+        const agentText = pendingBotText.split(/БЕЛЕЖКА:/i)[0].trim();
+        pendingBotText = '';
+        if (typeof window.notesApi !== 'undefined') {
+          window.notesApi.addNote(botIntent.query, agentText);
+          if (typeof openNotesModal === 'function') openNotesModal();
+        }
+      }
       if (botIntent.type === 'show-results') {
         pendingBotText = stripShowResultsTrigger(pendingBotText);
         if (typeof openSearchResults === 'function') openSearchResults();
