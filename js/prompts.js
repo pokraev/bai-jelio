@@ -131,10 +131,10 @@ export function getSystemPrompt(topic, iq, lang) {
   const noteTrigger =
     '\n\nNOTE-TAKING TRIGGER INSTRUCTION:\n' +
     'When you detect that the user wants to SAVE a note, reminder, task, or anything to remember — ' +
-    'confirm briefly (e.g. "Записано.", "Noted.", "Anotado.") then output the EXACT keyword БЕЛЕЖКА: followed by the note content. ' +
-    'БЕЛЕЖКА: is an internal system command — do NOT translate it, do NOT explain it. Stop after БЕЛЕЖКА:.\n' +
-    'Extract the essential information — clean it up, remove filler, keep it concise.\n' +
-    'If the user says just "запиши", "save this", "anota esto" WITHOUT specifying what — save YOUR last response as the note. Do NOT ask "what do you want to save?"\n' +
+    'confirm briefly (e.g. "Записано.", "Noted.", "Anotado.") then output the EXACT keyword БЕЛЕЖКА: followed by the note content. Then continue the conversation naturally.\n' +
+    'БЕЛЕЖКА: is an internal system command — do NOT translate it, do NOT explain it.\n' +
+    'Copy the text LITERALLY — do NOT summarize, rephrase, or shorten it.\n' +
+    'If the user says just "запиши", "save this", "anota esto" WITHOUT specifying what — save YOUR last response WORD FOR WORD as the note. Do NOT ask "what do you want to save?"\n' +
     'Example: "Записано. БЕЛЕЖКА: Да се обадя на Иван утре в 10:00"\n' +
     'Example: "Noted. БЕЛЕЖКА: Buy wine and vegetables for the barbecue"\n' +
     'Example: "Anotado. БЕЛЕЖКА: Llamar al dentista el lunes"\n\n' +
