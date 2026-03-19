@@ -658,12 +658,20 @@ function handleServerContent(content) {
     var searchModal = document.getElementById('searchResultsModal');
     if (searchModal && searchModal.classList.contains('visible') && lastUserText) {
       if (/прочети|прочитай|чети|разкажи|кажи ми какво пише|read it|read .*(to me|aloud|out)|léelo|léeme|^да$|^yes$|^sí$|^да,?\s|^yes,?\s|^sí,?\s|давай|go ahead|sure|разбира се|of course/i.test(lastUserText) && window._thinkResultText) {
-        const isAst = getAssistantMode();
+        const textToRead = window._thinkResultText;
+        window._thinkResultText = null; // clear so next turn doesn't re-trigger
+        window._isReadingThinkResult = true; // flag to prevent modal close during reading
         sendSystemInstruction(
-          (isAst ? 'STAY IN CHARACTER. Professional tone.\n' : '') +
-          'Read the following text aloud to the user. Read it clearly, section by section. Do not skip anything. Do not summarize — read the FULL text:\n\n' +
-          window._thinkResultText
+          'The user asked you to read the analysis. You MUST read the ENTIRE text below OUT LOUD, word by word. ' +
+          'Do NOT say "please provide the text" — the text IS provided below. Do NOT summarize. Do NOT skip sections. ' +
+          'Read it naturally, section by section, as if presenting a report. Start reading NOW:\n\n' +
+          '--- BEGIN TEXT ---\n' +
+          textToRead +
+          '\n--- END TEXT ---'
         );
+      } else if (window._isReadingThinkResult) {
+        // Agent is still reading — don't close modal
+        window._isReadingThinkResult = false;
       } else {
         // User spoke about something else — close the modal
         if (typeof closeSearchResults === 'function') closeSearchResults();
