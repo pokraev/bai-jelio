@@ -111,11 +111,15 @@ export async function startDeepThink(query, deps) {
       'Be factual, concise, and direct. No filler. No fluff.\n\n' +
       'QUERY: ' + query;
 
+    // Try Claude first if God mode, fall back to Gemma
     const godMode = typeof window.getGodMode === 'function' && window.getGodMode();
-
     if (godMode && typeof window.callClaude === 'function') {
       result = await window.callClaude(prompt, { maxTokens: 4000, tier: 'strong' });
-    } else {
+    }
+
+    if (!result) {
+      // Gemma 12B fallback
+      console.log('[think] using Gemma 12B fallback');
       const res = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key=' + encodeURIComponent(apiKey),
         {
@@ -132,6 +136,8 @@ export async function startDeepThink(query, deps) {
         result = data.candidates && data.candidates[0] && data.candidates[0].content &&
           data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
           data.candidates[0].content.parts[0].text;
+      } else {
+        console.error('[think] Gemma error:', res.status);
       }
     }
   } catch (e) {
