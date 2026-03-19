@@ -40,6 +40,11 @@ import { getConversationSummary, getNeutralSummary, hasHistory, getLastSessionBr
 import { trackUsage, updateQuotaUI, groundingExhausted } from './quota.js';
 import { requestWakeLock, releaseWakeLock, setStatus } from './ui-controls.js';
 import { setAudioPlayer } from './render-state.js';
+import { parseBotIntent, parseUserIntent, stripShowResultsTrigger } from './intent-detect.js';
+import {
+  startDeepThink, splitTextForReading, sendNextReadChunk,
+  isReadingActive, setReadingActive, setReadQueue, getReadQueue, clearReadState,
+} from './think.js';
 
 // ── Module state ────────────────────────────────────
 
@@ -477,16 +482,15 @@ function handleSetupComplete(apiKey) {
     searchCache = null;
     if (window._thinkResultText && typeof openSearchResults === 'function') {
       openSearchResults();
+      // Split text into chunks by section (split on bold headings) or by size
       const thinkText = window._thinkResultText;
+      setReadQueue(splitTextForReading(thinkText));
       setTimeout(() => {
         sendSystemInstruction(
           'IMPORTANT PERSONA RULE: Stay in character as a professional assistant.\n' +
           'Your deep analysis is complete and displayed on the user\'s screen.\n' +
           'Say briefly: "The analysis is ready on your screen. Would you like me to read it to you?"\n' +
-          'If the user says YES (да, yes, давай, sure, прочети, read it, of course, разбира се) — ' +
-          'read the FULL TEXT below out loud, section by section. Do NOT say you don\'t have the text. You DO have it right here:\n\n' +
-          '--- ANALYSIS TEXT ---\n' + thinkText + '\n--- END ---\n\n' +
-          'If the user says NO or changes topic — just continue the conversation. Do NOT read the text.'
+          'Wait for the user\'s response. Do NOT read anything yet.'
         );
       }, 1500);
     } else {
@@ -605,86 +609,78 @@ function handleServerContent(content) {
       window._rawTranscripts.push({ role: 'bot', text: pendingBotText.trim(), ts: Date.now() });
     }
 
-    // Detect search or think trigger from accumulated bot output
+    // ── Bot output intent detection ──
     if (pendingBotText && !isSearching) {
-      // Deep analysis trigger: МИСЛИ:
-      const thinkMatch = pendingBotText.match(/МИСЛИ:\s*(.+)/i);
-      if (thinkMatch) {
-        const query = thinkMatch[1].trim();
-        console.log('Think triggered:', query);
-        const stg = document.getElementById('stage');
+      const botIntent = parseBotIntent(pendingBotText, lastUserText);
+      const stg = document.getElementById('stage');
+
+      if (botIntent.type === 'think') {
+        console.log('Think triggered:', botIntent.query);
         if (stg) stg.classList.add('thinking');
         if (typeof startSearchOrbit === 'function') startSearchOrbit();
         pendingBotText = '';
         isSearching = true;
-        bus.emit('think:triggered', { query });
+        bus.emit('think:triggered', { query: botIntent.query });
         return;
       }
-      // Web search trigger: ТЪРСЯ:
-      const searchMatch = pendingBotText.match(/ТЪРСЯ:\s*(.+)/i);
-      if (searchMatch) {
-        const query = searchMatch[1].trim();
-        console.log('Search triggered:', query);
-        const stg = document.getElementById('stage');
+      if (botIntent.type === 'search') {
+        console.log('Search triggered:', botIntent.query);
         if (stg) stg.classList.add('searching');
         if (typeof startSearchOrbit === 'function') startSearchOrbit();
         pendingBotText = '';
         isSearching = true;
-        bus.emit('search:triggered', { query });
+        bus.emit('search:triggered', { query: botIntent.query });
         return;
       }
-      // Fallback: bot said it would search but forgot ТЪРСЯ: — use user's text as query
-      if (!searchMatch && /чакай да (видя|проверя|погледна)|дай да (видя|проверя|търся)|ще проверя|ще потърся|let me check|let me search|déjame buscar/i.test(pendingBotText)) {
-        if (lastUserText && lastUserText.length > 5) {
-          console.log('[search] bot promised to search but no ТЪРСЯ:, using user text:', lastUserText);
-          const stg = document.getElementById('stage');
-          if (stg) stg.classList.add('searching');
-          if (typeof startSearchOrbit === 'function') startSearchOrbit();
-          pendingBotText = '';
-          isSearching = true;
-          bus.emit('search:triggered', { query: lastUserText });
-          return;
-        }
-      }
-      // Detect "show results" trigger from bot
-      if (/ПОКАЖИ_РЕЗУЛТАТИ/i.test(pendingBotText)) {
-        pendingBotText = pendingBotText.replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
+      if (botIntent.type === 'show-results') {
+        pendingBotText = stripShowResultsTrigger(pendingBotText);
         if (typeof openSearchResults === 'function') openSearchResults();
       }
     }
-    // Detect "show results" from user speech (покажи резултати, дай линкове, show results, etc.)
-    if (lastUserText && /покажи.*(резултат|линк|източник)|дай.*(линк|резултат)|show.*result|muéstra.*resultado/i.test(lastUserText)) {
-      if (window._lastSearchText && typeof openSearchResults === 'function') {
-        openSearchResults();
-      }
+
+    // ── User speech intent detection ──
+    const modalEl = document.getElementById('searchResultsModal');
+    const modalVisible = modalEl && modalEl.classList.contains('visible');
+
+    // Auto-continue reading when bot finishes (no user speech)
+    if (isReadingActive() && getReadQueue() && getReadQueue().length > 0 && !lastUserText) {
+      sendNextReadChunk(sendSystemInstruction);
     }
-    // Detect "read it to me" when think/search modal is open
-    var searchModal = document.getElementById('searchResultsModal');
-    if (searchModal && searchModal.classList.contains('visible') && lastUserText) {
-      if (/прочети|прочитай|чети|разкажи|кажи ми какво пише|read it|read .*(to me|aloud|out)|léelo|léeme|^да$|^yes$|^sí$|^да,?\s|^yes,?\s|^sí,?\s|давай|go ahead|sure|разбира се|of course/i.test(lastUserText) && window._thinkResultText) {
-        const textToRead = window._thinkResultText;
-        window._thinkResultText = null; // clear so next turn doesn't re-trigger
-        window._isReadingThinkResult = true; // flag to prevent modal close during reading
-        sendSystemInstruction(
-          'The user asked you to read the analysis. You MUST read the ENTIRE text below OUT LOUD, word by word. ' +
-          'Do NOT say "please provide the text" — the text IS provided below. Do NOT summarize. Do NOT skip sections. ' +
-          'Read it naturally, section by section, as if presenting a report. Start reading NOW:\n\n' +
-          '--- BEGIN TEXT ---\n' +
-          textToRead +
-          '\n--- END TEXT ---'
-        );
-      } else if (window._isReadingThinkResult) {
-        // Agent is still reading — don't close modal
-        window._isReadingThinkResult = false;
-      } else {
-        // User spoke about something else — close the modal
+
+    const userIntent = parseUserIntent(lastUserText, {
+      modalVisible,
+      hasSearchResults: !!window._lastSearchText,
+      hasThinkResult: !!window._thinkResultText,
+      isReading: isReadingActive(),
+      hasReadQueue: !!(getReadQueue() && getReadQueue().length > 0),
+    });
+
+    switch (userIntent.type) {
+      case 'show-results':
+        if (typeof openSearchResults === 'function') openSearchResults();
+        break;
+      case 'read-aloud':
+        if (window._thinkResultText && (!getReadQueue() || getReadQueue().length === 0)) {
+          setReadQueue(splitTextForReading(window._thinkResultText));
+        }
+        window._thinkResultText = null;
+        setReadingActive(true);
+        sendNextReadChunk(sendSystemInstruction);
+        break;
+      case 'read-continue':
+        sendNextReadChunk(sendSystemInstruction);
+        break;
+      case 'read-finished':
+        setReadingActive(false);
+        break;
+      case 'dismiss-modal':
         if (typeof closeSearchResults === 'function') closeSearchResults();
-        const isAst = getAssistantMode();
-        sendSystemInstruction(isAst
+        sendSystemInstruction(getAssistantMode()
           ? 'The results window is now closed. Do not mention closing it. Continue the conversation.'
           : 'Прозорецът с резултатите вече е затворен. НЕ споменавай затварянето, НЕ казвай "затварям го". Просто отговори на потребителя и продължи разговора естествено.');
-      }
+        break;
     }
+
     pendingBotText = '';
 
     bus.emit('turn:complete');
@@ -829,81 +825,6 @@ export async function startWebSearch(query) {
  * Deep analysis: call Gemma 12B, display formatted result, reconnect.
  * @param {string} query
  */
-export async function startDeepThink(query) {
-  searchCache = null;
-  if (typeof closeSearchResults === 'function') closeSearchResults();
-
-  const stage = document.getElementById('stage');
-  if (stage) stage.classList.add('thinking');
-  if (typeof startSearchOrbit === 'function') startSearchOrbit();
-
-  audioPlayer.stop();
-  bus.emit('audio:playing-changed', { playing: false });
-  _isConnected = false;
-  if (ws) { ws.close(); ws = null; }
-  setWebSocket(null);
-  stopMic();
-
-  const apiKey = document.getElementById('apiKey').value.trim();
-  let result = null;
-
-  try {
-    const lang = getSelectedLang();
-    const langNames = { bg: 'Bulgarian', en: 'English', es: 'Spanish', hi: 'Hindi' };
-    const langName = langNames[lang] || 'English';
-
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key=' + encodeURIComponent(apiKey),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text:
-            'You are a precise, knowledgeable analyst. Write your ENTIRE response in ' + langName + '.\n' +
-            'Provide a thorough, well-structured analysis. Use clear sections with **bold headings**, bullet points where appropriate. ' +
-            'Be factual, concise, and direct. No filler. No fluff.\n\n' +
-            'QUERY: ' + query
-          }] }],
-          generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 4000 }
-        })
-      }
-    );
-
-    if (res.ok) {
-      const data = await res.json();
-      result = data.candidates && data.candidates[0] && data.candidates[0].content &&
-        data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-        data.candidates[0].content.parts[0].text;
-    }
-  } catch (e) {
-    console.error('[think] error:', e);
-  } finally {
-    const stageEl = document.getElementById('stage');
-    if (stageEl) stageEl.classList.remove('thinking');
-    if (typeof stopSearchOrbit === 'function') stopSearchOrbit();
-    isSearching = false;
-  }
-
-  if (result) {
-    // Store as formatted analysis for display
-    window._lastSearchQuery = query;
-    window._lastSearchItems = [];
-    window._lastSearchSources = [];
-    window._lastSearchText = result;
-    window._lastThinkResult = result;
-    window._thinkResultText = result;
-    searchCache = result;
-    console.log('[think] result:', result.substring(0, 300));
-  } else {
-    searchCache = 'Analysis could not be completed.';
-    window._lastThinkResult = null;
-    window._thinkResultText = null;
-  }
-
-  reconnectReason = 'think';
-  connect();
-}
-
 // ── Bus event subscriptions ─────────────────────────
 
 // Settings: reconnect with new voice/lang/mode
@@ -942,5 +863,18 @@ bus.on('search:triggered', ({ query }) => {
 
 // Deep analysis triggered from bot output
 bus.on('think:triggered', ({ query }) => {
-  startDeepThink(query);
+  startDeepThink(query, {
+    getApiKey: () => document.getElementById('apiKey').value.trim(),
+    audioPlayer,
+    bus,
+    teardownConnection: () => {
+      _isConnected = false;
+      if (ws) { ws.close(); ws = null; }
+      setWebSocket(null);
+      stopMic();
+    },
+    reconnect: () => { reconnectReason = 'think'; connect(); },
+    setIsSearching: (v) => { isSearching = v; },
+    setSearchCache: (v) => { searchCache = v; },
+  });
 });

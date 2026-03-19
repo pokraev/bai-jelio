@@ -32,20 +32,53 @@ export async function searchAndNarrate(query, opts) {
   window._lastSearchSources = [];
 
   // Step 1: Try model knowledge (no grounding, no quota cost)
-  // Wait briefly for Live API RPM window to clear (shared project-level quota)
   // Brief wait for RPM window after Live API disconnect
   await new Promise(r => setTimeout(r, 2000));
 
-  console.log('[search] trying model knowledge first...');
-  let knowledgeResult = await geminiRest(
+  const knowledgePrompt =
     'The user asked: "' + query + '"\n\n' +
     'Answer from your knowledge. If you are confident about current/recent facts, include them.\n' +
     'If you are NOT confident about current data (e.g. today\'s events, live scores, breaking news), ' +
     'start your response with exactly: NEED_LIVE_DATA\n\n' +
     SEARCH_PROMPT_SUFFIX +
-    'Respond in ' + responseLang + '. Max 200 words. No markdown.',
-    { model: 'gemma-3-4b-it' }
-  );
+    'Respond in ' + responseLang + '. Max 200 words. No markdown.';
+
+  // Try Claude with web search first if God mode active
+  const godMode = typeof window.getGodMode === 'function' && window.getGodMode();
+  let knowledgeResult = null;
+
+  if (godMode && typeof window.callClaudeWithSearch === 'function') {
+    console.log('[search] God mode: trying Claude with web search...');
+    const claudeSearchPrompt =
+      'The user asked: "' + query + '"\n\n' +
+      'Search the web for current information and answer.\n' +
+      SEARCH_PROMPT_SUFFIX +
+      'Respond in ' + responseLang + '. Max 200 words. No markdown.';
+    knowledgeResult = await window.callClaudeWithSearch(claudeSearchPrompt, { maxTokens: 500 });
+    if (knowledgeResult) {
+      console.log('[search] Claude web search result:', knowledgeResult.substring(0, 200));
+      window._lastSearchText = knowledgeResult;
+      window._lastSearchQuery = query;
+      var lines = knowledgeResult.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+      var items = [];
+      for (var i = 0; i < lines.length && items.length < 5; i++) {
+        var line = lines[i].replace(/^[\*\-•]\s*/, '').replace(/\*\*/g, '').trim();
+        if (!line || line.startsWith('---')) continue;
+        var dashIdx = line.search(/[\-–—:]/);
+        if (dashIdx > 3 && dashIdx < line.length - 3) {
+          items.push({ title: line.substring(0, dashIdx).trim(), desc: line.substring(dashIdx + 1).trim() });
+        } else {
+          items.push({ title: line, desc: '' });
+        }
+      }
+      window._lastSearchItems = items;
+      window._searchWasGrounded = true;
+      return knowledgeResult;
+    }
+  }
+
+  console.log('[search] trying Gemma knowledge...');
+  knowledgeResult = await geminiRest(knowledgePrompt, { model: 'gemma-3-4b-it' });
 
   if (knowledgeResult === '__429__') return '__429__';
   if (knowledgeResult && !knowledgeResult.startsWith('NEED_LIVE_DATA')) {

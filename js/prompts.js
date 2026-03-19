@@ -62,6 +62,7 @@ export async function loadPrompts() {
     'lang-bg', 'lang-en', 'lang-es', 'lang-hi',
     'assitent-lang-bg', 'assitent-lang-en', 'assitent-lang-es', 'assitent-lang-hi',
     'deferred-knowledge', 'search-trigger', 'assitent-search-trigger',
+    'search-prompt-full', 'thinking-prompt-full',
   ];
 
   const entries = await Promise.all(
@@ -120,6 +121,10 @@ export function getSystemPrompt(topic, iq, lang) {
     return buildFallbackPrompt(t, i, l);
   }
 
+  // Intent detection patterns (shared by all personas)
+  const searchPatterns = promptCache['search-prompt-full'] || '';
+  const thinkingPatterns = promptCache['thinking-prompt-full'] || '';
+
   // Assistant mode — self-contained prompt with language injection
   if (getAssistantMode()) {
     const assistantBase = promptCache['assitent-system-base'] || '';
@@ -128,7 +133,9 @@ export function getSystemPrompt(topic, iq, lang) {
     return assistantBase
       .replace('{assistant_lang_speak}', aLang.speak || '')
       .replace('{assistant_lang_rules}', aLang.rules || '')
-      + (searchTrigger ? '\n\n' + searchTrigger : '');
+      + (searchTrigger ? '\n\n' + searchTrigger : '')
+      + (searchPatterns ? '\n\n' + searchPatterns : '')
+      + (thinkingPatterns ? '\n\n' + thinkingPatterns : '');
   }
 
   const base = getSoberMode()
@@ -145,7 +152,9 @@ export function getSystemPrompt(topic, iq, lang) {
     .replace('{iq_style}', iqProfile.style || '')
     .replace('{iq_length}', iqProfile.length || '')
     .replace('{lang_greeting}', langPrompt.greeting || '')
-    .replace('{lang_rules}', langPrompt.rules || '');
+    .replace('{lang_rules}', langPrompt.rules || '')
+    + (searchPatterns ? '\n\n' + searchPatterns : '')
+    + (thinkingPatterns ? '\n\n' + thinkingPatterns : '');
 }
 
 /**

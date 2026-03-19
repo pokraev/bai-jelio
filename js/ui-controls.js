@@ -246,6 +246,7 @@ export async function doExecuteClearMemory() {
  */
 export function clearApiKey() {
   setCookie('gemini_api_key', '', -1);
+  try { localStorage.removeItem('god_mode'); } catch (_) {}
   location.reload();
 }
 

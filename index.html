@@ -84,12 +84,16 @@
         <div class="field-group">
           <label><span data-i18n="api_key_label">Gemini API Key</span>
             <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('visible');" data-i18n-title="api_key_help" title="Как да получа ключ?">?</button>
+            <label class="god-mode-toggle"><input type="checkbox" id="godModeCheck" onchange="toggleGodModeField()"><span>God Mode</span></label>
           </label>
           <div class="row">
             <input type="password" id="apiKey" data-i18n-placeholder="api_key_placeholder" placeholder="Въведете вашият Gemini API key тук">
             <button class="round-btn round-btn-connect" id="connectBtn" onclick="toggleConnection()" title="Connect">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"></polygon></svg>
             </button>
+          </div>
+          <div id="claudeKeyField" style="display:none">
+            <input type="password" id="claudeApiKey" placeholder="Claude API Key (sk-ant-...)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem;margin-top:6px">
           </div>
         </div>
         <div id="configStatus" class="field-hint"></div>
@@ -281,6 +285,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- Transcript Modal -->
 <div class="modal" id="transcriptModal" onclick="if(event.target===this)closeTranscriptModal()">
@@ -681,6 +686,200 @@ function openSearchResults() {
 function closeSearchResults() {
   document.getElementById('searchResultsModal').classList.remove('visible');
 }
+
+// ── God Mode (Claude API) ───────────────────────────
+
+var CLAUDE_MODELS = {
+  fast: 'claude-haiku-4-5-20251001',    // transcript cleaning, search
+  medium: 'claude-sonnet-4-6',           // summaries
+  strong: 'claude-opus-4-6'              // deep analysis (МИСЛИ:)
+};
+
+function toggleGodModeField() {
+  var checked = document.getElementById('godModeCheck').checked;
+  document.getElementById('claudeKeyField').style.display = checked ? '' : 'none';
+  if (!checked) {
+    localStorage.removeItem('god_mode');
+  }
+}
+
+function getGodMode() {
+  var key = (document.getElementById('claudeApiKey') || {}).value;
+  if (!key) {
+    try { var saved = localStorage.getItem('god_mode'); if (saved) return JSON.parse(saved); } catch (_) {}
+    return null;
+  }
+  key = key.trim();
+  if (!key) return null;
+  return { key: key };
+}
+
+function saveGodModeKey() {
+  var key = (document.getElementById('claudeApiKey') || {}).value || '';
+  key = key.trim();
+  if (key) {
+    localStorage.setItem('god_mode', JSON.stringify({ key: key }));
+  } else {
+    localStorage.removeItem('god_mode');
+  }
+}
+
+// Auto-save Claude key on input
+document.addEventListener('DOMContentLoaded', function() {
+  var claudeInput = document.getElementById('claudeApiKey');
+  if (claudeInput) {
+    claudeInput.addEventListener('change', saveGodModeKey);
+    // Restore from localStorage
+    var saved = null;
+    try { var raw = localStorage.getItem('god_mode'); if (raw) saved = JSON.parse(raw); } catch (_) {}
+    if (saved && saved.key) {
+      claudeInput.value = saved.key;
+      document.getElementById('godModeCheck').checked = true;
+      document.getElementById('claudeKeyField').style.display = '';
+    }
+  }
+});
+
+/**
+ * Call Claude API as a drop-in replacement for Gemma generateContent.
+ * @param {string} prompt — the full prompt text
+ * @param {{ maxTokens?: number, tier?: 'fast'|'medium'|'strong' }} opts
+ * @returns {Promise<string|null>} — the response text or null on error
+ */
+async function callClaude(prompt, opts) {
+  var god = getGodMode();
+  if (!god) return null;
+  opts = opts || {};
+  var model = CLAUDE_MODELS[opts.tier || 'medium'];
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': god.key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: opts.maxTokens || 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.content && data.content[0] && data.content[0].text || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Call Claude API with web search tool enabled.
+ * @param {string} prompt
+ * @param {{ maxTokens?: number }} opts
+ * @returns {Promise<string|null>}
+ */
+async function callClaudeWithSearch(prompt, opts) {
+  var god = getGodMode();
+  if (!god) return null;
+  opts = opts || {};
+  var model = CLAUDE_MODELS[opts.tier || 'fast'];
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': god.key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: opts.maxTokens || 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    // Extract text blocks from response (skip tool_use/web_search blocks)
+    var text = '';
+    if (data.content) {
+      for (var i = 0; i < data.content.length; i++) {
+        if (data.content[i].type === 'text') {
+          text += data.content[i].text;
+        }
+      }
+    }
+    return text || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Expose for modules
+window.callClaudeWithSearch = callClaudeWithSearch;
+
+/**
+ * Stream Claude API response, calling onChunk for each text delta.
+ * @param {string} prompt
+ * @param {{ maxTokens?: number, onChunk: function(string), signal?: AbortSignal }} opts
+ * @returns {Promise<string>} — full accumulated text
+ */
+async function streamClaude(prompt, opts) {
+  var god = getGodMode();
+  if (!god) return '';
+  var model = CLAUDE_MODELS[opts.tier || 'medium'];
+  var fullText = '';
+  var res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': god.key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: model,
+      max_tokens: opts.maxTokens || 2000,
+      stream: true,
+      messages: [{ role: 'user', content: prompt }]
+    }),
+    signal: opts.signal
+  });
+  if (!res.ok) return '';
+  var reader = res.body.getReader();
+  var decoder = new TextDecoder();
+  var buffer = '';
+  while (true) {
+    if (opts.signal && opts.signal.aborted) { reader.cancel(); return fullText; }
+    var chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    var lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line.startsWith('data: ')) continue;
+      var jsonStr = line.substring(6);
+      try {
+        var evt = JSON.parse(jsonStr);
+        if (evt.type === 'content_block_delta' && evt.delta && evt.delta.text) {
+          fullText += evt.delta.text;
+          if (opts.onChunk) opts.onChunk(evt.delta.text, fullText);
+        }
+      } catch (_) {}
+    }
+  }
+  return fullText;
+}
+
+// Expose for modules
+window.getGodMode = getGodMode;
+window.callClaude = callClaude;
+window.streamClaude = streamClaude;
+
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
     if (typeof getCookie === 'function' && getCookie('iphone_tutorial_hide') !== '1') {
@@ -1282,63 +1481,79 @@ async function renderSummary(turns, dateStr, hourVal) {
     var fullText = '';
     var streamStarted = false;
 
+    var godMode = getGodMode();
+
     try {
-      var streamRes = null;
-      for (var mi = 0; mi < models.length; mi++) {
-        if (signal.aborted) { _apiSuspended = false; return; }
-        streamRes = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/' + models[mi] + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(apiKey),
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: promptText }] }],
-              generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 2000 }
-            }),
-            signal: signal
+      if (godMode) {
+        // ── Claude streaming ──
+        fullText = await streamClaude(promptText, {
+          maxTokens: 2000,
+          tier: 'medium',
+          signal: signal,
+          onChunk: function(delta, accumulated) {
+            if (!streamStarted) { streamStarted = true; streamBody.innerHTML = ''; }
+            streamBody.innerHTML = formatSummaryHtml(accumulated);
+            autoScrollChat(chat);
           }
-        );
-        if (streamRes.ok) break;
-      }
-
-      if (!streamRes || !streamRes.ok) {
-        _apiSuspended = false;
-        var errData = streamRes ? await streamRes.json() : {};
-        var errMsg = (errData.error && errData.error.message) || 'HTTP ' + (streamRes ? streamRes.status : 'unknown');
-        streamBody.innerHTML = '<div class="transcript-empty">Error: ' + escapeHtml(errMsg) + '</div>';
-        return;
-      }
-
-      var reader = streamRes.body.getReader();
-      var decoder = new TextDecoder();
-      var buffer = '';
-
-      while (true) {
-        if (signal.aborted) { _apiSuspended = false; reader.cancel(); return; }
-        var chunk = await reader.read();
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-
-        // Parse SSE lines
-        var lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete line
-        for (var li = 0; li < lines.length; li++) {
-          var line = lines[li].trim();
-          if (!line.startsWith('data: ')) continue;
-          var jsonStr = line.substring(6);
-          if (jsonStr === '[DONE]') continue;
-          try {
-            var parsed = JSON.parse(jsonStr);
-            var text = parsed.candidates && parsed.candidates[0] &&
-              parsed.candidates[0].content && parsed.candidates[0].content.parts &&
-              parsed.candidates[0].content.parts[0] && parsed.candidates[0].content.parts[0].text;
-            if (text) {
-              if (!streamStarted) { streamStarted = true; streamBody.innerHTML = ''; }
-              fullText += text;
-              streamBody.innerHTML = formatSummaryHtml(fullText);
-              autoScrollChat(chat);
+        });
+      } else {
+        // ── Gemma streaming ──
+        var streamRes = null;
+        for (var mi = 0; mi < models.length; mi++) {
+          if (signal.aborted) { _apiSuspended = false; return; }
+          streamRes = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/' + models[mi] + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(apiKey),
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 2000 }
+              }),
+              signal: signal
             }
-          } catch (_) {}
+          );
+          if (streamRes.ok) break;
+        }
+
+        if (!streamRes || !streamRes.ok) {
+          _apiSuspended = false;
+          var errData = streamRes ? await streamRes.json() : {};
+          var errMsg = (errData.error && errData.error.message) || 'HTTP ' + (streamRes ? streamRes.status : 'unknown');
+          streamBody.innerHTML = '<div class="transcript-empty">Error: ' + escapeHtml(errMsg) + '</div>';
+          return;
+        }
+
+        var reader = streamRes.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+
+        while (true) {
+          if (signal.aborted) { _apiSuspended = false; reader.cancel(); return; }
+          var chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (var li = 0; li < lines.length; li++) {
+            var line = lines[li].trim();
+            if (!line.startsWith('data: ')) continue;
+            var jsonStr = line.substring(6);
+            if (jsonStr === '[DONE]') continue;
+            try {
+              var parsed = JSON.parse(jsonStr);
+              var text = parsed.candidates && parsed.candidates[0] &&
+                parsed.candidates[0].content && parsed.candidates[0].content.parts &&
+                parsed.candidates[0].content.parts[0] && parsed.candidates[0].content.parts[0].text;
+              if (text) {
+                if (!streamStarted) { streamStarted = true; streamBody.innerHTML = ''; }
+                fullText += text;
+                streamBody.innerHTML = formatSummaryHtml(fullText);
+                autoScrollChat(chat);
+              }
+            } catch (_) {}
+          }
         }
       }
 
@@ -1361,6 +1576,7 @@ async function renderSummary(turns, dateStr, hourVal) {
   }
 
   // ── Standard mode: non-streaming ──
+  var godMode = getGodMode();
   var reqBody = JSON.stringify({
     contents: [{ parts: [{ text: promptText }] }],
     generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 2000 }
@@ -1370,6 +1586,23 @@ async function renderSummary(turns, dateStr, hourVal) {
   var MAX_RETRIES = 3;
   try {
     var res, data;
+
+    // Try Claude first if God mode active
+    if (godMode) {
+      labelEl.textContent = baseLabel;
+      var claudeResult = await callClaude(promptText, { maxTokens: 2000 });
+      if (claudeResult) {
+        _apiSuspended = false;
+        typingEl.remove();
+        var summary = claudeResult.trim();
+        if (cacheKey) { try { localStorage.setItem(cacheKey, summary); } catch (_) {} }
+        chat.innerHTML = '';
+        showSummaryBubble(chat, summary);
+        return;
+      }
+      // Claude failed — fall through to Gemma
+    }
+
     for (var attempt = 0; attempt < MAX_RETRIES; attempt++) {
       for (var mi = 0; mi < models.length; mi++) {
         if (signal.aborted) { _apiSuspended = false; typingEl.remove(); return; }
@@ -1629,37 +1862,50 @@ async function cleanTranscript(text, langRule, signal) {
   var cacheKey = 'clean_' + lang + '_' + text.length + '_' + text.substring(0, 60).replace(/\s/g, '_');
   var cached = getCachedEntry(cacheKey);
   if (cached) return cached;
+
+  var cleanPrompt = 'Language: ' + langRule + '\n\n' +
+    'This is a SPEECH-TO-TEXT transcript with many recognition errors. Fix ALL of the following:\n' +
+    '1. PHONETIC ERRORS: The STT often mishears words. Guess the correct word from context. Examples: "Ти Ти Ти ли си" → "Чел ли си", "чело" → "чела" (gender), "бачител" → "бащител/бащата/учител" depending on context.\n' +
+    '2. REPEATED/STUTTERED WORDS: Remove accidental repetitions from STT.\n' +
+    '3. GRAMMAR: Fix gender agreements, verb forms, definite articles (членуване), commas, capitalization.\n' +
+    '4. PROPER NOUNS: Fix misspelled names of people, books, places, bands (e.g. "Каарамазови" → "Карамазови", "Достоевски", "Iron Maiden").\n' +
+    '5. CAPITALIZE first letter of each sentence.\n' +
+    'Keep the same meaning, tone, slang and colloquial style. Do NOT translate. Do NOT add quotes. Return ONLY the corrected text.\n\n' + text;
+
   try {
-    var res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-4b-it:generateContent?key=' + encodeURIComponent(apiKey),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text:
-            'Language: ' + langRule + '\n\n' +
-            'This is a SPEECH-TO-TEXT transcript with many recognition errors. Fix ALL of the following:\n' +
-            '1. PHONETIC ERRORS: The STT often mishears words. Guess the correct word from context. Examples: "Ти Ти Ти ли си" → "Чел ли си", "чело" → "чела" (gender), "бачител" → "бащител/бащата/учител" depending on context.\n' +
-            '2. REPEATED/STUTTERED WORDS: Remove accidental repetitions from STT.\n' +
-            '3. GRAMMAR: Fix gender agreements, verb forms, definite articles (членуване), commas, capitalization.\n' +
-            '4. PROPER NOUNS: Fix misspelled names of people, books, places, bands (e.g. "Каарамазови" → "Карамазови", "Достоевски", "Iron Maiden").\n' +
-            '5. CAPITALIZE first letter of each sentence.\n' +
-            'Keep the same meaning, tone, slang and colloquial style. Do NOT translate. Do NOT add quotes. Return ONLY the corrected text.\n\n' + text
-          }] }],
-          generationConfig: { temperature: 0.0, topP: 0.1, topK: 1, maxOutputTokens: 500 }
-        }),
-        signal: signal
-      }
-    );
-    if (res.status === 429) {
-      await new Promise(function(r) { setTimeout(r, 5000); });
-      return text;
+    var godMode = getGodMode();
+    var result = null;
+
+    if (godMode) {
+      // Use Claude
+      result = await callClaude(cleanPrompt, { maxTokens: 500, tier: 'fast' });
     }
-    if (!res.ok) return text;
-    var data = await res.json();
-    var result = data.candidates && data.candidates[0] && data.candidates[0].content &&
-      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-      data.candidates[0].content.parts[0].text;
+
+    if (!result) {
+      // Fallback to Gemma
+      var res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-4b-it:generateContent?key=' + encodeURIComponent(apiKey),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: cleanPrompt }] }],
+            generationConfig: { temperature: 0.0, topP: 0.1, topK: 1, maxOutputTokens: 500 }
+          }),
+          signal: signal
+        }
+      );
+      if (res.status === 429) {
+        await new Promise(function(r) { setTimeout(r, 5000); });
+        return text;
+      }
+      if (!res.ok) return text;
+      var data = await res.json();
+      result = data.candidates && data.candidates[0] && data.candidates[0].content &&
+        data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+        data.candidates[0].content.parts[0].text;
+    }
+
     var cleaned = result ? stripForeignChars(result.trim()) : text;
     if (cleaned && cleaned !== text) setTranscriptCache(cacheKey, cleaned);
     return cleaned;
