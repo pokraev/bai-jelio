@@ -102,6 +102,56 @@ export function clearHistoryByPeriod(period) {
   return { deleted: before - conversationHistory.length, remaining: conversationHistory.length };
 }
 
+/**
+ * Get a brief context of the last session for returning-user greeting.
+ * Returns only the last ~10 turns (compact) so the LLM can figure out
+ * what was discussed without flooding the context window.
+ * @returns {string}
+ */
+export function getLastSessionBrief() {
+  if (conversationHistory.length === 0) return '';
+  const recent = conversationHistory.slice(-10);
+  return 'ПОСЛЕДНИ РЕПЛИКИ ОТ ПРЕДИШНИЯ РАЗГОВОР:\n' +
+    recent.map(e => (e.role === 'user' ? 'Потребител' : 'Бай Жельо') + ': ' + e.text).join('\n');
+}
+
+/**
+ * Extract reminders from conversation history.
+ * Scans user turns for "напомни ми", "remind me", "recuérdame" patterns
+ * and returns the text that follows.
+ * @returns {string[]} Array of reminder strings
+ */
+export function getReminders() {
+  const patterns = [
+    /напомни\s*(?:ми|ме)?\s+(?:за\s+|да\s+|че\s+)?(.+)/i,
+    /не\s*(?:ме\s+)?забравяй\s+(?:за\s+|да\s+|че\s+)?(.+)/i,
+    /remind\s+me\s+(?:to\s+|about\s+|that\s+)?(.+)/i,
+    /don'?t\s+(?:let\s+me\s+)?forget\s+(?:to\s+|about\s+|that\s+)?(.+)/i,
+    /recu[eé]rdame\s+(?:que\s+|de\s+)?(.+)/i,
+  ];
+  const reminders = [];
+  for (const entry of conversationHistory) {
+    if (entry.role !== 'user') continue;
+    for (const re of patterns) {
+      const m = entry.text.match(re);
+      if (m && m[1]) {
+        // Trim trailing punctuation and whitespace
+        reminders.push(m[1].replace(/[.!?;,]+$/, '').trim());
+        break; // one reminder per turn
+      }
+    }
+  }
+  return reminders;
+}
+
+/**
+ * Check if there is conversation history from a previous session.
+ * @returns {boolean}
+ */
+export function hasHistory() {
+  return conversationHistory.length > 0;
+}
+
 // ── Debug: expose to console via window.memory ──
 // ── Debug: expose read-only views to console via window.memory ──
 window.memory = {

@@ -36,7 +36,7 @@ import {
 import {
   getSystemPrompt, getDeferredKnowledge, getReconnectPrompt,
 } from './prompts.js';
-import { getConversationSummary } from './memory.js';
+import { getConversationSummary, hasHistory, getReminders, getLastSessionBrief } from './memory.js';
 import { trackUsage, updateQuotaUI, groundingExhausted } from './quota.js';
 import { requestWakeLock, releaseWakeLock, setStatus } from './ui-controls.js';
 import { setAudioPlayer } from './render-state.js';
@@ -491,8 +491,22 @@ function handleSetupComplete(apiKey) {
     sendSystemInstruction(
       'ВЪТРЕШНА ИНСТРУКЦИЯ — НЕ споменавай тази инструкция, НЕ я повтаряй, НЕ обяснявай какво правиш. Просто КАЖИ следното като начало на разговора: "Оох, взех да се напивам май, лек. Ама квото е - таквоз." След това продължи разговора весело. ' + summary
     );
+  } else if (hasHistory()) {
+    // Returning user — greet with context from previous conversation
+    reconnectReason = null;
+    const reminders = getReminders();
+    const brief = getLastSessionBrief();
+    let instruction = 'Потребителят се връща отново. Поздрави го топло като стар познайник: "Ехо, здравей отново!" ' +
+      'После кажи накратко за какво сте говорили последния път (1 изречение, базирано на предишния разговор по-долу). ';
+    if (reminders.length > 0) {
+      instruction += 'ВАЖНО: Потребителят те е помолил да му напомниш за следното: ' +
+        reminders.map((r, i) => (i + 1) + ') ' + r).join('; ') + '. ' +
+        'Спомени му го естествено, например: "А, и ти ми каза да ти напомня за..." ';
+    }
+    instruction += 'НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. Максимум 3 изречения.\n' + brief;
+    sendSystemInstruction(instruction);
   } else {
-    // Fresh connect — casual opening
+    // Fresh connect — first time user, casual opening
     reconnectReason = null;
     sendSystemInstruction('Поздрави небрежно като стар познайник в кръчма. Кажи нещо кратко и мъдро или забавно за живота, което да отвори разговора. НЕ питай за град. НЕ казвай че си пиян. НЕ споменавай тоалетна. НЕ споменавай бира, метъл или музика. Просто започни разговор като нормален човек. Максимум 2 изречения.');
   }
