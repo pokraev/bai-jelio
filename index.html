@@ -836,7 +836,7 @@ async function callClaude(prompt, opts) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': god.key,
-        'anthropic-version': '2025-01-01',
+        'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -870,7 +870,7 @@ async function callClaudeWithSearch(prompt, opts) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': god.key,
-        'anthropic-version': '2025-01-01',
+        'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
