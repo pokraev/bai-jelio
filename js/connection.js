@@ -636,12 +636,24 @@ function handleServerContent(content) {
         openSearchResults();
       }
     }
-    // Close search results if modal is open and user spoke (they're done looking)
+    // Detect "read it to me" when think/search modal is open
     var searchModal = document.getElementById('searchResultsModal');
     if (searchModal && searchModal.classList.contains('visible') && lastUserText) {
-      if (typeof closeSearchResults === 'function') closeSearchResults();
-      // Tell the agent to not mention closing the window
-      sendSystemInstruction('Прозорецът с резултатите вече е затворен. НЕ споменавай затварянето, НЕ казвай "затварям го". Просто отговори на потребителя и продължи разговора естествено.');
+      if (/прочети|прочитай|чети|разкажи|кажи ми какво пише|read it|read .*(to me|aloud|out)|léelo|léeme/i.test(lastUserText) && window._thinkResultText) {
+        const isAst = getAssistantMode();
+        sendSystemInstruction(
+          (isAst ? 'STAY IN CHARACTER. Professional tone.\n' : '') +
+          'Read the following text aloud to the user. Read it clearly, section by section. Do not skip anything. Do not summarize — read the FULL text:\n\n' +
+          window._thinkResultText
+        );
+      } else {
+        // User spoke about something else — close the modal
+        if (typeof closeSearchResults === 'function') closeSearchResults();
+        const isAst = getAssistantMode();
+        sendSystemInstruction(isAst
+          ? 'The results window is now closed. Do not mention closing it. Continue the conversation.'
+          : 'Прозорецът с резултатите вече е затворен. НЕ споменавай затварянето, НЕ казвай "затварям го". Просто отговори на потребителя и продължи разговора естествено.');
+      }
     }
     pendingBotText = '';
 
@@ -849,11 +861,13 @@ export async function startDeepThink(query) {
     window._lastSearchSources = [];
     window._lastSearchText = result;
     window._lastThinkResult = result;
+    window._thinkResultText = result;
     searchCache = result;
     console.log('[think] result:', result.substring(0, 300));
   } else {
     searchCache = 'Analysis could not be completed.';
     window._lastThinkResult = null;
+    window._thinkResultText = null;
   }
 
   reconnectReason = 'search';
