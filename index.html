@@ -87,20 +87,23 @@
     <button class="cheers-btn" id="cheersBtn" onclick="toggleConnection()" style="display:none" data-i18n="cheers">🍺 ¡Vamos!</button>
     <div class="config-section" id="configSection">
       <div class="config-body">
-        <div class="field-group">
-          <label><span data-i18n="api_key_label">Gemini API Key</span>
-            <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('visible');" data-i18n-title="api_key_help" title="Как да получа ключ?">?</button>
-            <label class="god-mode-toggle"><input type="checkbox" id="godModeCheck" onchange="toggleGodModeField()"><span>God Mode</span></label>
-          </label>
-          <div class="row">
-            <input type="password" id="apiKey" data-i18n-placeholder="api_key_placeholder" placeholder="Въведете вашият Gemini API key тук">
+        <div class="config-title-row">
+          <span class="config-title" data-i18n="api_key_label">Gemini API Key</span>
+          <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('visible');" data-i18n-title="api_key_help" title="Как да получа ключ?">?</button>
+          <label class="god-mode-toggle"><input type="checkbox" id="godModeCheck" onchange="toggleGodModeField()"><span>God Mode</span></label>
+        </div>
+        <div class="config-field">
+          <label class="config-field-label">Gemini API Key</label>
+          <div class="config-input-row">
+            <input type="password" id="apiKey" data-i18n-placeholder="api_key_placeholder" placeholder="Paste your Gemini API key here">
             <button class="round-btn round-btn-connect" id="connectBtn" onclick="toggleConnection()" title="Connect">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"></polygon></svg>
             </button>
           </div>
-          <div id="claudeKeyField" style="display:none">
-            <input type="password" id="claudeApiKey" placeholder="Claude API Key (sk-ant-...)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem;margin-top:6px">
-          </div>
+        </div>
+        <div id="claudeKeyField" class="config-field" style="display:none">
+          <label class="config-field-label">Claude API Key</label>
+          <input type="password" id="claudeApiKey" placeholder="sk-ant-api03-...">
         </div>
         <div id="configStatus" class="field-hint"></div>
       </div>
