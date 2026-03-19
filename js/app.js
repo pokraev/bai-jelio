@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
-import { getCookie, setCookie, setSoberMode, getSelectedLang } from './config.js';
+import { getCookie, setCookie, setSoberMode, setAssistantMode, getSelectedLang } from './config.js';
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import { startMic, stopMic, toggleMute, setWebSocket, getIsMuted } from './microphone.js';
@@ -13,7 +13,7 @@ import {
   selectTopic, openSettings, closeSettings, saveSettings,
   confirmClearMemory, closeClearMemoryModal, doExecuteClearMemory,
   clearApiKey, clearCache,
-  setStatus, requestWakeLock, releaseWakeLock,
+  setStatus, requestWakeLock, releaseWakeLock, updateAvatarForMode,
 } from './ui-controls.js';
 import { initQuota } from './quota.js';
 import { startAnimation } from './animation.js';
@@ -87,6 +87,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Restore sober mode from cookie
   if (getCookie('sober_mode') === '1') {
     setSoberMode(true);
+  }
+
+  // Restore assistant mode from cookie
+  if (getCookie('assistant_mode') === '1') {
+    setAssistantMode(true);
+    updateAvatarForMode(true);
   }
 
   // Enable transcript button if there's saved history

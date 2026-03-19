@@ -4,7 +4,7 @@
 
 import {
   TOPIC_KNOWLEDGE, IQ_LEVELS, IQ_NAMES, LANGS, LANG_LABELS,
-  getSelectedTopic, getSelectedIQ, getSelectedLang, getSoberMode,
+  getSelectedTopic, getSelectedIQ, getSelectedLang, getSoberMode, getAssistantMode,
 } from './config.js';
 
 // ── Cached prompt templates ─────────────────────────
@@ -50,7 +50,7 @@ export async function loadPrompts() {
   if (promptCache) return;
 
   const files = [
-    'system-base', 'sober-system-base',
+    'system-base', 'sober-system-base', 'assitent-system-base',
     'topic-philosophy', 'topic-psychology', 'topic-sociology',
     'topic-science', 'topic-politics', 'topic-music',
     'topic-literature', 'topic-life',
@@ -107,6 +107,13 @@ export function getSystemPrompt(topic, iq, lang) {
   // If prompts not yet loaded, fall back to inline assembly
   if (!promptCache) {
     return buildFallbackPrompt(t, i, l);
+  }
+
+  // Assistant mode — self-contained prompt, no IQ/topic/lang placeholders
+  if (getAssistantMode()) {
+    const assistantBase = promptCache['assitent-system-base'] || '';
+    const searchTrigger = promptCache['search-trigger'] || '';
+    return assistantBase + (searchTrigger ? '\n\n' + searchTrigger : '');
   }
 
   const base = getSoberMode()

@@ -116,35 +116,6 @@ export function getLastSessionBrief() {
 }
 
 /**
- * Extract reminders from conversation history.
- * Scans user turns for "напомни ми", "remind me", "recuérdame" patterns
- * and returns the text that follows.
- * @returns {string[]} Array of reminder strings
- */
-export function getReminders() {
-  const patterns = [
-    /напомни\s*(?:ми|ме)?\s+(?:за\s+|да\s+|че\s+)?(.+)/i,
-    /не\s*(?:ме\s+)?забравяй\s+(?:за\s+|да\s+|че\s+)?(.+)/i,
-    /remind\s+me\s+(?:to\s+|about\s+|that\s+)?(.+)/i,
-    /don'?t\s+(?:let\s+me\s+)?forget\s+(?:to\s+|about\s+|that\s+)?(.+)/i,
-    /recu[eé]rdame\s+(?:que\s+|de\s+)?(.+)/i,
-  ];
-  const reminders = [];
-  for (const entry of conversationHistory) {
-    if (entry.role !== 'user') continue;
-    for (const re of patterns) {
-      const m = entry.text.match(re);
-      if (m && m[1]) {
-        // Trim trailing punctuation and whitespace
-        reminders.push(m[1].replace(/[.!?;,]+$/, '').trim());
-        break; // one reminder per turn
-      }
-    }
-  }
-  return reminders;
-}
-
-/**
  * Check if there is conversation history from a previous session.
  * @returns {boolean}
  */

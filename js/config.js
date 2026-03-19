@@ -103,6 +103,7 @@ let _selectedIQ    = 'intelligent';
 let _selectedLang  = 'bg';
 let _selectedVoice = 'Enceladus';
 let _soberMode = false;
+let _assistantMode = false;
 
 export function getSelectedTopic()          { return _selectedTopic; }
 export function setSelectedTopic(v)         { _selectedTopic = v; }
@@ -118,6 +119,9 @@ export function setSelectedVoice(v)         { _selectedVoice = v; }
 
 export function getSoberMode()              { return _soberMode; }
 export function setSoberMode(v)             { _soberMode = v; }
+
+export function getAssistantMode()          { return _assistantMode; }
+export function setAssistantMode(v)         { _assistantMode = v; }
 
 // ──────────────────────────────────────────────────────
 // Utility

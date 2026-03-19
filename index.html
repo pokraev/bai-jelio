@@ -205,6 +205,7 @@
             <div class="custom-select-menu">
               <div class="custom-select-item active" data-val="drunk" data-i18n="mode_drunk">Готиния</div>
               <div class="custom-select-item" data-val="sober" data-i18n="mode_sober">Трезвен</div>
+              <div class="custom-select-item" data-val="assistant" data-i18n="mode_assistant">Асистент</div>
             </div>
           </div>
         </div>
@@ -750,9 +751,22 @@ var _apiSuspended = false; // true while summary is generating — blocks cleanT
 
 // ── Transcript helpers ──
 function getFullTranscriptHistory() {
-  var hist = window._rawTranscripts && window._rawTranscripts.length > 0
-    ? window._rawTranscripts
-    : (window.memory ? window.memory.history : []);
+  var memory = window.memory ? window.memory.history : [];
+  var session = window._rawTranscripts || [];
+
+  // Merge: memory (past sessions) + current session, deduplicate by timestamp
+  var hist;
+  if (memory.length > 0 && session.length > 0) {
+    // Find the earliest session timestamp to avoid overlap
+    var sessionStart = session[0].ts || Date.now();
+    var olderMemory = memory.filter(function(e) { return e.ts && e.ts < sessionStart; });
+    hist = olderMemory.concat(session);
+  } else if (session.length > 0) {
+    hist = session;
+  } else {
+    hist = memory;
+  }
+
   // Backfill missing timestamps: assign evenly spaced times ending at now
   if (hist.length > 0 && !hist[0].ts) {
     var now = Date.now();
@@ -1162,20 +1176,34 @@ async function renderSummary(turns, dateStr, hourVal) {
   transcriptAbort = new AbortController();
   signal = transcriptAbort.signal;
 
-  // Build conversation text for summary — limit to last 100 turns to avoid token overflow
-  var summaryTurns = turns.length > 100 ? turns.slice(-100) : turns;
   var botNames = { bg: 'Бай Жельо', en: 'Bai Zhelyo', es: 'Bai Zhelyo', hi: 'बाई झेल्यो' };
   var userNames = { bg: 'Аз', en: 'Me', es: 'Yo', hi: 'मैं' };
   var botName = botNames[lang] || botNames.bg;
   var userName = userNames[lang] || userNames.bg;
+
+  // Check for cached summary (past dates only, not today)
+  var todayKey = toDateKey(new Date());
+  var isToday = !dateStr || dateStr === todayKey;
+  var cacheKey = dateStr ? 'summary_' + dateStr : null;
+  if (!isToday && cacheKey) {
+    var cached = null;
+    try { cached = localStorage.getItem(cacheKey); } catch (_) {}
+    if (cached) {
+      _apiSuspended = false;
+      typingEl.remove();
+      chat.innerHTML = '';
+      showSummaryBubble(chat, cached);
+      return;
+    }
+  }
+
+  // Build transcript text from the already-filtered turns (selected date only)
+  var summaryTurns = turns.length > 100 ? turns.slice(-100) : turns;
   var convText = summaryTurns.map(function(turn) {
-    // Strip search triggers and system commands from text
     var cleanText = turn.text.replace(/ТЪРСЯ:\s*.*/gi, '').replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
     if (!cleanText) return null;
     return (turn.role === 'user' ? userName : botName) + ': ' + cleanText;
   }).filter(Boolean).join('\n');
-
-  // Truncate if too long (keep under ~12k chars for flash-lite)
   if (convText.length > 12000) convText = convText.substring(convText.length - 12000);
 
   var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
@@ -1190,21 +1218,24 @@ async function renderSummary(turns, dateStr, hourVal) {
   };
   var h = sectionHeadings[lang] || sectionHeadings.bg;
 
+  var promptParts = [
+    'IMPORTANT: You MUST write your ENTIRE response in ' + langName + '. Every word must be in ' + langName + '.\n\n',
+    'Summarize this conversation. ONLY use information from the conversation text below — nothing else.\n',
+    'Use these sections with **bold** headings:\n' +
+    '**' + h.topics + '**\n' +
+    '**' + h.keyPoints + '**\n' +
+    '**' + h.agreements + '** (skip if none)\n' +
+    '**' + h.disagreements + '** (skip if none)\n' +
+    '**' + h.decisions + '** (skip if none)\n\n' +
+    'Each section has bullet points. For agreements look for "Абсолютно!", "Да!", "Точно!". For disagreements look for "не съм съгласен", "несъгласен", "не мисля така". Do NOT list different topics as disagreements.\n',
+    'The summary is written from MY perspective (the user). Use first person singular for "' + userName + '" (I asked, I wanted — NOT "user asks"). Use first person plural when both participants agree/share something (we agreed, we both think — NOT "they both think"). Conjugate all verbs accordingly in ' + langName + '.\n',
+    'Keep it under 400 words. Skip empty sections. Write ONLY the summary in ' + langName + ', no preamble.\n\n',
+    'CONVERSATION:\n' + convText
+  ];
+
   var models = ['gemma-3-4b-it', 'gemma-3-1b-it'];
   var reqBody = JSON.stringify({
-    contents: [{ parts: [{ text:
-      'IMPORTANT: You MUST write your ENTIRE response in ' + langName + '. Every word must be in ' + langName + '.\n\n' +
-      'Summarize this conversation. Use these sections with **bold headings**:\n' +
-      '**' + h.topics + '** — main subjects discussed (bullet points)\n' +
-      '**' + h.keyPoints + '** — important facts, ideas, or arguments (bullet points)\n' +
-      '**' + h.agreements + '** — shared views or points where both participants clearly agree. Look for: confirmations ("Абсолютно!", "Да!", "Точно!", "Right!", "Exactly!"), supportive responses, both expressing the same opinion, or the user stating something and the bot affirming it (or vice versa). (bullet points, skip if none)\n' +
-      '**' + h.disagreements + '** — points where one person clearly opposed or contradicted the other. Look for: "не", "not", "I disagree", or directly opposing statements. Do NOT list different topics as disagreements. Skip if none.\n' +
-      '**' + h.decisions + '** — any conclusions, plans, or commitments explicitly made (bullet points, skip if none)\n' +
-      'STRICT RULE: Only include information EXPLICITLY stated in the conversation text below. Do NOT invent, assume, infer, or hallucinate anything. If something was not directly said, do NOT include it. If user messages are missing (only bot messages visible), summarize ONLY what the bot said — do NOT guess what the user said.\n' +
-      'The summary is written from MY perspective (the user). Use first person singular for "' + userName + '" (I asked, I wanted — NOT "user asks"). Use first person plural when both participants agree/share something (we agreed, we both think — NOT "they both think"). Conjugate all verbs accordingly in ' + langName + '.\n' +
-      'Keep it under 400 words. Skip empty sections. Write ONLY the summary in ' + langName + ', no preamble.\n\n' +
-      'CONVERSATION:\n' + convText
-    }] }],
+    contents: [{ parts: [{ text: promptParts.join('') }] }],
     generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 2000 }
   });
   var labelEl = typingEl.querySelector('.typing-label');
@@ -1268,6 +1299,11 @@ async function renderSummary(turns, dateStr, hourVal) {
     }
 
     summary = summary.trim();
+    // Cache daily summary (for past dates context and instant reload)
+    if (cacheKey) {
+      try { localStorage.setItem(cacheKey, summary); } catch (_) {}
+    }
+    chat.innerHTML = '';
     showSummaryBubble(chat, summary);
   } catch (e) {
     _apiSuspended = false;
@@ -1311,7 +1347,6 @@ function formatSummaryHtml(text) {
 }
 
 function showSummaryBubble(chat, text) {
-  chat.innerHTML = '';
   var container = document.createElement('div');
   container.className = 'summary-container';
   container.innerHTML =

@@ -12,6 +12,7 @@ import {
   getSelectedLang, setSelectedLang,
   getSelectedVoice, setSelectedVoice,
   getSoberMode, setSoberMode,
+  getAssistantMode, setAssistantMode,
   getCookie, setCookie,
 } from './config.js';
 import { getIQProfile, getLangPrompt } from './prompts.js';
@@ -30,6 +31,22 @@ export async function requestWakeLock() {
 
 export function releaseWakeLock() {
   if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+// ── Avatar mode switching ────────────────────────────
+
+export function updateAvatarForMode(isAssistant) {
+  var avatarImg = document.getElementById('avatarImg');
+  var searchImg = document.getElementById('searchImg');
+  var mouthCanvas = document.getElementById('mouthCanvas');
+  var eyelids = document.querySelectorAll('.eyelid');
+
+  if (avatarImg) avatarImg.src = isAssistant ? 'images/avatar-assitent.jpg' : 'avatar.jpg';
+  if (searchImg) searchImg.src = isAssistant ? 'images/avatar-assitent-serching.jpg' : 'images/searching.jpg';
+
+  // Hide mouth and eyelid animations in assistant mode
+  if (mouthCanvas) mouthCanvas.style.display = isAssistant ? 'none' : '';
+  eyelids.forEach(function(el) { el.style.display = isAssistant ? 'none' : ''; });
 }
 
 // ── Status Display ──────────────────────────────────
@@ -97,7 +114,7 @@ export function openSettings() {
   setCustomSelect('settingsVoice', getSelectedVoice());
   setCustomSelect('settingsIQ', getSelectedIQ());
   setCustomSelect('settingsLang', getSelectedLang());
-  setCustomSelect('settingsMode', getSoberMode() ? 'sober' : 'drunk');
+  setCustomSelect('settingsMode', getAssistantMode() ? 'assistant' : (getSoberMode() ? 'sober' : 'drunk'));
   var memMax = localStorage.getItem('memory_turns') || '500';
   var memUsed = window.memory ? window.memory.count : 0;
   setCustomSelect('settingsMemory', memMax);
@@ -266,7 +283,9 @@ export function saveSettings() {
   const voiceChanged = newVoice !== getSelectedVoice();
   const iqChanged = newIQ !== getSelectedIQ();
   const langChanged = newLang !== getSelectedLang();
-  const modeChanged = (newMode === 'sober') !== getSoberMode();
+  const wasAssistant = getAssistantMode();
+  const isAssistant = newMode === 'assistant';
+  const modeChanged = isAssistant !== wasAssistant || (!isAssistant && (newMode === 'sober') !== getSoberMode());
 
   // Apply all state changes
   if (voiceChanged) setSelectedVoice(newVoice);
@@ -277,8 +296,11 @@ export function saveSettings() {
     if (typeof window.switchUILang === 'function') window.switchUILang(newLang);
   }
   if (modeChanged) {
-    setSoberMode(newMode === 'sober');
+    setAssistantMode(isAssistant);
+    setSoberMode(!isAssistant && newMode === 'sober');
     setCookie('sober_mode', newMode === 'sober' ? '1' : '', 365);
+    setCookie('assistant_mode', isAssistant ? '1' : '', 365);
+    updateAvatarForMode(isAssistant);
   }
 
   // Close modal and unmute
@@ -294,9 +316,8 @@ export function saveSettings() {
   const needsReconnect = voiceChanged || langChanged || modeChanged;
 
   if (needsReconnect) {
-    // Set reconnect reason based on mode change
     if (modeChanged) {
-      bus.emit('ui:settings-reconnect', { reason: newMode === 'sober' ? 'sober' : 'drunk' });
+      bus.emit('ui:settings-reconnect', { reason: 'fresh' });
     } else {
       bus.emit('ui:settings-reconnect', { reason: 'silent' });
     }
