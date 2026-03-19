@@ -107,7 +107,7 @@ export async function startDeepThink(query, deps) {
     const langName = langNames[lang] || 'English';
 
     const prompt = 'You are a precise, knowledgeable analyst. Write your ENTIRE response in ' + langName + '.\n' +
-      'Provide a thorough, well-structured analysis. Use clear sections with **bold headings**, bullet points where appropriate. ' +
+      'Format your response in Markdown: use # and ## for headings, - for bullet points, **bold** for emphasis, `code` for technical terms, and > for key quotes or takeaways. ' +
       'Be factual, concise, and direct. No filler. No fluff.\n\n' +
       'QUERY: ' + query;
 

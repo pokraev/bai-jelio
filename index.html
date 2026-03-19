@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/main.css">
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.wasm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -619,8 +620,8 @@ function openSearchResults() {
   // Deep analysis result — show formatted text instead of links
   if (thinkResult) {
     var container = document.createElement('div');
-    container.className = 'think-result';
-    container.innerHTML = formatSummaryHtml(thinkResult);
+    container.className = 'think-result markdown-body';
+    container.innerHTML = renderMarkdown(thinkResult);
     list.appendChild(container);
     window._lastThinkResult = null;
     modal.classList.add('visible');
@@ -1216,37 +1217,12 @@ async function renderSummary(turns) {
   }
 }
 
-function formatSummaryHtml(text) {
-  // Parse lines: headings (** **), bullet points (* or -), plain text
-  var lines = text.split('\n');
-  var html = '';
-  var inList = false;
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) { if (inList) { html += '</ul>'; inList = false; } html += '<br>'; continue; }
-    // Bold heading: **text**
-    if (/^\*\*(.+)\*\*$/.test(line)) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += '<div class="summary-heading">' + escapeHtml(line.replace(/\*\*/g, '')) + '</div>';
-    }
-    // Bullet point: * text or - text
-    else if (/^[\*\-•]\s+/.test(line)) {
-      if (!inList) { html += '<ul class="summary-list">'; inList = true; }
-      var content = escapeHtml(line.replace(/^[\*\-•]\s+/, ''));
-      // Inline bold **word**
-      content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      html += '<li>' + content + '</li>';
-    }
-    // Plain text
-    else {
-      if (inList) { html += '</ul>'; inList = false; }
-      var content = escapeHtml(line);
-      content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      html += '<p class="summary-text">' + content + '</p>';
-    }
+function renderMarkdown(text) {
+  if (typeof marked !== 'undefined' && marked.parse) {
+    return marked.parse(text, { breaks: true, gfm: true });
   }
-  if (inList) html += '</ul>';
-  return html;
+  // Fallback: basic escaping with line breaks
+  return escapeHtml(text).replace(/\n/g, '<br>');
 }
 
 function showSummaryBubble(chat, text) {
@@ -1258,7 +1234,7 @@ function showSummaryBubble(chat, text) {
       '<span class="summary-title">' + (typeof t === 'function' ? t('transcript_summary') : 'Резюме') +
       '</span>' +
     '</div>' +
-    '<div class="summary-body">' + formatSummaryHtml(text) + '</div>';
+    '<div class="summary-body markdown-body">' + renderMarkdown(text) + '</div>';
   chat.appendChild(container);
   autoScrollChat(chat);
 }
