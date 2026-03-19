@@ -130,13 +130,16 @@ export function getSystemPrompt(topic, iq, lang) {
   // Note trigger instruction
   const noteTrigger =
     '\n\nNOTE-TAKING TRIGGER INSTRUCTION:\n' +
-    'When you detect that the user wants to save a note, reminder, task, or anything to remember — ' +
+    'When you detect that the user wants to SAVE a note, reminder, task, or anything to remember — ' +
     'confirm briefly (e.g. "Записано.", "Noted.", "Anotado.") then output the EXACT keyword БЕЛЕЖКА: followed by the note content. ' +
     'БЕЛЕЖКА: is an internal system command — do NOT translate it, do NOT explain it. Stop after БЕЛЕЖКА:.\n' +
     'Extract the essential information — clean it up, remove filler, keep it concise.\n' +
     'Example: "Записано. БЕЛЕЖКА: Да се обадя на Иван утре в 10:00"\n' +
     'Example: "Noted. БЕЛЕЖКА: Buy wine and vegetables for the barbecue"\n' +
-    'Example: "Anotado. БЕЛЕЖКА: Llamar al dentista el lunes"';
+    'Example: "Anotado. БЕЛЕЖКА: Llamar al dentista el lunes"\n\n' +
+    'When you detect that the user wants to SEE/SHOW/VIEW their notes (NOT save a new one) — ' +
+    'output the EXACT keyword ПОКАЖИ_БЕЛЕЖКИ and nothing else. Do NOT use РЕЗЮМЕ: for this. Do NOT use БЕЛЕЖКА: for this.\n' +
+    'Examples of "show notes" requests: "покажи ми бележките", "show my notes", "muéstrame las notas", "какви бележки имам", "what notes do I have"';
 
   // Summary trigger instruction (appended after patterns)
   const summaryTrigger =

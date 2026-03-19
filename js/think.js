@@ -62,11 +62,23 @@ export function sendNextReadChunk(sendInstruction) {
   }
   const chunk = readQueue.shift();
   const isLast = readQueue.length === 0;
+  const lang = getSelectedLang();
+  const readInstr = {
+    bg: 'Продължи да четеш анализа. Прочети следния текст НА ГЛАС, естествено. НЕ добавяй свои коментари или мнения. Просто чети:',
+    en: 'Continue reading the analysis. Read the following text OUT LOUD, naturally, as a continuation. Do NOT add your own commentary, opinions, or transitions between sections. Just read:',
+    es: 'Continúa leyendo el análisis. Lee el siguiente texto EN VOZ ALTA, de forma natural. NO añadas comentarios propios ni opiniones. Solo lee:',
+    hi: 'विश्लेषण पढ़ना जारी रखें। निम्नलिखित पाठ को ज़ोर से, स्वाभाविक रूप से पढ़ें। अपनी टिप्पणियाँ या राय न जोड़ें। बस पढ़ें:',
+  };
+  const lastInstr = {
+    bg: '\n\nТова е последната част. След като прочетеш, кажи накратко: "Това беше анализът."',
+    en: '\n\nThis is the last section. After reading, say briefly: "That concludes the analysis."',
+    es: '\n\nEsta es la última sección. Después de leer, di brevemente: "Eso concluye el análisis."',
+    hi: '\n\nयह अंतिम भाग है। पढ़ने के बाद, संक्षेप में कहें: "विश्लेषण यहाँ समाप्त होता है।"',
+  };
   sendInstruction(
-    'Continue reading the analysis. Read the following text OUT LOUD, naturally, as a continuation. ' +
-    'Do NOT add your own commentary, opinions, or transitions between sections. Just read:\n\n' +
+    (readInstr[lang] || readInstr.en) + '\n\n' +
     chunk +
-    (isLast ? '\n\nThis is the last section. After reading, say briefly: "That concludes the analysis."' : '')
+    (isLast ? (lastInstr[lang] || lastInstr.en) : '')
   );
   return true;
 }

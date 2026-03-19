@@ -683,6 +683,8 @@ function openSearchResults() {
 
 function closeSearchResults() {
   document.getElementById('searchResultsModal').classList.remove('visible');
+  // Stop reading if active — imported module functions accessed via window
+  if (window._stopReading) window._stopReading();
 }
 
 // ── Notes Modal ─────────────────────────────────────

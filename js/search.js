@@ -41,7 +41,15 @@ export async function searchAndNarrate(query, opts) {
     'If you are NOT confident about current data (e.g. today\'s events, live scores, breaking news), ' +
     'start your response with exactly: NEED_LIVE_DATA\n\n' +
     SEARCH_PROMPT_SUFFIX +
-    'Respond in ' + responseLang + '. Max 200 words. No markdown.';
+    'IMPORTANT: Respond with TWO sections separated by ---ITEMS--- marker.\n' +
+    'Section 1: A natural spoken summary in ' + responseLang + '. Max 150 words. No markdown.\n' +
+    'Section 2: After ---ITEMS---, list each result as one line: TITLE | SHORT_DESCRIPTION (max 15 words, in ' + responseLang + ')\n' +
+    'Maximum 5 items — pick the most relevant/interesting ones.\n' +
+    'Example:\n' +
+    'Here are today\'s events in Valencia...\n' +
+    '---ITEMS---\n' +
+    'Jazz Festival at Palau de la Música | Live jazz concert starting at 8pm, free entry\n' +
+    'Fallas Exhibition | Traditional Valencian art exhibition at City Hall square\n';
 
   // Try Claude with web search first if God mode active
   const godMode = typeof window.getGodMode === 'function' && window.getGodMode();
@@ -53,27 +61,32 @@ export async function searchAndNarrate(query, opts) {
       'The user asked: "' + query + '"\n\n' +
       'Search the web for current information and answer.\n' +
       SEARCH_PROMPT_SUFFIX +
-      'Respond in ' + responseLang + '. Max 200 words. No markdown.';
+      'IMPORTANT: Respond with TWO sections separated by ---ITEMS--- marker.\n' +
+      'Section 1: A natural spoken summary in ' + responseLang + '. Max 150 words. No markdown.\n' +
+      'Section 2: After ---ITEMS---, list each result as one line: TITLE | SHORT_DESCRIPTION (max 15 words, in ' + responseLang + ')\n' +
+      'Maximum 5 items — pick the most relevant/interesting ones.\n';
     knowledgeResult = await window.callClaudeWithSearch(claudeSearchPrompt, { maxTokens: 500 });
     if (knowledgeResult) {
       console.log('[search] Claude web search result:', knowledgeResult.substring(0, 200));
-      window._lastSearchText = knowledgeResult;
       window._lastSearchQuery = query;
-      var lines = knowledgeResult.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+      var cParts = knowledgeResult.split('---ITEMS---');
+      var cSpokenText = (cParts[0] || '').trim();
+      var cItemsText = (cParts[1] || '').trim();
       var items = [];
-      for (var i = 0; i < lines.length && items.length < 5; i++) {
-        var line = lines[i].replace(/^[\*\-•]\s*/, '').replace(/\*\*/g, '').trim();
-        if (!line || line.startsWith('---')) continue;
-        var dashIdx = line.search(/[\-–—:]/);
-        if (dashIdx > 3 && dashIdx < line.length - 3) {
-          items.push({ title: line.substring(0, dashIdx).trim(), desc: line.substring(dashIdx + 1).trim() });
-        } else {
-          items.push({ title: line, desc: '' });
+      if (cItemsText) {
+        var lines = cItemsText.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+        for (var i = 0; i < lines.length && items.length < 5; i++) {
+          var pipe = lines[i].indexOf('|');
+          var title = pipe !== -1 ? lines[i].substring(0, pipe).trim() : lines[i].trim();
+          var desc = pipe !== -1 ? lines[i].substring(pipe + 1).trim() : '';
+          if (!title || title.startsWith('---') || title.startsWith('**')) continue;
+          items.push({ title: title, desc: desc });
         }
       }
+      window._lastSearchText = cSpokenText || knowledgeResult;
       window._lastSearchItems = items;
       window._searchWasGrounded = true;
-      return knowledgeResult;
+      return cSpokenText || knowledgeResult;
     }
   }
 
@@ -83,24 +96,26 @@ export async function searchAndNarrate(query, opts) {
   if (knowledgeResult === '__429__') return '__429__';
   if (knowledgeResult && !knowledgeResult.startsWith('NEED_LIVE_DATA')) {
     console.log('[search] model knowledge sufficient:', knowledgeResult.substring(0, 200));
-    window._lastSearchText = knowledgeResult;
     window._lastSearchQuery = query;
-    // Parse text into items for the modal
-    var lines = knowledgeResult.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+    // Parse structured response (same format as grounded search)
+    var kParts = knowledgeResult.split('---ITEMS---');
+    var kSpokenText = (kParts[0] || '').trim();
+    var kItemsText = (kParts[1] || '').trim();
     var items = [];
-    for (var i = 0; i < lines.length && items.length < 5; i++) {
-      var line = lines[i].replace(/^[\*\-•]\s*/, '').replace(/\*\*/g, '').trim();
-      if (!line || line.startsWith('---')) continue;
-      var dashIdx = line.search(/[\-–—:]/);
-      if (dashIdx > 3 && dashIdx < line.length - 3) {
-        items.push({ title: line.substring(0, dashIdx).trim(), desc: line.substring(dashIdx + 1).trim() });
-      } else {
-        items.push({ title: line, desc: '' });
+    if (kItemsText) {
+      var lines = kItemsText.split('\n').filter(function(l) { return l.trim() && l.trim().length > 3; });
+      for (var i = 0; i < lines.length && items.length < 5; i++) {
+        var pipe = lines[i].indexOf('|');
+        var title = pipe !== -1 ? lines[i].substring(0, pipe).trim() : lines[i].trim();
+        var desc = pipe !== -1 ? lines[i].substring(pipe + 1).trim() : '';
+        if (!title || title.startsWith('---') || title.startsWith('**')) continue;
+        items.push({ title: title, desc: desc });
       }
     }
+    window._lastSearchText = kSpokenText || knowledgeResult;
     window._lastSearchItems = items;
     window._searchWasGrounded = false;
-    return knowledgeResult;
+    return kSpokenText || knowledgeResult;
   }
 
   // Step 2: Model says it needs live data — use grounded search

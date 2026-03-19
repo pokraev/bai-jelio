@@ -40,7 +40,7 @@ import { getConversationSummary, getNeutralSummary, hasHistory, getLastSessionBr
 import { trackUsage, updateQuotaUI, groundingExhausted } from './quota.js';
 import { requestWakeLock, releaseWakeLock, setStatus } from './ui-controls.js';
 import { setAudioPlayer } from './render-state.js';
-import { parseBotIntent, parseUserIntent, stripShowResultsTrigger } from './intent-detect.js';
+import { parseBotIntent, parseUserIntent, stripShowResultsTrigger, resolveAmbiguousIntent } from './intent-detect.js';
 import {
   startDeepThink, splitTextForReading, sendNextReadChunk,
   isReadingActive, setReadingActive, setReadQueue, getReadQueue, clearReadState,
@@ -406,6 +406,16 @@ export function setSearchCache(result) {
 export function getIsSearching() { return isSearching; }
 export function setIsSearching(v) { isSearching = v; }
 
+// ── Stop reading (exposed globally for closeSearchResults in index.html) ──
+window._stopReading = function () {
+  if (!isReadingActive()) return;
+  audioPlayer.stop();
+  bus.emit('audio:playing-changed', { playing: false });
+  setReadingActive(false);
+  clearReadState();
+  const micS = getMicStream();
+  if (!getIsMuted() && micS) micS.getAudioTracks().forEach(t => { t.enabled = true; });
+};
 
 // ── Internal handlers ───────────────────────────────
 
@@ -483,20 +493,26 @@ function handleSetupComplete(apiKey) {
     searchCache = null;
     if (window._thinkResultText && typeof openSearchResults === 'function') {
       openSearchResults();
-      // Split text into chunks by section (split on bold headings) or by size
+      // Split text into chunks and start reading immediately
       const thinkText = window._thinkResultText;
+      window._thinkResultText = null;
       setReadQueue(splitTextForReading(thinkText));
+      setReadingActive(true);
+      // Suspend mic so user speech doesn't interfere with reading
+      const thinkMic = getMicStream();
+      if (thinkMic) thinkMic.getAudioTracks().forEach(t => { t.enabled = false; });
+      const thinkFail = {
+        bg: 'Анализът не можа да бъде завършен. Извинявай, опитай отново.',
+        en: 'The analysis could not be completed. Apologize briefly and offer to try again.',
+        es: 'El análisis no se pudo completar. Discúlpate brevemente y ofrece intentarlo de nuevo.',
+        hi: 'विश्लेषण पूरा नहीं हो सका। संक्षेप में माफी मांगें और फिर से प्रयास करने की पेशकश करें।',
+      };
       setTimeout(() => {
-        sendSystemInstruction(
-          'IMPORTANT PERSONA RULE: Stay in character as a professional assistant.\n' +
-          'Your deep analysis is complete and displayed on the user\'s screen.\n' +
-          'Say briefly: "The analysis is ready on your screen. Would you like me to read it to you?"\n' +
-          'Wait for the user\'s response. Do NOT read anything yet.'
-        );
+        sendNextReadChunk(sendSystemInstruction);
       }, 1500);
     } else {
       sendSystemInstruction(
-        'The analysis could not be completed. Apologize briefly and offer to try again.'
+        thinkFail[getSelectedLang()] || thinkFail.en
       );
     }
   } else if (reconnectReason === 'silent') {
@@ -611,12 +627,39 @@ function handleServerContent(content) {
     }
 
     // ── Bot output intent detection ──
-    if (pendingBotText && !isSearching) {
+    if (pendingBotText && !isSearching && !isReadingActive()) {
       const botIntent = parseBotIntent(pendingBotText, lastUserText);
       const stg = document.getElementById('stage');
 
+      if (botIntent.type === 'ambiguous') {
+        console.log('Ambiguous intent — multiple triggers:', botIntent.matches.map(m => m.type));
+        pendingBotText = '';
+        // Store matches so we can resolve after user clarifies
+        window._pendingAmbiguousMatches = botIntent.matches;
+        const intentLabels = {
+          think: { bg: 'анализ', en: 'deep analysis', es: 'análisis', hi: 'विश्लेषण' },
+          search: { bg: 'търсене', en: 'search', es: 'búsqueda', hi: 'खोज' },
+          summary: { bg: 'резюме', en: 'summary', es: 'resumen', hi: 'सारांश' },
+          note: { bg: 'бележка', en: 'note', es: 'nota', hi: 'नोट' },
+          'show-results': { bg: 'покажи резултати', en: 'show results', es: 'mostrar resultados', hi: 'परिणाम दिखाएं' },
+        };
+        const lang = getSelectedLang();
+        const options = botIntent.matches
+          .map(m => intentLabels[m.type] ? (intentLabels[m.type][lang] || intentLabels[m.type].en) : m.type)
+          .join(', ');
+        const askPrompt = {
+          bg: 'Открих няколко възможни действия: ' + options + '. Попитай потребителя кое от тях иска — кратко и ясно. НЕ изпълнявай нищо все още.',
+          en: 'Multiple actions detected: ' + options + '. Ask the user briefly which one they want. Do NOT execute any yet.',
+          es: 'Se detectaron varias acciones: ' + options + '. Pregunta brevemente al usuario cuál quiere. NO ejecutes ninguna todavía.',
+          hi: 'कई क्रियाएं पाई गईं: ' + options + '। उपयोगकर्ता से संक्षेप में पूछें कि वे कौन सी चाहते हैं। अभी कोई भी निष्पादित न करें।',
+        };
+        sendSystemInstruction(askPrompt[lang] || askPrompt.en);
+        return;
+      }
+
       if (botIntent.type === 'think') {
         console.log('Think triggered:', botIntent.query);
+        clearReadState();
         if (stg) stg.classList.add('thinking');
         if (typeof startSearchOrbit === 'function') startSearchOrbit();
         pendingBotText = '';
@@ -647,10 +690,66 @@ function handleServerContent(content) {
           if (typeof openNotesModal === 'function') openNotesModal();
         }
       }
+      if (botIntent.type === 'show-notes') {
+        pendingBotText = '';
+        if (typeof openNotesModal === 'function') openNotesModal();
+        return;
+      }
       if (botIntent.type === 'show-results') {
         pendingBotText = stripShowResultsTrigger(pendingBotText);
         if (typeof openSearchResults === 'function') openSearchResults();
       }
+    }
+
+    // ── Resolve ambiguous intent from user's clarification ──
+    if (window._pendingAmbiguousMatches && lastUserText) {
+      const clarification = lastUserText.toLowerCase();
+      const resolved = resolveAmbiguousIntent(clarification, window._pendingAmbiguousMatches);
+      window._pendingAmbiguousMatches = null;
+      if (resolved) {
+        console.log('Ambiguous resolved to:', resolved.type);
+        // Re-inject as pendingBotText and re-trigger
+        const stgR = document.getElementById('stage');
+        if (resolved.type === 'think') {
+          clearReadState();
+          if (stgR) stgR.classList.add('thinking');
+          if (typeof startSearchOrbit === 'function') startSearchOrbit();
+          isSearching = true;
+          bus.emit('think:triggered', { query: resolved.query });
+          pendingBotText = '';
+          return;
+        }
+        if (resolved.type === 'search') {
+          if (stgR) stgR.classList.add('searching');
+          if (typeof startSearchOrbit === 'function') startSearchOrbit();
+          isSearching = true;
+          bus.emit('search:triggered', { query: resolved.query });
+          pendingBotText = '';
+          return;
+        }
+        if (resolved.type === 'summary') {
+          if (typeof openTranscriptModal === 'function') openTranscriptModal();
+          pendingBotText = '';
+          return;
+        }
+        if (resolved.type === 'note') {
+          if (typeof window.notesApi !== 'undefined') {
+            window.notesApi.addNote(resolved.query);
+            if (typeof openNotesModal === 'function') openNotesModal();
+          }
+          pendingBotText = '';
+          return;
+        }
+        if (resolved.type === 'show-notes') {
+          if (typeof openNotesModal === 'function') openNotesModal();
+          pendingBotText = '';
+          return;
+        }
+        if (resolved.type === 'show-results') {
+          if (typeof openSearchResults === 'function') openSearchResults();
+        }
+      }
+      // If not resolved, agent already asked — just let conversation continue
     }
 
     // ── User speech intent detection ──
@@ -659,7 +758,16 @@ function handleServerContent(content) {
 
     // Auto-continue reading when bot finishes (no user speech)
     if (isReadingActive() && getReadQueue() && getReadQueue().length > 0 && !lastUserText) {
+      // Keep mic suspended while reading continues
+      const micS = getMicStream();
+      if (micS) micS.getAudioTracks().forEach(t => { t.enabled = false; });
       sendNextReadChunk(sendSystemInstruction);
+    }
+    // Re-enable mic when reading finishes (queue drained)
+    if (isReadingActive() && (!getReadQueue() || getReadQueue().length === 0)) {
+      setReadingActive(false);
+      const micS = getMicStream();
+      if (!getIsMuted() && micS) micS.getAudioTracks().forEach(t => { t.enabled = true; });
     }
 
     const userIntent = parseUserIntent(lastUserText, {
@@ -668,27 +776,54 @@ function handleServerContent(content) {
       hasThinkResult: !!window._thinkResultText,
       isReading: isReadingActive(),
       hasReadQueue: !!(getReadQueue() && getReadQueue().length > 0),
+      hasNotes: typeof window.notesApi !== 'undefined' && window.notesApi.getNotes && window.notesApi.getNotes().length > 0,
     });
 
     switch (userIntent.type) {
+      case 'show-notes':
+        if (typeof openNotesModal === 'function') openNotesModal();
+        break;
       case 'show-results':
         if (typeof openSearchResults === 'function') openSearchResults();
         break;
-      case 'read-aloud':
-        if (window._thinkResultText && (!getReadQueue() || getReadQueue().length === 0)) {
+      case 'read-aloud': {
+        // Always rebuild queue from latest think result (discard stale queue)
+        if (window._thinkResultText) {
           setReadQueue(splitTextForReading(window._thinkResultText));
         }
         window._thinkResultText = null;
         setReadingActive(true);
+        // Stop Gemini's current response and suspend mic during reading
+        audioPlayer.stop();
+        bus.emit('audio:playing-changed', { playing: false });
+        const micR = getMicStream();
+        if (micR) micR.getAudioTracks().forEach(t => { t.enabled = false; });
         sendNextReadChunk(sendSystemInstruction);
         break;
-      case 'read-continue':
+      }
+      case 'read-continue': {
+        const micC = getMicStream();
+        if (micC) micC.getAudioTracks().forEach(t => { t.enabled = false; });
         sendNextReadChunk(sendSystemInstruction);
         break;
-      case 'read-finished':
+      }
+      case 'read-finished': {
         setReadingActive(false);
+        clearReadState();
+        const micF = getMicStream();
+        if (!getIsMuted() && micF) micF.getAudioTracks().forEach(t => { t.enabled = true; });
         break;
+      }
       case 'dismiss-modal':
+        // Stop reading if active
+        if (isReadingActive()) {
+          audioPlayer.stop();
+          bus.emit('audio:playing-changed', { playing: false });
+          setReadingActive(false);
+          clearReadState();
+          const micD = getMicStream();
+          if (!getIsMuted() && micD) micD.getAudioTracks().forEach(t => { t.enabled = true; });
+        }
         if (typeof closeSearchResults === 'function') closeSearchResults();
         sendSystemInstruction(getAssistantMode()
           ? 'The results window is now closed. Do not mention closing it. Continue the conversation.'
