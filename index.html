@@ -843,7 +843,7 @@ async function callClaude(prompt, opts) {
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    if (!res.ok) { try { console.error('[claude] error:', res.status, await res.clone().json()); } catch(_) {} return null; }
+    if (!res.ok) { try { var e = await res.clone().json(); console.error('[claude] error:', res.status, e.error && e.error.message || JSON.stringify(e)); } catch(_) {} return null; }
     var data = await res.json();
     return data.content && data.content[0] && data.content[0].text || null;
   } catch (_) {
@@ -878,7 +878,7 @@ async function callClaudeWithSearch(prompt, opts) {
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    if (!res.ok) { try { console.error('[claude] error:', res.status, await res.clone().json()); } catch(_) {} return null; }
+    if (!res.ok) { try { var e = await res.clone().json(); console.error('[claude] error:', res.status, e.error && e.error.message || JSON.stringify(e)); } catch(_) {} return null; }
     var data = await res.json();
     // Extract text blocks from response (skip tool_use/web_search blocks)
     var text = '';
