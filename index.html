@@ -296,68 +296,42 @@
 <!-- Notes Modal -->
 <div class="modal" id="notesModal" onclick="if(event.target===this)closeNotesModal()">
   <div class="modal-card transcript-modal-card">
-    <div class="transcript-toolbar">
-      <div class="transcript-tabs">
-        <span class="transcript-tab active">Notes</span>
+    <div class="notes-toolbar">
+      <div class="notes-header">
+        <span class="notes-label">Notes</span>
+        <div class="notes-filters">
+          <select id="notesLookahead" onchange="renderNotes()" class="notes-select">
+            <option value="0">Today</option>
+            <option value="3" selected>3 days</option>
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+          </select>
+          <select id="notesPeriod" onchange="renderNotes()" class="notes-select">
+            <option value="upcoming" selected>Upcoming</option>
+            <option value="all">All</option>
+          </select>
+        </div>
       </div>
-      <div class="transcript-controls">
-        <select id="notesFilter" onchange="renderNotes()" class="notes-filter-select">
-          <option value="all">All</option>
-          <option value="today" selected>Today</option>
-          <option value="3">Next 3 days</option>
-          <option value="7">Next 7 days</option>
-          <option value="30">Next 30 days</option>
-        </select>
-        <button class="modal-close transcript-close" onclick="closeNotesModal()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
+      <button class="modal-close transcript-close" onclick="closeNotesModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="transcript-chat" id="notesChat"></div>
   </div>
 </div>
 
-<!-- Transcript Modal -->
+<!-- Summary Modal -->
 <div class="modal" id="transcriptModal" onclick="if(event.target===this)closeTranscriptModal()">
   <div class="modal-card transcript-modal-card">
     <div class="transcript-toolbar">
       <div class="transcript-tabs">
-        <span class="transcript-tab active" data-i18n="transcript_summary">Резюме</span>
-      </div>
-      <div class="transcript-controls">
-        <div class="transcript-calendar-wrap">
-          <button class="cal-toggle" id="calToggleBtn" onclick="toggleTranscriptCalendar()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <span id="calToggleLabel" data-i18n="transcript_all_dates">Всички дни</span>
-          </button>
-          <div class="transcript-calendar" id="transcriptCalendar">
-            <div class="cal-header">
-              <button class="cal-arrow" id="calPrev" onclick="calNavigate(-1)">‹</button>
-              <span class="cal-month" id="calMonth"></span>
-              <button class="cal-arrow" id="calNext" onclick="calNavigate(1)">›</button>
-            </div>
-            <div class="cal-weekdays" id="calWeekdays"></div>
-            <div class="cal-grid" id="calGrid"></div>
-          </div>
-        </div>
-        <div class="custom-select transcript-select" id="transcriptHour" data-value="">
-          <div class="custom-select-btn"><span data-i18n="transcript_all_hours">Всички часове</span><svg width="10" height="6" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-          <div class="custom-select-menu" id="transcriptHourMenu"></div>
-        </div>
+        <span class="summary-label" data-i18n="transcript_summary">Summary</span>
       </div>
       <button class="modal-close transcript-close" onclick="closeTranscriptModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
       </button>
     </div>
-    <div class="transcript-search-bar">
-      <div class="transcript-search-wrap">
-        <svg class="transcript-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" id="transcriptSearch" class="transcript-search" placeholder="Търси..." data-i18n-placeholder="transcript_search_placeholder" autocomplete="off">
-        <div class="transcript-search-dropdown" id="transcriptSearchDropdown"></div>
-      </div>
-    </div>
     <div class="transcript-chat" id="transcriptChat"></div>
-    <div class="transcript-disclaimer" data-i18n="transcript_disclaimer">⚠ Експериментална функция — възможни са грешки в транскрипцията и резюмето.</div>
   </div>
 </div>
 
@@ -728,17 +702,14 @@ function renderNotes() {
   chat.innerHTML = '';
   if (!window.notesApi) { chat.innerHTML = '<div class="transcript-empty">Notes not available</div>'; return; }
 
-  var filter = document.getElementById('notesFilter').value;
+  var period = document.getElementById('notesPeriod').value;
+  var lookahead = parseInt(document.getElementById('notesLookahead').value);
   var notes;
 
-  if (filter === 'all') {
+  if (period === 'all') {
     notes = window.notesApi.getAllNotes();
-  } else if (filter === 'today') {
-    var today = new Date();
-    var key = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    notes = window.notesApi.getNotesByDate(key);
   } else {
-    notes = window.notesApi.getNotesLookahead(parseInt(filter));
+    notes = window.notesApi.getNotesLookahead(lookahead);
   }
 
   if (notes.length === 0) {
@@ -1047,48 +1018,6 @@ function getFullTranscriptHistory() {
   return hist;
 }
 
-function transcriptDatesMap(history) {
-  // Returns { 'YYYY-MM-DD': [indices] } for turns that have timestamps
-  var map = {};
-  for (var i = 0; i < history.length; i++) {
-    if (!history[i].ts) continue;
-    var d = new Date(history[i].ts);
-    var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    if (!map[key]) map[key] = [];
-    map[key].push(i);
-  }
-  return map;
-}
-
-function transcriptHoursForDate(history, dateStr) {
-  var hours = {};
-  for (var i = 0; i < history.length; i++) {
-    if (!history[i].ts) continue;
-    var d = new Date(history[i].ts);
-    var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    if (key === dateStr) {
-      var h = d.getHours();
-      if (!hours[h]) hours[h] = [];
-      hours[h].push(i);
-    }
-  }
-  return hours;
-}
-
-function filterTranscriptHistory(history, dateStr, hourVal) {
-  if (!dateStr) return history;
-  var filtered = [];
-  for (var i = 0; i < history.length; i++) {
-    if (!history[i].ts) continue;
-    var d = new Date(history[i].ts);
-    var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    if (key !== dateStr) continue;
-    if (hourVal !== '' && d.getHours() !== parseInt(hourVal, 10)) continue;
-    filtered.push(history[i]);
-  }
-  return filtered;
-}
-
 function formatDateLabel(dateStr) {
   var parts = dateStr.split('-');
   return parts[2] + '.' + parts[1] + '.' + parts[0];
@@ -1109,286 +1038,13 @@ function setTranscriptSelect(id, value, label) {
   });
 }
 
-// ── Calendar state ──
-var _calHistory = [];
-var _calDatesSet = {};
-var _calViewMonth = null; // Date object for displayed month
-var _calSelectedDate = ''; // 'YYYY-MM-DD' or ''
-
-function toggleTranscriptCalendar() {
-  var cal = document.getElementById('transcriptCalendar');
-  cal.classList.toggle('open');
-}
-
-function calNavigate(delta) {
-  _calViewMonth.setMonth(_calViewMonth.getMonth() + delta);
-  renderCalendarGrid();
-}
-
-function calSelectDate(dateStr) {
-  _calSelectedDate = dateStr;
-  document.getElementById('transcriptCalendar').classList.remove('open');
-
-  var allDatesLabel = typeof t === 'function' ? t('transcript_all_dates') : 'Всички дни';
-  var label = dateStr ? formatDateLabel(dateStr) : allDatesLabel;
-  document.getElementById('calToggleLabel').textContent = label;
-  // Fake transcriptDate data-value for compatibility
-
-  if (dateStr) {
-    populateHoursForDate(dateStr);
-  } else {
-    resetHoursDropdown();
-  }
-  var hourVal = document.getElementById('transcriptHour').dataset.value;
-  renderFilteredTranscript(_calHistory, dateStr, hourVal);
-  renderCalendarGrid();
-}
-
-function renderCalendarGrid() {
-  var grid = document.getElementById('calGrid');
-  var weekdaysEl = document.getElementById('calWeekdays');
-  var monthEl = document.getElementById('calMonth');
-  var year = _calViewMonth.getFullYear();
-  var month = _calViewMonth.getMonth();
-
-  // Month/year label
-  var lang = (typeof getSelectedLang === 'function') ? getSelectedLang() : 'bg';
-  var monthNames = {
-    bg: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
-    en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-    es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
-    hi: ['जनवरी','फ़रवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर']
-  };
-  var dayNames = {
-    bg: ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],
-    en: ['Mo','Tu','We','Th','Fr','Sa','Su'],
-    es: ['Lu','Ma','Mi','Ju','Vi','Sá','Do'],
-    hi: ['सो','मं','बु','गु','शु','श','र']
-  };
-  var names = monthNames[lang] || monthNames.bg;
-  var days = dayNames[lang] || dayNames.bg;
-  monthEl.textContent = names[month] + ' ' + year;
-
-  // Weekday headers
-  weekdaysEl.innerHTML = '';
-  for (var w = 0; w < 7; w++) {
-    var wd = document.createElement('div');
-    wd.className = 'cal-weekday';
-    wd.textContent = days[w];
-    weekdaysEl.appendChild(wd);
-  }
-
-  // Build grid
-  grid.innerHTML = '';
-  var firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  var startOffset = (firstDay + 6) % 7; // Mon=0
-  var daysInMonth = new Date(year, month + 1, 0).getDate();
-  var todayStr = toDateKey(new Date());
-
-  // Empty cells before first day
-  for (var e = 0; e < startOffset; e++) {
-    var empty = document.createElement('div');
-    empty.className = 'cal-day other-month';
-    grid.appendChild(empty);
-  }
-
-  for (var d = 1; d <= daysInMonth; d++) {
-    var cell = document.createElement('div');
-    cell.className = 'cal-day';
-    cell.textContent = d;
-    var key = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-
-    if (key === todayStr) cell.classList.add('today');
-    if (key === _calSelectedDate) cell.classList.add('selected');
-
-    if (_calDatesSet[key]) {
-      cell.classList.add('has-data');
-      (function(k) {
-        cell.onclick = function() { calSelectDate(k); };
-      })(key);
-    }
-    grid.appendChild(cell);
-  }
-}
-
-function populateHoursForDate(dateStr) {
-  var hourSel = document.getElementById('transcriptHour');
-  var hourMenu = document.getElementById('transcriptHourMenu');
-  var allHoursLabel = typeof t === 'function' ? t('transcript_all_hours') : 'Всички часове';
-  hourMenu.innerHTML = '';
-
-  var allH = document.createElement('div');
-  allH.className = 'custom-select-item active';
-  allH.dataset.val = '';
-  allH.textContent = allHoursLabel;
-  allH.onclick = function() {
-    setTranscriptSelect('transcriptHour', '', allHoursLabel);
-    hourSel.classList.remove('open');
-    renderFilteredTranscript(_calHistory, _calSelectedDate, '');
-  };
-  hourMenu.appendChild(allH);
-
-  var hoursWithData = transcriptHoursForDate(_calHistory, dateStr);
-  var sortedHours = Object.keys(hoursWithData).map(Number).sort(function(a, b) { return a - b; });
-  for (var i = 0; i < sortedHours.length; i++) {
-    (function(h) {
-      var item = document.createElement('div');
-      item.className = 'custom-select-item';
-      item.dataset.val = String(h);
-      var label = String(h).padStart(2, '0') + ':00 – ' + String(h + 1).padStart(2, '0') + ':00';
-      item.textContent = label;
-      item.onclick = function() {
-        setTranscriptSelect('transcriptHour', String(h), label);
-        hourSel.classList.remove('open');
-        renderFilteredTranscript(_calHistory, _calSelectedDate, String(h));
-      };
-      hourMenu.appendChild(item);
-    })(sortedHours[i]);
-  }
-  setTranscriptSelect('transcriptHour', '', allHoursLabel);
-}
-
-function resetHoursDropdown() {
-  var hourSel = document.getElementById('transcriptHour');
-  var hourMenu = document.getElementById('transcriptHourMenu');
-  var allHoursLabel = typeof t === 'function' ? t('transcript_all_hours') : 'Всички часове';
-  hourMenu.innerHTML = '';
-  var allH = document.createElement('div');
-  allH.className = 'custom-select-item active';
-  allH.dataset.val = '';
-  allH.textContent = allHoursLabel;
-  allH.onclick = function() {
-    setTranscriptSelect('transcriptHour', '', allHoursLabel);
-    hourSel.classList.remove('open');
-    renderFilteredTranscript(_calHistory, _calSelectedDate, '');
-  };
-  hourMenu.appendChild(allH);
-  setTranscriptSelect('transcriptHour', '', allHoursLabel);
-}
-
-function setupTranscriptControls(history) {
-  _calHistory = history;
-  var searchInput = document.getElementById('transcriptSearch');
-  var dropdown = document.getElementById('transcriptSearchDropdown');
-
-  searchInput.value = '';
-  dropdown.classList.remove('open');
-  dropdown.innerHTML = '';
-  document.getElementById('transcriptCalendar').classList.remove('open');
-
-  // Build dates set
-  _calDatesSet = {};
-  var datesMap = transcriptDatesMap(history);
-  var dateKeys = Object.keys(datesMap).sort();
-  for (var i = 0; i < dateKeys.length; i++) _calDatesSet[dateKeys[i]] = true;
-
-  // Default to today or most recent date
-  var todayStr = toDateKey(new Date());
-  var allDatesLabel = typeof t === 'function' ? t('transcript_all_dates') : 'Всички дни';
-
-  if (_calDatesSet[todayStr]) {
-    _calSelectedDate = todayStr;
-    _calViewMonth = new Date();
-    document.getElementById('calToggleLabel').textContent = formatDateLabel(todayStr);
-    populateHoursForDate(todayStr);
-  } else if (dateKeys.length > 0) {
-    var lastDate = dateKeys[dateKeys.length - 1];
-    _calSelectedDate = lastDate;
-    var parts = lastDate.split('-');
-    _calViewMonth = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
-    document.getElementById('calToggleLabel').textContent = formatDateLabel(lastDate);
-    populateHoursForDate(lastDate);
-  } else {
-    _calSelectedDate = '';
-    _calViewMonth = new Date();
-    document.getElementById('calToggleLabel').textContent = allDatesLabel;
-    resetHoursDropdown();
-  }
-
-  renderCalendarGrid();
-
-  // Search with lookahead
-  var searchDebounce = null;
-  searchInput.oninput = function() {
-    clearTimeout(searchDebounce);
-    var q = searchInput.value.trim().toLowerCase();
-    if (q.length < 2) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
-    searchDebounce = setTimeout(function() {
-      var results = [];
-      for (var i = 0; i < history.length; i++) {
-        if (history[i].text.toLowerCase().indexOf(q) !== -1) {
-          results.push({ index: i, turn: history[i] });
-          if (results.length >= 20) break;
-        }
-      }
-      dropdown.innerHTML = '';
-      if (results.length === 0) {
-        dropdown.innerHTML = '<div class="transcript-search-item" style="color:var(--text-muted);cursor:default">' +
-          (typeof t === 'function' ? t('transcript_no_results') : 'Няма резултати') + '</div>';
-      } else {
-        for (var r = 0; r < results.length; r++) {
-          (function(res) {
-            var item = document.createElement('div');
-            item.className = 'transcript-search-item';
-            var roleLabel = res.turn.role === 'user' ? '👤' : '🍺';
-            var txt = res.turn.text;
-            // Highlight match
-            var idx = txt.toLowerCase().indexOf(q);
-            var before = txt.substring(Math.max(0, idx - 30), idx);
-            var match = txt.substring(idx, idx + q.length);
-            var after = txt.substring(idx + q.length, idx + q.length + 40);
-            if (idx > 30) before = '...' + before;
-            if (idx + q.length + 40 < txt.length) after = after + '...';
-            var timeStr = '';
-            if (res.turn.ts) {
-              var d = new Date(res.turn.ts);
-              timeStr = '<span class="search-time">' + d.toLocaleDateString() + ' ' +
-                String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</span>';
-            }
-            item.innerHTML = '<span class="search-role">' + roleLabel + '</span>' +
-              escapeHtml(before) + '<span class="search-match">' + escapeHtml(match) + '</span>' + escapeHtml(after) +
-              timeStr;
-            item.onclick = function() {
-              dropdown.classList.remove('open');
-              searchInput.value = '';
-              // Find the date of this result and show summary for that date
-              if (history[res.index] && history[res.index].ts) {
-                var d = new Date(history[res.index].ts);
-                _calSelectedDate = toDateKey(d);
-                document.getElementById('calToggleLabel').textContent = formatDateLabel(_calSelectedDate);
-                renderFilteredTranscript(history, _calSelectedDate, '');
-              }
-            };
-            dropdown.appendChild(item);
-          })(results[r]);
-        }
-      }
-      dropdown.classList.add('open');
-    }, 200);
-  };
-
-  // Close dropdown on outside click
-  searchInput.onblur = function() {
-    setTimeout(function() { dropdown.classList.remove('open'); }, 200);
-  };
-  searchInput.onfocus = function() {
-    if (dropdown.children.length > 0 && searchInput.value.trim().length >= 2) dropdown.classList.add('open');
-  };
-}
-
 function escapeHtml(str) {
   var div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
 }
 
-
-function renderFilteredTranscript(history, dateStr, hourVal) {
-  var filtered = filterTranscriptHistory(history, dateStr, hourVal);
-  renderSummary(filtered, dateStr, hourVal);
-}
-
-async function renderSummary(turns, dateStr, hourVal) {
+async function renderSummary(turns) {
   var chat = document.getElementById('transcriptChat');
   var modal = document.getElementById('transcriptModal');
   chat.innerHTML = '';
@@ -1427,23 +1083,7 @@ async function renderSummary(turns, dateStr, hourVal) {
   var botName = botNames[lang] || botNames.bg;
   var userName = userNames[lang] || userNames.bg;
 
-  // Check for cached summary (past dates only, not today)
-  var todayKey = toDateKey(new Date());
-  var isToday = !dateStr || dateStr === todayKey;
-  var cacheKey = dateStr ? 'summary_' + dateStr : null;
-  if (!isToday && cacheKey) {
-    var cached = null;
-    try { cached = localStorage.getItem(cacheKey); } catch (_) {}
-    if (cached) {
-      _apiSuspended = false;
-      typingEl.remove();
-      chat.innerHTML = '';
-      showSummaryBubble(chat, cached);
-      return;
-    }
-  }
-
-  // Build transcript text from the already-filtered turns (selected date only)
+  // Build transcript text from conversation history
   var summaryTurns = turns.length > 100 ? turns.slice(-100) : turns;
   var convText = summaryTurns.map(function(turn) {
     var cleanText = turn.text.replace(/ТЪРСЯ:\s*.*/gi, '').replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
@@ -1501,7 +1141,6 @@ async function renderSummary(turns, dateStr, hourVal) {
         _apiSuspended = false;
         typingEl.remove();
         var summary = claudeResult.trim();
-        if (cacheKey) { try { localStorage.setItem(cacheKey, summary); } catch (_) {} }
         chat.innerHTML = '';
         showSummaryBubble(chat, summary);
         return;
@@ -1563,9 +1202,6 @@ async function renderSummary(turns, dateStr, hourVal) {
     }
 
     summary = summary.trim();
-    if (cacheKey) {
-      try { localStorage.setItem(cacheKey, summary); } catch (_) {}
-    }
     chat.innerHTML = '';
     showSummaryBubble(chat, summary);
   } catch (e) {
@@ -1616,7 +1252,7 @@ function showSummaryBubble(chat, text) {
     '<div class="summary-header">' +
       '<span class="summary-icon">📋</span>' +
       '<span class="summary-title">' + (typeof t === 'function' ? t('transcript_summary') : 'Резюме') +
-        (_calSelectedDate ? ' — ' + formatDateLabel(_calSelectedDate) : '') + '</span>' +
+      '</span>' +
     '</div>' +
     '<div class="summary-body">' + formatSummaryHtml(text) + '</div>';
   chat.appendChild(container);
@@ -1637,22 +1273,12 @@ async function openTranscriptModal() {
   }
 
   var history = getFullTranscriptHistory();
-  setupTranscriptControls(history);
-
   if (history.length === 0) {
-    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'Няма транскрипт') + '</div>';
+    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'No conversation yet') + '</div>';
     return;
   }
 
-  var dateStr = _calSelectedDate;
-  var hourVal = document.getElementById('transcriptHour').dataset.value;
-  var filtered = dateStr ? filterTranscriptHistory(history, dateStr, hourVal) : history;
-  if (filtered.length === 0) {
-    _calSelectedDate = '';
-    document.getElementById('calToggleLabel').textContent = typeof t === 'function' ? t('transcript_all_dates') : 'Всички дни';
-    filtered = history;
-  }
-  await renderSummary(filtered, dateStr, hourVal);
+  await renderSummary(history, null, null);
 }
 
 function autoScrollChat(el) {
