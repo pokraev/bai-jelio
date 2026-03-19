@@ -36,7 +36,7 @@ import {
 import {
   getSystemPrompt, getDeferredKnowledge, getReconnectPrompt,
 } from './prompts.js';
-import { getConversationSummary, hasHistory, getLastSessionBrief } from './memory.js';
+import { getConversationSummary, getNeutralSummary, hasHistory, getLastSessionBrief } from './memory.js';
 import { trackUsage, updateQuotaUI, groundingExhausted } from './quota.js';
 import { requestWakeLock, releaseWakeLock, setStatus } from './ui-controls.js';
 import { setAudioPlayer } from './render-state.js';
@@ -447,7 +447,7 @@ function handleSetupComplete(apiKey) {
   // ── Character opens the conversation based on reconnectReason ──
   const isAssistant = getAssistantMode();
   const deferredKnowledge = isAssistant ? '' : getDeferredKnowledge() + getEnrichmentContext();
-  const summary = getConversationSummary();
+  const summary = isAssistant ? getNeutralSummary() : getConversationSummary();
 
   if (reconnectReason === 'search') {
     reconnectReason = null;

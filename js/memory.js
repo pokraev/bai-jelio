@@ -59,6 +59,17 @@ export function getConversationSummary() {
 }
 
 /**
+ * Get conversation summary with neutral labels (for assistant mode).
+ * Only includes the factual content, no persona cues.
+ * @returns {string}
+ */
+export function getNeutralSummary() {
+  if (conversationHistory.length === 0) return '';
+  return 'CONVERSATION CONTEXT (facts only — maintain your own tone, do NOT mimic the speaking style below):\n' +
+    conversationHistory.map(e => (e.role === 'user' ? 'User' : 'Assistant') + ': ' + e.text).join('\n');
+}
+
+/**
  * Get full history for memory recall ("what do you remember?").
  * @returns {string}
  */

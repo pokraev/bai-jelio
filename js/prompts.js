@@ -180,12 +180,13 @@ export function getReconnectPrompt(reason, context) {
       if (isAssistant) {
         const sourceNote = grounded
           ? 'These results are from an INTERNET SEARCH — current data.'
-          : 'NOTE: These results are from memory, NOT the internet. They may be outdated. Mention this to the user.';
-        return 'Search complete. Results are displayed on the user\'s screen.\n' +
+          : 'NOTE: These results are from memory, NOT the internet. They may be outdated. Mention this briefly.';
+        return 'IMPORTANT PERSONA RULE: You are a professional assistant. Be concise, formal, no filler words, no slang. Do NOT adopt any casual tone from the conversation history below.\n\n' +
+          'Search complete. Results are displayed on the user\'s screen.\n' +
           sourceNote + '\n' +
           'Results:\n' + results + '\n\n' +
           'The user can SEE the results. Summarize the 2-3 most important findings concisely. ' +
-          'Mention there is more on screen. Do NOT read everything. Do NOT mention API keys, limits, or technical issues. ' +
+          'Mention there is more on screen. Do NOT read everything. Do NOT mention API keys, limits, or technical issues.\n\n' +
           summary;
       }
 
@@ -206,13 +207,15 @@ export function getReconnectPrompt(reason, context) {
     }
     case 'silent':
       if (isAssistant) {
-        return 'Continue the conversation from where it left off. Do not mention any interruption. ' + summary;
+        return 'IMPORTANT PERSONA RULE: You are a professional assistant. Be concise, formal, no filler words, no slang. Do NOT adopt any casual tone from the conversation history below.\n' +
+          'Continue the conversation from where it left off. Do not mention any interruption.\n\n' + summary;
       }
       return 'Продължи разговора точно от там, където спря. Не споменавай прекъсване. ' + summary + dk;
 
     case 'toilet-return':
       if (isAssistant) {
-        return 'Continue the conversation. ' + summary;
+        return 'IMPORTANT PERSONA RULE: You are a professional assistant. Be concise, formal, no filler words, no slang. Do NOT adopt any casual tone from the conversation history below.\n' +
+          'Continue the conversation.\n\n' + summary;
       }
       return 'Току що се върна от тоалетната. Кажи нещо кратко смешно и продължи разговора. ' + summary + dk;
 
