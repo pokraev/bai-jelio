@@ -66,6 +66,19 @@ function toggleConnection() {
 // ── Initialization ──
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // One-time migration: cookies → localStorage
+  if (!localStorage.getItem('_migrated_cookies')) {
+    ['gemini_api_key', 'sober_mode', 'assistant_mode', 'ui_lang', 'iphone_tutorial_hide'].forEach(function(name) {
+      var m = document.cookie.match('(^|;)\\s*' + name + '=([^;]*)');
+      if (m) {
+        var val = decodeURIComponent(m[2]);
+        if (val) localStorage.setItem('setting_' + name, val);
+        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+      }
+    });
+    localStorage.setItem('_migrated_cookies', '1');
+  }
+
   // Init i18n (detects lang from URL/cookie, loads translations, applies)
   await initI18n();
 

@@ -67,28 +67,30 @@ export const IQ_NAMES = {
 // ──────────────────────────────────────────────────────
 
 /**
- * Set a cookie with a given name, value, and expiry in days.
+ * Store a value in localStorage.
  * @param {string} name
- * @param {string} value
- * @param {number} days — positive to set, negative to delete
+ * @param {string} value — empty string or negative days = delete
+ * @param {number} [days] — negative to delete (kept for API compat)
  */
 export function setCookie(name, value, days) {
-  const d = new Date();
-  d.setTime(d.getTime() + days * 86400000);
-  document.cookie =
-    name + '=' + encodeURIComponent(value) +
-    ';expires=' + d.toUTCString() +
-    ';path=/;SameSite=Strict';
+  try {
+    if (!value || (days !== undefined && days < 0)) {
+      localStorage.removeItem('setting_' + name);
+    } else {
+      localStorage.setItem('setting_' + name, value);
+    }
+  } catch (_) {}
 }
 
 /**
- * Read a cookie by name. Returns '' if not found.
+ * Read a value from localStorage. Returns '' if not found.
  * @param {string} name
  * @returns {string}
  */
 export function getCookie(name) {
-  const m = document.cookie.match('(^|;)\\s*' + name + '=([^;]*)');
-  return m ? decodeURIComponent(m[2]) : '';
+  try {
+    return localStorage.getItem('setting_' + name) || '';
+  } catch (_) { return ''; }
 }
 
 // ──────────────────────────────────────────────────────
