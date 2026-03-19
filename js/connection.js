@@ -477,12 +477,16 @@ function handleSetupComplete(apiKey) {
     searchCache = null;
     if (window._thinkResultText && typeof openSearchResults === 'function') {
       openSearchResults();
+      const thinkText = window._thinkResultText;
       setTimeout(() => {
         sendSystemInstruction(
           'IMPORTANT PERSONA RULE: Stay in character as a professional assistant.\n' +
-          'Your deep analysis is complete and displayed on the user\'s screen. ' +
-          'Say briefly: "The analysis is ready on your screen. Would you like me to read it to you?" ' +
-          'Wait for the user\'s response. Do NOT summarize or read anything yet.'
+          'Your deep analysis is complete and displayed on the user\'s screen.\n' +
+          'Say briefly: "The analysis is ready on your screen. Would you like me to read it to you?"\n' +
+          'If the user says YES (да, yes, давай, sure, прочети, read it, of course, разбира се) — ' +
+          'read the FULL TEXT below out loud, section by section. Do NOT say you don\'t have the text. You DO have it right here:\n\n' +
+          '--- ANALYSIS TEXT ---\n' + thinkText + '\n--- END ---\n\n' +
+          'If the user says NO or changes topic — just continue the conversation. Do NOT read the text.'
         );
       }, 1500);
     } else {
