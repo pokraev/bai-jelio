@@ -212,6 +212,7 @@ export async function connect() {
   setStatus('Connecting...', true);
 
   try {
+    console.log('[connect] key length:', apiKey.length, 'starts with:', apiKey.substring(0, 8) + '...');
     const uri = GEMINI_WS_URL + '?key=' + encodeURIComponent(apiKey);
     ws = new WebSocket(uri);
     setWebSocket(ws);
