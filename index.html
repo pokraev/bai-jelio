@@ -94,18 +94,17 @@
         </div>
         <div class="config-field">
           <label class="config-field-label">Gemini API Key</label>
-          <div class="config-input-row">
-            <input type="password" id="apiKey" data-i18n-placeholder="api_key_placeholder" placeholder="Paste your Gemini API key here">
-            <button class="round-btn round-btn-connect" id="connectBtn" onclick="toggleConnection()" title="Connect">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"></polygon></svg>
-            </button>
-          </div>
+          <input type="password" id="apiKey" data-i18n-placeholder="api_key_placeholder" placeholder="Paste your Gemini API key here">
         </div>
         <div id="claudeKeyField" class="config-field" style="display:none">
           <label class="config-field-label">Claude API Key</label>
           <input type="password" id="claudeApiKey" placeholder="sk-ant-api03-...">
         </div>
         <div id="configStatus" class="field-hint"></div>
+        <button class="config-connect-btn" id="connectBtn" onclick="toggleConnection()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"></polygon></svg>
+          <span>Continue</span>
+        </button>
       </div>
     </div>
   </div>

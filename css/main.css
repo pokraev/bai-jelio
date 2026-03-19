@@ -276,10 +276,26 @@ input::placeholder { color: var(--text-muted); opacity: 0.5; }
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-.config-input-row {
+.config-connect-btn {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
 }
+.config-connect-btn:hover { opacity: 0.9; }
+.config-connect-btn:active { transform: scale(0.98); }
 .field-hint {
   font-size: 0.68rem; color: var(--text-muted); opacity: 0.6;
   line-height: 1.4;
