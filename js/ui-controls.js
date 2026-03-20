@@ -61,9 +61,6 @@ export function setStatus(msg, active) {
 // ── Topic Selection ─────────────────────────────────
 
 export function selectTopic(btn, topic) {
-  setSelectedTopic(topic);
-  document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
   bus.emit('ui:topic-changed', { topic });
 }
 
@@ -299,8 +296,6 @@ export function saveSettings() {
   if (modeChanged) {
     setAssistantMode(isAssistant);
     setSoberMode(!isAssistant && newMode === 'sober');
-    setCookie('sober_mode', newMode === 'sober' ? '1' : '', 365);
-    setCookie('assistant_mode', isAssistant ? '1' : '', 365);
     updateAvatarForMode(isAssistant);
   }
 

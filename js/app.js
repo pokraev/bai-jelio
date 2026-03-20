@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────
 
 import bus from './events.js';
-import { getCookie, setCookie, setSoberMode, setAssistantMode, getSelectedLang } from './config.js';
+import { getCookie, setCookie, getSelectedTopic, getAssistantMode, getSelectedLang, restoreSettings } from './config.js';
 import { loadPrompts, getDeferredKnowledge, getSystemPrompt } from './prompts.js';
 import { GeminiAudioPlayer } from './audio-player.js';
 import { startMic, stopMic, toggleMute, setWebSocket, getIsMuted } from './microphone.js';
@@ -98,16 +98,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     '_debugPrompts.getDeferredKnowledge()': { description: 'Beer + metal knowledge block' },
   });
 
-  // Restore sober mode from cookie
-  if (getCookie('sober_mode') === '1') {
-    setSoberMode(true);
-  }
+  // Restore all persisted settings (topic, IQ, lang, voice, mode)
+  restoreSettings();
 
-  // Restore assistant mode from cookie
-  if (getCookie('assistant_mode') === '1') {
-    setAssistantMode(true);
-    updateAvatarForMode(true);
-  }
+  // Sync UI to restored settings
+  if (getAssistantMode()) updateAvatarForMode(true);
+
+  // Sync topic button active state
+  const savedTopic = getSelectedTopic();
+  document.querySelectorAll('.topic-btn[onclick*="selectTopic"]').forEach(b => {
+    const match = b.getAttribute('onclick')?.match(/selectTopic\(this,\s*'(\w+)'\)/);
+    b.classList.toggle('active', match && match[1] === savedTopic);
+  });
 
   // Enable transcript button if there's saved history
   if (window.memory && window.memory.count > 0) {

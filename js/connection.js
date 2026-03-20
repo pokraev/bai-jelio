@@ -23,7 +23,7 @@
 import bus from './events.js';
 import {
   GEMINI_WS_URL, GEMINI_MODEL,
-  getSelectedVoice, getSelectedTopic, getSelectedLang,
+  getSelectedVoice, getSelectedTopic, setSelectedTopic, getSelectedLang,
   getCookie, setCookie, base64ToUint8Array,
   getSoberMode, getAssistantMode,
 } from './config.js';
@@ -703,6 +703,7 @@ function handleServerContent(content) {
           summary: { bg: 'резюме', en: 'summary', es: 'resumen', hi: 'सारांश' },
           note: { bg: 'бележка', en: 'note', es: 'nota', hi: 'नोट' },
           'show-results': { bg: 'покажи резултати', en: 'show results', es: 'mostrar resultados', hi: 'परिणाम दिखाएं' },
+          'topic-switch': { bg: 'смяна на тема', en: 'switch topic', es: 'cambiar tema', hi: 'विषय बदलें' },
         };
         const lang = getSelectedLang();
         const options = botIntent.matches
@@ -762,6 +763,16 @@ function handleServerContent(content) {
           if (typeof openNotesModal === 'function') openNotesModal();
         }
       }
+      if (botIntent.type === 'topic-switch') {
+        const validTopics = ['philosophy', 'psychology', 'sociology', 'science', 'politics', 'music', 'literature', 'life', 'soccer'];
+        const requestedTopic = botIntent.query;
+        if (validTopics.includes(requestedTopic)) {
+          console.log('Topic switch triggered:', requestedTopic);
+          pendingBotText = '';
+          bus.emit('ui:topic-changed', { topic: requestedTopic });
+          return;
+        }
+      }
       if (botIntent.type === 'show-notes') {
         pendingBotText = '';
         if (typeof openNotesModal === 'function') openNotesModal();
@@ -811,6 +822,14 @@ function handleServerContent(content) {
           }
           pendingBotText = '';
           return;
+        }
+        if (resolved.type === 'topic-switch') {
+          const validTopics = ['philosophy', 'psychology', 'sociology', 'science', 'politics', 'music', 'literature', 'life', 'soccer'];
+          if (validTopics.includes(resolved.query)) {
+            bus.emit('ui:topic-changed', { topic: resolved.query });
+            pendingBotText = '';
+            return;
+          }
         }
         if (resolved.type === 'show-notes') {
           if (typeof openNotesModal === 'function') openNotesModal();
@@ -1063,11 +1082,18 @@ bus.on('ui:settings-reconnect', ({ reason }) => {
   }
 });
 
-// UI: topic changed — send transition command
+// UI: topic changed — reconnect with new topic in system prompt
 bus.on('ui:topic-changed', ({ topic }) => {
-  if (_isConnected && ws && ws.readyState === WebSocket.OPEN) {
-    const topicNames = { philosophy: 'философия', psychology: 'психология', sociology: 'социология', science: 'наука', politics: 'българска политика', music: 'музика', literature: 'литература', life: 'живот' };
-    safeSwitchCommand('Потребителят смени темата на ' + topicNames[topic] + '. Направи забавен и остроумен преход към новата тема — може с шега, аналогия или неочаквана връзка с предишния разговор. Бъди кратък и смешен.');
+  // Update config and UI button state
+  setSelectedTopic(topic);
+  document.querySelectorAll('.topic-btn[onclick*="selectTopic"]').forEach(b => {
+    const match = b.getAttribute('onclick')?.match(/selectTopic\(this,\s*'(\w+)'\)/);
+    b.classList.toggle('active', match && match[1] === topic);
+  });
+
+  // Reconnect so the new topic knowledge is in the system prompt
+  if (_isConnected) {
+    bus.emit('ui:settings-reconnect', { reason: 'fresh' });
   }
 });
 

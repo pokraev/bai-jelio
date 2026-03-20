@@ -57,12 +57,13 @@ export async function loadPrompts() {
     'system-base', 'sober-system-base', 'assitent-system-base',
     'topic-philosophy', 'topic-psychology', 'topic-sociology',
     'topic-science', 'topic-politics', 'topic-music',
-    'topic-literature', 'topic-life',
+    'topic-literature', 'topic-life', 'topic-soccer',
     'iq-average', 'iq-intelligent', 'iq-genius',
     'lang-bg', 'lang-en', 'lang-es', 'lang-hi',
     'assitent-lang-bg', 'assitent-lang-en', 'assitent-lang-es', 'assitent-lang-hi',
     'deferred-knowledge', 'search-trigger', 'assitent-search-trigger',
     'search-prompt-full', 'thinking-prompt-full', 'summary-full-prompt', 'take-note-full-prompt',
+    'topic-switch-full-prompt',
   ];
 
   const entries = await Promise.all(
@@ -126,6 +127,7 @@ export function getSystemPrompt(topic, iq, lang) {
   const thinkingPatterns = promptCache['thinking-prompt-full'] || '';
   const summaryPatterns = promptCache['summary-full-prompt'] || '';
   const notePatterns = promptCache['take-note-full-prompt'] || '';
+  const topicSwitchPatterns = promptCache['topic-switch-full-prompt'] || '';
 
   // Note trigger instruction
   const noteTrigger =
@@ -165,7 +167,8 @@ export function getSystemPrompt(topic, iq, lang) {
       + (searchPatterns ? '\n\n' + searchPatterns : '')
       + (thinkingPatterns ? '\n\n' + thinkingPatterns : '')
       + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '')
-      + (notePatterns ? '\n\n' + notePatterns + noteTrigger : '');
+      + (notePatterns ? '\n\n' + notePatterns + noteTrigger : '')
+      + (topicSwitchPatterns ? '\n\n' + topicSwitchPatterns : '');
   }
 
   const base = getSoberMode()
@@ -186,7 +189,8 @@ export function getSystemPrompt(topic, iq, lang) {
     + (searchPatterns ? '\n\n' + searchPatterns : '')
     + (thinkingPatterns ? '\n\n' + thinkingPatterns : '')
     + (summaryPatterns ? '\n\n' + summaryPatterns + summaryTrigger : '')
-    + (notePatterns ? '\n\n' + notePatterns + noteTrigger : '');
+    + (notePatterns ? '\n\n' + notePatterns + noteTrigger : '')
+    + (topicSwitchPatterns ? '\n\n' + topicSwitchPatterns : '');
 }
 
 /**

@@ -50,6 +50,8 @@ export const TOPIC_KNOWLEDGE = {
     'литература — познаваш отлично българската и световната литература. Ботев, Вазов, Яворов, Елин Пелин, Йовков, Далчев, Вапцаров, Багряна, но и Достоевски, Толстой, Шекспир, Камю, Маркес, Хемингуей, Буковски, Кафка. Познаваш и поезия, и проза, и драма. Можеш да цитираш, да обясняваш символи и образи, да свързваш литературата с живота. Говориш за книги като за нещо живо — не академично, а като човек, който е чел до зори и е плакал над страници след третата ракия.',
   life:
     'живот — универсални човешки теми: смисълът на живота, жени vs мъже, богати vs бедни, млади vs стари, любов и разочарования, амбиции и компромиси, лайфстайл, щастие, самота, успех и провал, семейство, приятелство, предателство, мечти, страхове, остаряване, свобода, отговорност. НЕ е специфично за България — това са теми, които вълнуват хората по цял свят. Говориш откровено, с хумор и мъдрост. Не поучаваш, а споделяш като човек, който е видял и патил.',
+  soccer:
+    'футбол — познаваш отлично световния и българския футбол. Пеле, Марадона, Кройф, Зидан, Роналдо, Меси, Мбапе. Стоичков, Лечков, Балъков, ЦСКА, Левски, Лудогорец. САЩ \'94, Шампионска лига, тактики, трансфери, скандали. Говориш за мачове като за спомени.',
 };
 
 // ── IQ levels and display names ──
@@ -108,22 +110,42 @@ let _soberMode = false;
 let _assistantMode = false;
 
 export function getSelectedTopic()          { return _selectedTopic; }
-export function setSelectedTopic(v)         { _selectedTopic = v; }
+export function setSelectedTopic(v)         { _selectedTopic = v; setCookie('selected_topic', v, 365); }
 
 export function getSelectedIQ()             { return _selectedIQ; }
-export function setSelectedIQ(v)            { _selectedIQ = v; }
+export function setSelectedIQ(v)            { _selectedIQ = v; setCookie('selected_iq', v, 365); }
 
 export function getSelectedLang()           { return _selectedLang; }
-export function setSelectedLang(v)          { _selectedLang = v; }
+export function setSelectedLang(v)          { _selectedLang = v; setCookie('selected_lang', v, 365); }
 
 export function getSelectedVoice()          { return _selectedVoice; }
-export function setSelectedVoice(v)         { _selectedVoice = v; }
+export function setSelectedVoice(v)         { _selectedVoice = v; setCookie('selected_voice', v, 365); }
 
 export function getSoberMode()              { return _soberMode; }
-export function setSoberMode(v)             { _soberMode = v; }
+export function setSoberMode(v)             { _soberMode = v; setCookie('sober_mode', v ? '1' : '', 365); }
 
 export function getAssistantMode()          { return _assistantMode; }
-export function setAssistantMode(v)         { _assistantMode = v; }
+export function setAssistantMode(v)         { _assistantMode = v; setCookie('assistant_mode', v ? '1' : '', 365); }
+
+/**
+ * Restore all settings from localStorage. Call once at startup.
+ */
+export function restoreSettings() {
+  const topic = getCookie('selected_topic');
+  if (topic && TOPIC_KNOWLEDGE[topic]) _selectedTopic = topic;
+
+  const iq = getCookie('selected_iq');
+  if (iq && IQ_LEVELS.includes(iq)) _selectedIQ = iq;
+
+  const lang = getCookie('selected_lang');
+  if (lang && LANGS.includes(lang)) _selectedLang = lang;
+
+  const voice = getCookie('selected_voice');
+  if (voice && VOICES.some(v => v.id === voice)) _selectedVoice = voice;
+
+  if (getCookie('sober_mode') === '1') _soberMode = true;
+  if (getCookie('assistant_mode') === '1') _assistantMode = true;
+}
 
 // ──────────────────────────────────────────────────────
 // Utility
