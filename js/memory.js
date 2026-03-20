@@ -134,6 +134,24 @@ export function hasHistory() {
   return conversationHistory.length > 0;
 }
 
+/**
+ * Retroactively correct the last user transcript in memory.
+ * Called async when Gemini REST returns a better version.
+ * @param {string} correctedText
+ */
+export function correctLastUserTranscript(correctedText) {
+  if (!correctedText) return;
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    if (conversationHistory[i].role === 'user') {
+      const old = conversationHistory[i].text;
+      conversationHistory[i].text = correctedText.trim();
+      persistHistory();
+      console.log('[memory] transcript corrected:', old, '→', correctedText.trim());
+      break;
+    }
+  }
+}
+
 // ── Debug: expose to console via window.memory ──
 // ── Debug: expose read-only views to console via window.memory ──
 window.memory = {
@@ -147,5 +165,13 @@ window.memory = {
     const dk = getDeferredKnowledge ? getDeferredKnowledge() : '(load prompts.js first)';
     return getConversationSummary() + '\n---DEFERRED KNOWLEDGE---\n' + dk;
   },
-  print() { console.log(getFullHistory() || '(empty)'); }
+  print() { console.log(getFullHistory() || '(empty)'); },
+  chat() {
+    if (conversationHistory.length === 0) { console.log('(empty)'); return; }
+    for (const e of conversationHistory) {
+      const icon = e.role === 'user' ? '👤' : '🍺';
+      const time = e.ts ? new Date(e.ts).toLocaleTimeString() : '';
+      console.log(icon + ' ' + time + '  ' + e.text);
+    }
+  }
 };

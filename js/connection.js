@@ -79,6 +79,55 @@ let groundingBlocked = false;
 let pendingBotText = '';
 let pendingUserText = '';
 
+// ── Async transcript correction ─────────────────────
+// Uses a cheap Gemini REST call to infer what the user actually said,
+// based on the (possibly garbled) ASR transcript + the bot's response.
+// Fires 'transcript:user-corrected' when done — memory picks it up.
+
+async function correctTranscriptAsync(rawUserText, botResponse) {
+  try {
+    const { geminiRest, canCallRest } = await import('./gemini-rest.js');
+    if (!canCallRest()) return; // don't burn quota
+
+    const corrected = await geminiRest(
+      'The speech recognition system transcribed a user\'s spoken message as:\n' +
+      '"' + rawUserText + '"\n\n' +
+      'The AI assistant then responded with:\n' +
+      '"' + botResponse.slice(0, 300) + '"\n\n' +
+      'Based on the context of the response, reconstruct what the user ACTUALLY said. ' +
+      'Fix any speech recognition errors, wrong words, or garbled text. ' +
+      'Keep the same language as the original. ' +
+      'Reply with ONLY the corrected transcript, nothing else. ' +
+      'If the original seems correct, reply with it unchanged.',
+      { temperature: 0.1, maxOutputTokens: 200 }
+    );
+
+    if (corrected && corrected !== '__429__') {
+      const cleaned = corrected.replace(/^["']|["']$/g, '').trim();
+      if (cleaned) {
+        console.log('👤 User:', cleaned);
+        if (cleaned !== rawUserText) {
+          bus.emit('transcript:user-corrected', { text: cleaned, original: rawUserText });
+          // Also fix in _rawTranscripts (retroactively)
+          if (window._rawTranscripts) {
+            for (let i = window._rawTranscripts.length - 1; i >= 0; i--) {
+              if (window._rawTranscripts[i].role === 'user' && window._rawTranscripts[i].text === rawUserText) {
+                window._rawTranscripts[i].text = cleaned;
+                break;
+              }
+            }
+          }
+        }
+      }
+    } else {
+      // Fallback: log raw ASR if Gemma unavailable
+      console.log('👤 User:', rawUserText);
+    }
+  } catch (err) {
+    console.warn('[transcript-fix] error:', err.message);
+  }
+}
+
 // ── Audio Player ────────────────────────────────────
 
 const audioPlayer = new GeminiAudioPlayer();
@@ -623,13 +672,19 @@ function handleServerContent(content) {
     if (!window._rawTranscripts) window._rawTranscripts = [];
     var lastUserText = pendingUserText ? pendingUserText.trim() : '';
     if (pendingUserText) {
-      console.log('👤 User:', lastUserText);
       window._rawTranscripts.push({ role: 'user', text: lastUserText, ts: Date.now() });
       pendingUserText = '';
     }
     if (pendingBotText) {
       console.log('🍺 Бай Жельо:', pendingBotText.trim());
       window._rawTranscripts.push({ role: 'bot', text: pendingBotText.trim(), ts: Date.now() });
+    }
+
+    // ── Async transcript correction via Gemini REST ──
+    // The model understood the user perfectly (its response proves it),
+    // so we ask a cheap LLM to infer what the user actually said.
+    if (lastUserText && pendingBotText) {
+      correctTranscriptAsync(lastUserText, pendingBotText.trim());
     }
 
     // ── Bot output intent detection ──
@@ -685,7 +740,7 @@ function handleServerContent(content) {
       if (botIntent.type === 'summary') {
         console.log('Summary triggered:', botIntent.query);
         pendingBotText = '';
-        if (typeof openTranscriptModal === 'function') openTranscriptModal();
+        if (typeof openSummaryModal === 'function') openSummaryModal();
         return;
       }
       if (botIntent.type === 'note') {
@@ -745,7 +800,7 @@ function handleServerContent(content) {
           return;
         }
         if (resolved.type === 'summary') {
-          if (typeof openTranscriptModal === 'function') openTranscriptModal();
+          if (typeof openSummaryModal === 'function') openSummaryModal();
           pendingBotText = '';
           return;
         }

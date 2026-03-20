@@ -974,19 +974,24 @@ select {
 }
 
 /* Transcript action button (under avatar) */
-#transcriptBtn {
+#transcriptBtn,
+#summaryBtn {
   border-color: rgba(136,153,170,0.25);
   color: var(--text-muted);
   opacity: 0.4;
   pointer-events: none;
 }
-#transcriptBtn.has-turns {
+#transcriptBtn.has-turns,
+#summaryBtn.has-turns,
+#notesBtn {
   border-color: rgba(78,203,113,0.5);
   color: var(--success);
   opacity: 1;
   pointer-events: auto;
 }
-#transcriptBtn.has-turns:hover {
+#transcriptBtn.has-turns:hover,
+#summaryBtn.has-turns:hover,
+#notesBtn:hover {
   border-color: var(--success);
   background: rgba(78,203,113,0.1);
 }
@@ -1005,11 +1010,9 @@ select {
 /* Transcript Toolbar */
 .transcript-toolbar {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
-  padding: 10px 40px 6px 12px;
+  padding: 10px 14px 8px 10px;
   flex-shrink: 0;
   position: relative;
 }
@@ -1045,10 +1048,74 @@ select {
   top: 8px;
   z-index: 5;
 }
+.transcript-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+/* Transcript search bar */
+.transcript-modal-card > .transcript-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+}
+.transcript-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.transcript-search-icon {
+  position: absolute;
+  left: 10px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.transcript-search {
+  width: 100%;
+  padding: 8px 70px 8px 32px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(240,165,0,0.15);
+  border-radius: 20px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.transcript-search:focus {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.08);
+}
+.transcript-search::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.transcript-search-count {
+  position: absolute;
+  right: 12px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  pointer-events: none;
+}
+mark.transcript-highlight {
+  background: rgba(240,165,0,0.35);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.bubble-content {
+  word-wrap: break-word;
+}
 @media (max-width: 768px) {
   .transcript-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
   }
   .transcript-close {
     right: 4px;
@@ -1296,8 +1363,15 @@ select {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 10px 8px 10px;
+  padding-right: 14px;
   min-height: 0;
+}
+.transcript-chat::-webkit-scrollbar {
+  width: 0;
+}
+.transcript-chat {
+  scrollbar-width: none;
 }
 .transcript-disclaimer {
   padding: 6px 12px;

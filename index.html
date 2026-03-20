@@ -78,6 +78,12 @@
       <button class="round-btn" id="transcriptBtn" onclick="openTranscriptModal()" data-i18n-title="transcript_title" title="Транскрипт">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="13" y2="13"></line></svg>
       </button>
+      <button class="round-btn" id="summaryBtn" onclick="openSummaryModal()" data-i18n-title="summary_title_label" title="Резюме">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      </button>
+      <button class="round-btn" id="notesBtn" onclick="openNotesModal()" data-i18n-title="notes_title" title="Бележки">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      </button>
       <button class="round-btn round-btn-gear" id="posFab" onclick="toggleLipsPopover(event)" title="Lips editor" style="display:none">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
       </button>
@@ -300,13 +306,13 @@
 <div class="modal" id="notesModal" onclick="if(event.target===this)closeNotesModal()">
   <div class="modal-card transcript-modal-card">
     <div class="notes-toolbar">
-      <span class="notes-label">Notes</span>
+      <span class="transcript-title" data-i18n="notes_title">Бележки</span>
       <button class="modal-close transcript-close" onclick="closeNotesModal()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
     <div class="notes-filter-bar">
-      <input type="text" id="notesSearch" class="notes-input" placeholder="Search notes..." oninput="renderNotes()">
+      <input type="text" id="notesSearch" class="notes-input" data-i18n-placeholder="notes_search_placeholder" placeholder="Търси в бележките..." oninput="renderNotes()">
       <select id="notesPeriod" onchange="renderNotes()" class="notes-select">
         <option value="all" selected>All</option>
         <option value="0">Today</option>
@@ -322,15 +328,33 @@
 <!-- Summary Modal -->
 <div class="modal" id="transcriptModal" onclick="if(event.target===this)closeTranscriptModal()">
   <div class="modal-card transcript-modal-card">
+    <button class="modal-close transcript-close" onclick="closeTranscriptModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+    </button>
     <div class="transcript-toolbar">
-      <div class="transcript-tabs">
-        <span class="summary-label" data-i18n="transcript_summary">Summary</span>
+      <span class="transcript-title" data-i18n="transcript_title_label">Транскрипция</span>
+      <div class="transcript-search-wrap">
+        <svg class="transcript-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="transcriptSearchInput" class="transcript-search" data-i18n-placeholder="transcript_search_placeholder" placeholder="Търси..." autocomplete="off" oninput="onTranscriptSearch(this.value)">
+        <span class="transcript-search-count" id="transcriptSearchCount"></span>
       </div>
-      <button class="modal-close transcript-close" onclick="closeTranscriptModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
-      </button>
     </div>
     <div class="transcript-chat" id="transcriptChat"></div>
+    <div class="transcript-disclaimer" data-i18n="transcript_disclaimer_short">⚠ Експериментална функция — възможни са грешки в транскрипцията.</div>
+  </div>
+</div>
+
+<!-- Summary Modal -->
+<div class="modal" id="summaryModal" onclick="if(event.target===this)closeSummaryModal()">
+  <div class="modal-card transcript-modal-card">
+    <button class="modal-close transcript-close" onclick="closeSummaryModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+    </button>
+    <div class="transcript-toolbar">
+      <span class="transcript-title" data-i18n="summary_title_label">Резюме</span>
+    </div>
+    <div class="transcript-chat" id="summaryChat"></div>
+    <div class="transcript-disclaimer" data-i18n="summary_disclaimer">⚠ Експериментална функция — възможни са грешки в резюмето.</div>
   </div>
 </div>
 
@@ -1052,8 +1076,8 @@ function escapeHtml(str) {
 }
 
 async function renderSummary(turns) {
-  var chat = document.getElementById('transcriptChat');
-  var modal = document.getElementById('transcriptModal');
+  var chat = document.getElementById('summaryChat');
+  var modal = document.getElementById('summaryModal');
   chat.innerHTML = '';
   if (transcriptAbort) transcriptAbort.abort();
   transcriptAbort = new AbortController();
@@ -1241,17 +1265,146 @@ function showSummaryBubble(chat, text) {
   autoScrollChat(chat);
 }
 
+// ── Chat transcript state ──
+var _transcriptHistory = [];
+var _transcriptSearchHits = [];
+var _transcriptCurrentHit = -1;
+
 async function openTranscriptModal() {
   var modal = document.getElementById('transcriptModal');
   var chat = document.getElementById('transcriptChat');
+  var searchInput = document.getElementById('transcriptSearchInput');
   modal.classList.add('visible');
   chat.innerHTML = '';
-  if (transcriptAbort) transcriptAbort.abort();
-  transcriptAbort = new AbortController();
+  if (searchInput) { searchInput.value = ''; }
+  document.getElementById('transcriptSearchCount').textContent = '';
   window._transcriptMuted = false;
   if (typeof getIsMuted === 'function' && !getIsMuted()) {
     toggleMute();
     window._transcriptMuted = true;
+  }
+
+  _transcriptHistory = getFullTranscriptHistory();
+  if (_transcriptHistory.length === 0) {
+    chat.innerHTML = '<div class="transcript-empty">' + (typeof t === 'function' ? t('transcript_empty') : 'No conversation yet') + '</div>';
+    return;
+  }
+
+  renderChatTranscript(_transcriptHistory);
+  // Scroll to bottom
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function renderChatTranscript(turns, query) {
+  var chat = document.getElementById('transcriptChat');
+  chat.innerHTML = '';
+  var lastDateKey = '';
+
+  for (var i = 0; i < turns.length; i++) {
+    var turn = turns[i];
+    var cleanText = turn.text.replace(/ТЪРСЯ:\s*.*/gi, '').replace(/ПОКАЖИ_РЕЗУЛТАТИ/gi, '').trim();
+    if (!cleanText) continue;
+
+    // Date separator
+    if (turn.ts) {
+      var dk = toDateKey(new Date(turn.ts));
+      if (dk !== lastDateKey) {
+        lastDateKey = dk;
+        var dateEl = document.createElement('div');
+        dateEl.className = 'chat-date-label';
+        dateEl.textContent = formatDateLabel(dk);
+        chat.appendChild(dateEl);
+      }
+    }
+
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ' + (turn.role === 'user' ? 'user' : 'bot');
+    bubble.dataset.index = i;
+
+    var icon = turn.role === 'user' ? '👤' : '🍺';
+    var time = turn.ts ? new Date(turn.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+    var displayText = escapeHtml(cleanText);
+    if (query) {
+      var re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      displayText = displayText.replace(re, '<mark class="transcript-highlight">$1</mark>');
+    }
+
+    bubble.innerHTML =
+      '<div class="bubble-content">' +
+        '<span class="bubble-icon">' + icon + '</span> ' + displayText +
+      '</div>' +
+      (time ? '<span class="bubble-time">' + time + '</span>' : '');
+
+    chat.appendChild(bubble);
+  }
+}
+
+function onTranscriptSearch(query) {
+  var countEl = document.getElementById('transcriptSearchCount');
+  query = (query || '').trim();
+
+  if (!query) {
+    renderChatTranscript(_transcriptHistory);
+    countEl.textContent = '';
+    var chatEl = document.getElementById('transcriptChat');
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return;
+  }
+
+  // Find matching turns
+  var lowerQ = query.toLowerCase();
+  _transcriptSearchHits = [];
+  for (var i = 0; i < _transcriptHistory.length; i++) {
+    if (_transcriptHistory[i].text.toLowerCase().indexOf(lowerQ) !== -1) {
+      _transcriptSearchHits.push(i);
+    }
+  }
+
+  renderChatTranscript(_transcriptHistory, query);
+
+  countEl.textContent = _transcriptSearchHits.length > 0
+    ? _transcriptSearchHits.length + ' found'
+    : 'no results';
+
+  // Scroll to most recent hit (last in array)
+  if (_transcriptSearchHits.length > 0) {
+    _transcriptCurrentHit = _transcriptSearchHits.length - 1;
+    scrollToHit(_transcriptSearchHits[_transcriptCurrentHit]);
+  }
+}
+
+function scrollToHit(index) {
+  var chat = document.getElementById('transcriptChat');
+  var bubble = chat.querySelector('[data-index="' + index + '"]');
+  if (bubble) {
+    bubble.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Flash highlight
+    bubble.classList.add('highlight');
+    setTimeout(function() { bubble.classList.remove('highlight'); }, 1500);
+  }
+}
+
+function closeSummaryModal() {
+  document.getElementById('summaryModal').classList.remove('visible');
+  if (transcriptAbort) { transcriptAbort.abort(); transcriptAbort = null; }
+  if (typeof getIsMuted === 'function' && getIsMuted() && window._summaryMuted) {
+    toggleMute();
+    window._summaryMuted = false;
+  }
+}
+
+async function openSummaryModal() {
+  var modal = document.getElementById('summaryModal');
+  var chat = document.getElementById('summaryChat');
+  modal.classList.add('visible');
+  chat.innerHTML = '';
+  if (transcriptAbort) transcriptAbort.abort();
+  transcriptAbort = new AbortController();
+  window._summaryMuted = false;
+  if (typeof getIsMuted === 'function' && !getIsMuted()) {
+    toggleMute();
+    window._summaryMuted = true;
   }
 
   var history = getFullTranscriptHistory();
@@ -1260,7 +1413,7 @@ async function openTranscriptModal() {
     return;
   }
 
-  await renderSummary(history, null, null);
+  await renderSummary(history);
 }
 
 function autoScrollChat(el) {

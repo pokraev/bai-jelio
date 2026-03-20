@@ -21,7 +21,7 @@ import { startAnimation } from './animation.js';
 import { initPositioning, toggleLipsPopover, setEditTarget } from './positioning.js';
 import { setIsSpeaking } from './render-state.js';
 import { feedTranscriptToLipSync, clearTranscriptQueue, driveLipSyncFromAudio } from './lip-sync.js';
-import { appendTranscript } from './memory.js';
+import { appendTranscript, correctLastUserTranscript } from './memory.js';
 import { initWaveform, startWaveformAnimation, resetWaveform } from './waveform.js';
 import { initI18n, t, switchUILang } from './i18n.js';
 
@@ -113,6 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.memory && window.memory.count > 0) {
     const tBtn = document.getElementById('transcriptBtn');
     if (tBtn) tBtn.classList.add('has-turns');
+    var sBtn = document.getElementById('summaryBtn');
+    if (sBtn) sBtn.classList.add('has-turns');
   }
 
   // Init waveform bars
@@ -212,6 +214,10 @@ let _memBotBuffer = '';
 let _memUserBuffer = '';
 bus.on('transcript:bot', ({ text }) => { _memBotBuffer += text; });
 bus.on('transcript:user', ({ text }) => { _memUserBuffer += text; });
+// Async correction from Gemini REST — retroactively fixes the last user transcript in memory
+bus.on('transcript:user-corrected', ({ text }) => {
+  correctLastUserTranscript(text);
+});
 bus.on('turn:complete', () => {
   if (_memUserBuffer.trim()) appendTranscript('user', _memUserBuffer.trim());
   if (_memBotBuffer.trim()) appendTranscript('bot', _memBotBuffer.trim());
