@@ -17,10 +17,12 @@ import {
 } from './ui-controls.js';
 import { initQuota } from './quota.js';
 import './notes.js';
-import { startAnimation } from './animation.js';
+import { drawMouth } from '../../avatar-visuals/src/mouth-renderer.js';
+import { createBlinkState, updateBlink, drawEyelids } from '../../avatar-visuals/src/eye-renderer.js';
+import { createLipSyncState, feedTranscript, clearTranscript, updateSpeakingViseme } from '../../avatar-visuals/src/lip-sync.js';
+import { VISEMES, createVisemeState, lerpState } from '../../avatar-visuals/src/visemes.js';
+import { createAnimationLoop } from '../../avatar-visuals/src/animation-loop.js';
 import { initPositioning, toggleLipsPopover, setEditTarget } from './positioning.js';
-import { setIsSpeaking } from './render-state.js';
-import { feedTranscriptToLipSync, clearTranscriptQueue, driveLipSyncFromAudio } from './lip-sync.js';
 import { appendTranscript, correctLastUserTranscript } from './memory.js';
 import { initWaveform, startWaveformAnimation, resetWaveform } from './waveform.js';
 import { initI18n, t, switchUILang } from './i18n.js';
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Init quota tracking UI
   initQuota();
 
-  // Init canvas animation
+  // Init canvas animation (using avatar-visuals rendering)
   const canvas = document.getElementById('mouthCanvas');
   if (canvas) {
     const ctx = canvas.getContext('2d');
@@ -137,9 +139,47 @@ document.addEventListener('DOMContentLoaded', async () => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       return dpr;
     }
-    const dpr = resizeCanvas();
+    resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    startAnimation({ ctx, canvas, dpr });
+
+    // Avatar rendering state (using avatar-visuals modules)
+    const S = 340 / 2000;
+    const mouthPos = { cx: 1724 * S, cy: 782 * S, halfW: 57 * S, halfH: 45 * S, rot: -0.217 };
+    const eyePos = {
+      left:  { cx: 1602 * S, cy: 617 * S, halfW: 46 * S, halfH: 32 * S, rot: -0.307 },
+      right: { cx: 1773 * S, cy: 584 * S, halfW: 47 * S, halfH: 31 * S, rot: -0.319 },
+    };
+
+    const visemeCur = createVisemeState();
+    const visemeTgt = createVisemeState();
+    const blinkState = createBlinkState();
+    const lipSyncState = createLipSyncState();
+    let isSpeaking = false;
+
+    window._avatarState = { isSpeaking: false, lipSyncState, visemeTgt };
+
+    const loop = createAnimationLoop((dt, time) => {
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+      ctx.clearRect(0, 0, w, h);
+
+      if (window._avatarState.isSpeaking) {
+        const ap = window._audioPlayer;
+        updateSpeakingViseme(lipSyncState, visemeTgt, {
+          time,
+          analyser: ap?.analyser,
+          freqData: ap?.freqData,
+        });
+      } else {
+        Object.assign(visemeTgt, VISEMES.rest);
+      }
+
+      lerpState(visemeCur, visemeTgt, dt);
+      drawMouth(ctx, mouthPos, visemeCur);
+      updateBlink(blinkState, time);
+      drawEyelids(ctx, eyePos, blinkState);
+    });
+    loop.start();
     initPositioning();
   }
 
@@ -199,7 +239,7 @@ bus.on('mic:destroyed', () => {
 
 // ── Speaking state ──
 bus.on('audio:playing-changed', ({ playing }) => {
-  setIsSpeaking(playing);
+  if (window._avatarState) window._avatarState.isSpeaking = playing;
   const stage = document.getElementById('stage');
   if (stage) {
     if (playing) {
@@ -231,8 +271,15 @@ bus.on('turn:complete', () => {
 });
 
 // ── Lip-sync wiring ──
-bus.on('transcript:bot', ({ text }) => feedTranscriptToLipSync(text));
-bus.on('audio:data', ({ audioData }) => driveLipSyncFromAudio(audioData));
-bus.on('turn:complete', () => clearTranscriptQueue());
-bus.on('turn:interrupted', () => clearTranscriptQueue());
-bus.on('connection:disconnected', () => clearTranscriptQueue());
+bus.on('transcript:bot', ({ text }) => {
+  if (window._avatarState) feedTranscript(window._avatarState.lipSyncState, text);
+});
+bus.on('turn:complete', () => {
+  if (window._avatarState) clearTranscript(window._avatarState.lipSyncState);
+});
+bus.on('turn:interrupted', () => {
+  if (window._avatarState) clearTranscript(window._avatarState.lipSyncState);
+});
+bus.on('connection:disconnected', () => {
+  if (window._avatarState) clearTranscript(window._avatarState.lipSyncState);
+});

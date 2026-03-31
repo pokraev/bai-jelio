@@ -132,6 +132,7 @@ async function correctTranscriptAsync(rawUserText, botResponse) {
 
 const audioPlayer = new GeminiAudioPlayer();
 setAudioPlayer(audioPlayer);
+window._audioPlayer = audioPlayer;
 audioPlayer.onPlayingChange = (playing) => {
   bus.emit('audio:playing-changed', { playing });
 };
