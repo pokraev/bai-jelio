@@ -17,11 +17,11 @@ import {
 } from './ui-controls.js';
 import { initQuota } from './quota.js';
 import './notes.js';
-import { drawMouth } from '../../avatar-visuals/src/mouth-renderer.js';
-import { createBlinkState, updateBlink, drawEyelids } from '../../avatar-visuals/src/eye-renderer.js';
-import { createLipSyncState, feedTranscript, clearTranscript, updateSpeakingViseme } from '../../avatar-visuals/src/lip-sync.js';
-import { VISEMES, createVisemeState, lerpState } from '../../avatar-visuals/src/visemes.js';
-import { createAnimationLoop } from '../../avatar-visuals/src/animation-loop.js';
+import { drawMouth } from './avatar-visuals/mouth-renderer.js';
+import { createBlinkState, updateBlink, drawEyelids } from './avatar-visuals/eye-renderer.js';
+import { createLipSyncState, feedTranscript, clearTranscript, updateSpeakingViseme } from './avatar-visuals/lip-sync.js';
+import { VISEMES, createVisemeState, lerpState } from './avatar-visuals/visemes.js';
+import { createAnimationLoop } from './avatar-visuals/animation-loop.js';
 import { initPositioning, toggleLipsPopover, setEditTarget } from './positioning.js';
 import { appendTranscript, correctLastUserTranscript } from './memory.js';
 import { initWaveform, startWaveformAnimation, resetWaveform } from './waveform.js';
