@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2.0.1';
+const CACHE_VERSION = '2.0.2';
 const CACHE_NAME = 'bai-zhelyo-v' + CACHE_VERSION;
 const ASSETS = [
   '/',
