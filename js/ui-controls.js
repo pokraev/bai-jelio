@@ -121,10 +121,11 @@ export function openSettings() {
 
   modal.classList.add('visible');
 
-  // Mute if not already muted
+  // Mute if not already muted. Skip endTurn so opening settings does not
+  // prompt the model to respond mid-configuration.
   _settingsMuted = false;
   if (typeof window.getIsMuted === 'function' && !window.getIsMuted()) {
-    window.toggleMute();
+    window.toggleMute({ endTurn: false });
     _settingsMuted = true;
   }
 }
@@ -135,7 +136,7 @@ export function openSettings() {
 export function closeSettings() {
   document.getElementById('settingsModal').classList.remove('visible');
   if (_settingsMuted) {
-    window.toggleMute();
+    window.toggleMute({ endTurn: false });
     _settingsMuted = false;
   }
 }
@@ -302,7 +303,7 @@ export function saveSettings() {
   // Close modal and unmute
   document.getElementById('settingsModal').classList.remove('visible');
   if (_settingsMuted) {
-    window.toggleMute();
+    window.toggleMute({ endTurn: false });
     _settingsMuted = false;
   }
 

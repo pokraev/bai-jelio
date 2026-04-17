@@ -172,25 +172,45 @@ export function destroyMic() {
 // ── Mute / Unmute ───────────────────────────────────
 
 /**
- * Toggle mute. Async — fully tears down on mute, fully restarts on unmute.
- * Events fire only after state is settled.
+ * Signal end-of-user-turn to Gemini Live.
+ * Gemini commits any buffered audio and starts its response.
  */
-export async function toggleMute() {
+function sendAudioStreamEnd() {
+  if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
+  _ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+}
+
+/**
+ * Toggle mute.
+ * On mute: flush pre-buffer, hand the turn to the LLM via audioStreamEnd,
+ * disable mic tracks, pause VAD. Stream/context stay alive so unmute is instant.
+ * On unmute: re-enable tracks, resume VAD.
+ *
+ * @param {{ endTurn?: boolean }} [opts] — endTurn defaults to true. Set false
+ *        for programmatic mutes (e.g. settings modal) that should not prompt
+ *        the model to respond.
+ */
+export function toggleMute(opts) {
   if (muteInProgress) return;
   muteInProgress = true;
 
+  const endTurn = !opts || opts.endTurn !== false;
   isMuted = !isMuted;
 
   if (isMuted) {
-    // Full teardown: stop graph, stop tracks, close context
+    if (endTurn) {
+      // Flush any pre-speech frames so the tail of the utterance reaches Gemini
+      if (preBuffer.length) {
+        for (const buffered of preBuffer) sendAudioChunk(buffered);
+        preBuffer = [];
+      }
+      sendAudioStreamEnd();
+    }
+    if (micStream) micStream.getAudioTracks().forEach(t => { t.enabled = false; });
     pauseVad();
-    teardownAudioGraph();
-    stopTracks();
-    closeContext();
     bus.emit('mic:muted', { muted: true });
   } else {
-    // Full restart: new stream, new context, new graph
-    await startMic();
+    if (micStream) micStream.getAudioTracks().forEach(t => { t.enabled = true; });
     resumeVad();
     bus.emit('mic:muted', { muted: false });
   }

@@ -200,7 +200,7 @@ bus.on('mic:started', () => startWaveformAnimation());
 bus.on('mic:stopped', () => resetWaveform());
 bus.on('mic:destroyed', () => resetWaveform());
 bus.on('mic:muted', ({ muted }) => {
-  // mic:muted now fires AFTER state is settled (async toggleMute)
+  // mic:muted fires after state is settled inside toggleMute()
   if (muted) resetWaveform(); else startWaveformAnimation();
   // Switch mic icon
   const btn = document.getElementById('muteBtn');

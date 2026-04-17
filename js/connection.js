@@ -630,8 +630,8 @@ function handleSetupComplete(apiKey) {
  * @param {object} content — response.serverContent
  */
 function handleServerContent(content) {
-  // If muted, ignore all model output
-  if (getIsMuted() && content.modelTurn?.parts) return;
+  // Mute applies to the user's mic only — the model is free to respond
+  // (mute explicitly hands the turn over via audioStreamEnd).
 
   if (content.modelTurn?.parts) {
     for (const part of content.modelTurn.parts) {
